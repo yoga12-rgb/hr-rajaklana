@@ -141,13 +141,13 @@ export default function OvertimePage() {
           title="Total Lembur Disetujui"
           value={`${totalApprovedHours} Jam`}
           icon={Timer}
-          trend={{ value: "+8 jam minggu ini", isPositive: true }}
+          subtext={<span className="text-amber-400 font-medium">+8 jam minggu ini</span>}
         />
         <StatCard
           title="Pending Approval"
           value={pendingCount.toString()}
           icon={AlertCircle}
-          trend={{ value: "Menunggu Verifikasi", isPositive: false }}
+          subtext={<span className="text-slate-400">Menunggu Verifikasi</span>}
         />
         <StatCard
           title="Pengajuan Disetujui"
