@@ -84,7 +84,7 @@ export default function BottomNav() {
   return (
     <>
       <nav 
-        className={`md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 z-50 px-3 pt-2.5 pb-4 sm:pb-2 shadow-[0_-8px_25px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 z-50 px-3 pt-2.5 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_25px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-in-out ${
           isKeyboardOpen ? "translate-y-[150%] pointer-events-none" : "translate-y-0"
         }`}
       >
@@ -101,6 +101,15 @@ export default function BottomNav() {
                   onClick={() => playClickSound()}
                   className="flex flex-col items-center justify-center -mt-4 relative z-10 group"
                 >
+                  {/* Invisible Sliding Active Indicator Line for Center FAB continuity */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavTab"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                      className="absolute top-4 left-1/2 -translate-x-1/2 w-7 h-1 opacity-0 pointer-events-none"
+                    />
+                  )}
+
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
                     isActive
                       ? "bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-md shadow-amber-500/30 ring-4 ring-slate-950 scale-105"
@@ -133,7 +142,7 @@ export default function BottomNav() {
                     <motion.div
                       layoutId="activeNavTab"
                       transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                      className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_0_10px_#f59e0b] z-20"
+                      className="absolute -top-[11px] left-1/2 -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_1px_12px_rgba(245,158,11,0.8)] z-[60]"
                     />
                   )}
 
@@ -165,7 +174,7 @@ export default function BottomNav() {
                   <motion.div
                     layoutId="activeNavTab"
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                    className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_0_10px_#f59e0b] z-20"
+                    className="absolute -top-[11px] left-1/2 -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_1px_12px_rgba(245,158,11,0.8)] z-[60]"
                   />
                 )}
 

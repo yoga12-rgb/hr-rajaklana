@@ -35,7 +35,7 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 bg-slate-900 text-white border-b border-slate-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+    <header className="bg-slate-900 text-white border-b border-slate-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40 shadow-sm h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
       {/* Mobile Brand / Logo */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-teal-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950 font-bold text-base md:hidden">

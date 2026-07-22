@@ -55,9 +55,6 @@ export default function AttendancePage() {
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
       setIsCameraActive(true);
     } catch (err: any) {
       console.error("Camera access error:", err);
@@ -65,6 +62,13 @@ export default function AttendancePage() {
       setIsCameraActive(false);
     }
   };
+
+  // Attach stream to video element when it becomes available in DOM
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [isCameraActive]);
 
   const stopCamera = () => {
     if (streamRef.current) {
