@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useHR } from "@/context/HRContext";
 import { 
   Clock, 
@@ -12,7 +12,10 @@ import {
   AlertCircle, 
   ChevronRight,
   ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  RefreshCw,
+  Check,
+  Video
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Modal } from "@/components/ui/Modal";
@@ -25,6 +28,15 @@ export default function AttendancePage() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [simulatedDistance, setSimulatedDistance] = useState<number>(50);
 
+  // Camera State & Refs
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -36,13 +48,68 @@ export default function AttendancePage() {
     return () => clearInterval(timer);
   }, []);
 
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsCameraActive(true);
+    } catch (err: any) {
+      console.error("Camera access error:", err);
+      setCameraError("Izin kamera ditolak atau perangkat kamera tidak ditemukan.");
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const captureSelfie = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgData = canvas.toDataURL("image/jpeg");
+        setCapturedImage(imgData);
+        stopCamera();
+      }
+    }
+  };
+
+  const retakeSelfie = () => {
+    setCapturedImage(null);
+    startCamera();
+  };
+
+  // Auto cleanup camera stream when modal is closed
+  useEffect(() => {
+    if (!showModal) {
+      stopCamera();
+      setCapturedImage(null);
+    }
+  }, [showModal]);
+
   const handleClockInSubmit = () => {
     if (simulatedDistance > 50) {
       showToast("Gagal Absen: Anda berada di luar radius presensi kantor! (120m > Radius Maksimal 50m)", "warning");
       return;
     }
-    clockIn(notes || `Check-in GPS (Jarak: ${simulatedDistance}m)`);
-    showToast("Absen Masuk Berhasil! Posisi GPS Terverifikasi (50m Radius).", "success");
+    clockIn(notes || `Check-in GPS & Selfie (Jarak: ${simulatedDistance}m)`);
+    showToast("Absen Masuk Berhasil! Verifikasi Wajah & GPS Selesai.", "success");
     setNotes("");
     setShowModal(false);
   };
@@ -198,17 +265,89 @@ export default function AttendancePage() {
             </div>
           </div>
 
+          {/* Live Camera / Selfie Capture Box */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-slate-300">Foto Selfie Kehadiran Staf:</label>
+              {capturedImage && (
+                <span className="text-amber-400 text-[10px] flex items-center gap-1 font-bold">
+                  <Check className="w-3 h-3" /> Foto Terverifikasi
+                </span>
+              )}
+            </div>
+
+            <div className="relative w-full h-48 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col items-center justify-center">
+              {/* Hidden Canvas for capture */}
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* Case 1: Captured Image Preview */}
+              {capturedImage ? (
+                <div className="relative w-full h-full">
+                  {/* eslint-disable-next-img-element */}
+                  <img
+                    src={capturedImage}
+                    alt="Selfie Check-in"
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                  <button
+                    type="button"
+                    onClick={retakeSelfie}
+                    className="absolute bottom-2 right-2 bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1 shadow-lg transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3 text-amber-400" />
+                    <span>Foto Ulang</span>
+                  </button>
+                </div>
+              ) : isCameraActive ? (
+                /* Case 2: Live Video Stream */
+                <div className="relative w-full h-full">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover transform -scale-x-100"
+                  />
+                  <div className="absolute inset-0 border-2 border-dashed border-amber-500/50 rounded-xl pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={captureSelfie}
+                    className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer z-10"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Ambil Foto Selfie</span>
+                  </button>
+                </div>
+              ) : (
+                /* Case 3: Initial Camera Trigger Button */
+                <div className="p-4 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                    <Video className="w-5 h-5" />
+                  </div>
+                  {cameraError ? (
+                    <p className="text-xs text-rose-400 font-medium">{cameraError}</p>
+                  ) : (
+                    <p className="text-xs text-slate-400">Aktifkan kamera depan HP/laptop untuk verifikasi foto presensi</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1.5 mx-auto cursor-pointer shadow-sm"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Buka Kamera Device</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Selfie & Geofence Visualizer Box */}
-          <div className={`p-4 rounded-xl border space-y-2 text-center transition-colors ${
+          <div className={`p-3 rounded-xl border space-y-1 text-center transition-colors ${
             simulatedDistance <= 50
               ? "bg-slate-950 border-amber-500/40"
               : "bg-rose-950/20 border-rose-500/40"
           }`}>
-            <div className="relative inline-block">
-              <Camera className={`w-8 h-8 mx-auto animate-pulse ${
-                simulatedDistance <= 50 ? "text-amber-400" : "text-rose-400"
-              }`} />
-            </div>
             <p className="text-xs font-bold text-slate-200">
               {simulatedDistance <= 50 
                 ? "Jarak: 50 Meter (Di Dalam Radius Presensi)" 
