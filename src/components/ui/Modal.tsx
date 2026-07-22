@@ -52,19 +52,42 @@ export function Modal({
     };
 
     if (isOpen) {
+      // Robust iOS Safari scroll lock: position fixed hack
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
       document.body.style.overflow = "hidden";
-      // Mencegah background ikut ke-scroll (scroll chaining) di iOS/Android
       document.documentElement.style.overscrollBehavior = "none";
+      
       document.addEventListener("keydown", handleEscape);
     } else {
-      document.body.style.overflow = "unset";
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
       document.documentElement.style.overscrollBehavior = "auto";
+      
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
 
     return () => {
-      document.body.style.overflow = "unset";
+      // Cleanup
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
       document.documentElement.style.overscrollBehavior = "auto";
       document.removeEventListener("keydown", handleEscape);
+      
+      // Only restore scroll if we were actually locked
+      if (scrollY && isOpen) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     };
   }, [isOpen, onClose]);
 
