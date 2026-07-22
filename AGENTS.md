@@ -100,6 +100,15 @@ src/
 8. **General Domain Rule (Aplikasi HR & Operasional Umum)**:
    * **WAJIB General**: Aplikasi ini adalah **Sistem HRD & Workforce Operations Umum** yang serbaguna untuk bidang perusahaan operasional apa pun. **DILARANG EKSPLISIT** menggunakan istilah spesifik seperti *resto, resort, kitchen, waiter* secara kaku. Gunakan istilah umum seperti *Perusahaan, Rajaklana HQ, Area Operasional, Produksi & Operasional, Layanan & Lapangan, Team Lead, Supervisor*.
 
+9. **Aturan Standar Mobile PWA & Native UX (Wajib Dipatuhi)**:
+   * **iOS & Android Safe-Area Insets**: Komponen `Header` wajib menyertakan `pt-[env(safe-area-inset-top)]` dan `h-[calc(4rem+env(safe-area-inset-top))]`, serta `BottomNav` menyertakan `pb-[max(1rem,env(safe-area-inset-bottom))]` untuk menghindari bentrokan dengan *notch*, *status bar*, dan *iOS Home Bar*. Metadata `viewport` wajib menggunakan `viewportFit: "cover"`.
+   * **Header Glassmorphism Translucent**: Header wajib menggunakan `bg-slate-900/85 backdrop-blur-xl` sehingga saat halaman di-*scroll*, konten di bawahnya samar terpotong (*frosted glass*) dengan mewah.
+   * **Robust Body Scroll Lock (Modal / Bottom Sheet)**: Komponen `Modal` wajib menggunakan teknik `position: fixed` pada `document.body` saat terbuka untuk mematikan *background scrolling* pada iOS Safari.
+   * **Smart Virtual Keyboard Auto-Scroll**: Komponen `Modal` wajib memanfaatkan `window.visualViewport` API & focus listener (`handleFocusIn`) untuk menyuntikkan padding dinamik (`pb-64`) dan memanggil `scrollIntoView({ block: 'center' })` agar elemen input (`input`, `textarea`, `select`, `Combobox`, `DatePicker`, `TimePicker`) tidak pernah tertutupi keyboard HP.
+   * **Toast Notification Mobile Standard**: Komponen `Toast` diposisikan secara melayang di bawah header (`top-[calc(4.25rem+env(safe-area-inset-top))]`) dengan bentuk *Floating Capsule Pill* (`rounded-2xl`), *Glassmorphism Blur*, dan ikon dalam wadah transparan (`w-7 h-7 bg-amber-500/15`).
+   * **Desain Bebas Scrollbar**: Semua *scrollbar* visual disembunyikan secara global di `globals.css` (`::-webkit-scrollbar { display: none; }`) untuk estetika aplikasi *native*.
+   * **Kamera Selfie Presensi Portrait**: Kamera presensi wajib menggunakan rasio *Portrait* (`480x640`, `aspectRatio: 0.75`), container bingkai tegak (`h-72 sm:h-80`), dan transformasi cermin `ctx.scale(-1, 1)` agar pratinjau dan foto selfie konsisten.
+
 ---
 
 ## 🔮 Roadmap & Panduan Integrasi Database (Masa Depan)
