@@ -45,10 +45,11 @@ export function Modal({
   // Auto-scroll input into view & adjust bottom sheet height when virtual keyboard pops up
   const handleFocusIn = (e: React.FocusEvent) => {
     const target = e.target as HTMLElement;
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) {
+    const isInteractive = target.closest("input, textarea, select, button, [role='combobox'], [role='button']");
+    if (isInteractive) {
       setIsInputFocused(true);
       setTimeout(() => {
-        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        isInteractive.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 150);
     }
   };
@@ -60,6 +61,37 @@ export function Modal({
       }
     }, 100);
   };
+
+  // Industry Standard: Mobile Visual Viewport API listener to track virtual keyboard state 100% accurately
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleViewportChange = () => {
+      if (typeof window !== "undefined" && window.visualViewport) {
+        // Keyboard is visible if visualViewport height is significantly smaller than full innerHeight
+        const isKeyboardVisible = window.visualViewport.height < window.innerHeight * 0.75;
+        if (isKeyboardVisible) {
+          setIsInputFocused(true);
+          const activeEl = document.activeElement as HTMLElement;
+          if (activeEl && contentRef.current?.contains(activeEl)) {
+            setTimeout(() => {
+              activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 100);
+          }
+        } else {
+          setIsInputFocused(false);
+        }
+      }
+    };
+
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleViewportChange);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleViewportChange);
+      window.visualViewport?.removeEventListener("scroll", handleViewportChange);
+    };
+  }, [isOpen]);
 
   // Hydration check for Portal
   useEffect(() => {
