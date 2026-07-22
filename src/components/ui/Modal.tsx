@@ -1,0 +1,140 @@
+"use client";
+
+import React, { ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
+import { LucideIcon, X } from "lucide-react";
+
+interface ModalProps {
+  /** Kontrol status terbuka/tertutupnya modal */
+  isOpen: boolean;
+  /** Callback saat pengguna menutup modal/bottom sheet */
+  onClose: () => void;
+  /** Judul header modal */
+  title: string;
+  /** Ikon Lucide React opsional di samping judul */
+  icon?: LucideIcon;
+  /** Elemen formulir / konten utama di dalam modal */
+  children: ReactNode;
+  /** Kelas penyesuai lebar maksimum Tailwind (default: 'max-w-sm') */
+  maxWidth?: string;
+}
+
+/**
+ * Komponen Modal & Mobile Bottom Sheet Universal (Industry Standard)
+ * 
+ * - Portal: Dirender di document.body untuk menghindari masalah z-index & overflow.
+ * - Accessibility (A11y): Mendukung penutupan dengan tombol 'Escape' (Esc) & memiliki atribut ARIA.
+ * - Swipe-to-Dismiss: Bagian header dapat ditarik ke bawah (drag-to-close) untuk menutup di layar sentuh.
+ * - Body Scroll Lock: Mengunci scroll latar belakang utama saat terbuka.
+ * - Responsive: Bottom Sheet pada Mobile (< 640px) & Centered Popup pada Desktop (>= 640px).
+ */
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  icon: Icon,
+  children,
+  maxWidth = "max-w-sm"
+}: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+  const dragControls = useDragControls();
+
+  // Hydration check for Portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Body Scroll Lock & Escape Key Listener (Industry Standards)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      // Mencegah background ikut ke-scroll (scroll chaining) di iOS/Android
+      document.documentElement.style.overscrollBehavior = "none";
+      document.addEventListener("keydown", handleEscape);
+    } else {
+      document.body.style.overflow = "unset";
+      document.documentElement.style.overscrollBehavior = "auto";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+      document.documentElement.style.overscrollBehavior = "auto";
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!mounted) return null;
+
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden touch-none"
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            
+            /* Framer Motion Drag-to-Close Settings */
+            drag="y"
+            dragControls={dragControls}
+            dragListener={false} // Disable drag on the body so we can still scroll form content
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            onDragEnd={(_, info) => {
+              // Jika ditarik ke bawah melebihi threshold atau dengan kecepatan tinggi, tutup modal
+              if (info.offset.y > 150 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
+            
+            className={`bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl p-5 pb-12 sm:pb-8 w-full ${maxWidth} space-y-4 shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-900 relative`}
+          >
+            {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
+            <div 
+              className="cursor-grab active:cursor-grabbing sm:cursor-auto pb-3 border-b border-slate-800 touch-none"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
+              {/* Mobile Bottom Sheet Handle Pill */}
+              <div className="w-12 h-1.5 bg-slate-700/70 rounded-full mx-auto sm:hidden mb-2" />
+
+              <div className="flex items-center justify-between">
+                <h3 id="modal-title" className="font-bold text-slate-100 text-sm flex items-center gap-2 select-none">
+                  {Icon && <Icon className="w-4 h-4 text-amber-400" />}
+                  <span>{title}</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Tutup Modal"
+                  className="text-slate-400 hover:text-slate-200 text-xs font-semibold p-1 cursor-pointer transition-colors bg-slate-800/50 sm:bg-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return createPortal(modalContent, document.body);
+}
