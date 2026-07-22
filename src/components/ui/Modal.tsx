@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { LucideIcon, X } from "lucide-react";
@@ -38,7 +38,28 @@ export function Modal({
   maxWidth = "max-w-sm"
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const dragControls = useDragControls();
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll input into view & adjust bottom sheet height when virtual keyboard pops up
+  const handleFocusIn = (e: React.FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) {
+      setIsInputFocused(true);
+      setTimeout(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  };
+
+  const handleFocusOut = () => {
+    setTimeout(() => {
+      if (contentRef.current && !contentRef.current.contains(document.activeElement)) {
+        setIsInputFocused(false);
+      }
+    }, 100);
+  };
 
   // Hydration check for Portal
   useEffect(() => {
@@ -104,6 +125,9 @@ export function Modal({
           className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
         >
           <motion.div
+            ref={contentRef}
+            onFocus={handleFocusIn}
+            onBlur={handleFocusOut}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -126,7 +150,11 @@ export function Modal({
               }
             }}
             
-            className={`bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl p-5 pb-12 sm:pb-8 w-full ${maxWidth} space-y-4 shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative`}
+            className={`bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl p-5 ${
+              isInputFocused 
+                ? "pb-64 sm:pb-8 max-h-[65vh] sm:max-h-[90vh]" 
+                : "pb-12 sm:pb-8 max-h-[85vh] sm:max-h-[90vh]"
+            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative transition-all duration-200`}
           >
             {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
             <div 
