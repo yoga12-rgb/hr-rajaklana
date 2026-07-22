@@ -52,7 +52,12 @@ export default function AttendancePage() {
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { 
+          facingMode: "user", 
+          width: { ideal: 480 }, 
+          height: { ideal: 640 },
+          aspectRatio: { ideal: 0.75 }
+        }
       });
       streamRef.current = stream;
       setIsCameraActive(true);
@@ -82,11 +87,16 @@ export default function AttendancePage() {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth || 320;
-      canvas.height = video.videoHeight || 240;
+      const width = video.videoWidth || 480;
+      const height = video.videoHeight || 640;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Mirror the canvas image to match live video view (-scale-x-100)
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, width, height);
         const imgData = canvas.toDataURL("image/jpeg");
         setCapturedImage(imgData);
         stopCamera();
@@ -280,7 +290,7 @@ export default function AttendancePage() {
               )}
             </div>
 
-            <div className="relative w-full h-48 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col items-center justify-center">
+            <div className="relative w-full h-72 sm:h-80 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col items-center justify-center">
               {/* Hidden Canvas for capture */}
               <canvas ref={canvasRef} className="hidden" />
 
