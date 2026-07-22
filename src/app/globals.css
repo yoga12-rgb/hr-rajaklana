@@ -30,3 +30,14 @@ input, textarea, select {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* Hide Scrollbars Globally for Native App Feel (Industry Standard) */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+* {
+  scrollbar-width: none;
+}

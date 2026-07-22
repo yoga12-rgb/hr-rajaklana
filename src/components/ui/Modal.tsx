@@ -78,7 +78,7 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden touch-none"
+          className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
         >
           <motion.div
             role="dialog"
@@ -103,7 +103,7 @@ export function Modal({
               }
             }}
             
-            className={`bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl p-5 pb-12 sm:pb-8 w-full ${maxWidth} space-y-4 shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-900 relative`}
+            className={`bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl p-5 pb-12 sm:pb-8 w-full ${maxWidth} space-y-4 shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative`}
           >
             {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
             <div 
