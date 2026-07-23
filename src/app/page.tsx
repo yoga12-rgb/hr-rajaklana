@@ -15,7 +15,8 @@ import {
   UserCheck,
   Megaphone,
   Pin,
-  Plus
+  Plus,
+  FileText
 } from "lucide-react";
 import { useState } from "react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
@@ -50,13 +51,15 @@ export default function MobileHRDashboard() {
   const [ancTitle, setAncTitle] = useState("");
   const [ancContent, setAncContent] = useState("");
   const [ancCategory, setAncCategory] = useState<"Info K3" | "Event Perusahaan" | "Kebijakan HR" | "Operasional">("Operasional");
+  const [ancIsPinned, setAncIsPinned] = useState(true);
 
   const handleAncSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!ancTitle.trim() || !ancContent.trim()) return;
-    addAnnouncement(ancTitle, ancContent, ancCategory, true);
+    addAnnouncement(ancTitle, ancContent, ancCategory, ancIsPinned);
     setAncTitle("");
     setAncContent("");
+    setAncIsPinned(true);
     setShowAncModal(false);
   };
 
@@ -303,21 +306,24 @@ export default function MobileHRDashboard() {
         title="Publikasikan Pengumuman HRD"
         icon={Megaphone}
       >
-        <form onSubmit={handleAncSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Judul Pengumuman</label>
+        <form onSubmit={handleAncSubmit} className="space-y-4 pt-1">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+              <Megaphone className="w-3.5 h-3.5 text-amber-400" />
+              <span>Judul Pengumuman</span>
+            </label>
             <input
               type="text"
               value={ancTitle}
               onChange={(e) => setAncTitle(e.target.value)}
               placeholder="Contoh: Briefing Gabungan Shift Pagi"
-              className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
+              className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-slate-950 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 transition-all"
               required
             />
           </div>
 
           <Combobox
-            label="Kategori"
+            label="Kategori Pengumuman"
             options={[
               { value: "Operasional", label: "Operasional" },
               { value: "Info K3", label: "Info K3" },
@@ -328,29 +334,58 @@ export default function MobileHRDashboard() {
             onChange={(val) => setAncCategory(val as any)}
           />
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Isi Pengumuman</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-amber-400" />
+              <span>Isi Pengumuman</span>
+            </label>
             <textarea
-              rows={3}
+              rows={3.5}
               value={ancContent}
               onChange={(e) => setAncContent(e.target.value)}
               placeholder="Tuliskan detail informasi pengumuman..."
-              className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
+              className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-slate-950 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 transition-all resize-none"
               required
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          {/* Toggle Option: Pin Pengumuman */}
+          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                <Pin className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-200">Sematkan Pengumuman</p>
+                <p className="text-[10px] text-slate-400">Tampilkan di posisi teratas dashboard</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAncIsPinned(!ancIsPinned)}
+              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                ancIsPinned ? "bg-amber-500" : "bg-slate-800"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full bg-slate-950 shadow-md transition-transform transform ${
+                  ancIsPinned ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2.5 pt-2">
             <button
               type="button"
               onClick={() => setShowAncModal(false)}
-              className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+              className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-98 text-slate-300 text-xs font-bold transition-all cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 cursor-pointer"
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 active:scale-98 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
             >
               Publikasikan
             </button>
