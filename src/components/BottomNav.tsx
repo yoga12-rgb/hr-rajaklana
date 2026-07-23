@@ -276,7 +276,7 @@ export default function BottomNav() {
 
             {/* Menu 3: Pengaturan & Profil */}
             <Link
-              href="/profile"
+              href="/settings"
               onClick={() => {
                 playClickSound();
                 setShowMoreSheet(false);
@@ -289,11 +289,11 @@ export default function BottomNav() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-200 group-hover:text-amber-400 transition-colors">Pengaturan & Profil Akun</h4>
-                  <p className="text-[11px] text-slate-400">Keamanan akun, tema, & preferensi HR</p>
+                  <p className="text-[11px] text-slate-400">Manajemen outlet GPS, jam kerja, & profil HR</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">Akun</span>
+                <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">Setting</span>
                 <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
               </div>
             </Link>
