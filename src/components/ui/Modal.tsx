@@ -167,20 +167,54 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  // iOS Scroll Trap hack to prevent bounce scrolling from chaining to body
-  const handleTouchStart = () => {
-    if (!contentRef.current) return;
-    const el = contentRef.current;
+  // Foolproof iOS Scroll Lock (Prevent Scroll Chaining & Bounce)
+  useEffect(() => {
+    if (!isOpen) return;
     
-    // If at absolute top, push down 1px
-    if (el.scrollTop === 0) {
-      el.scrollTop = 1;
-    } 
-    // If at absolute bottom, push up 1px
-    else if (el.scrollTop + el.clientHeight >= el.scrollHeight) {
-      el.scrollTop = el.scrollHeight - el.clientHeight - 1;
-    }
-  };
+    let initialClientY = -1;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.targetTouches.length === 1) {
+        initialClientY = e.targetTouches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.targetTouches.length !== 1) return;
+      
+      const clientY = e.targetTouches[0].clientY;
+      const el = contentRef.current;
+      
+      // Prevent scrolling if touch is completely outside the scrollable container
+      if (!el || !el.contains(e.target as Node)) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+
+      // Prevent scroll chaining when interacting inside the modal
+      const isUp = clientY > initialClientY; // Swiping down (scrolling up)
+      const isDown = clientY < initialClientY; // Swiping up (scrolling down)
+      
+      if (isUp && el.scrollTop <= 0) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+      
+      if (isDown && el.scrollTop + el.clientHeight >= el.scrollHeight) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+    };
+
+    // Use passive: false to allow preventDefault()
+    document.addEventListener("touchstart", handleTouchStart, { passive: false });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [isOpen]);
 
   if (!mounted) return null;
 
@@ -205,7 +239,6 @@ export function Modal({
             ref={contentRef}
             onFocus={handleFocusIn}
             onBlur={handleFocusOut}
-            onTouchStart={handleTouchStart}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
