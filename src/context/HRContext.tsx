@@ -104,11 +104,32 @@ interface HRContextType {
 }
 
 const initialEmployees: Employee[] = [
-  { id: "EMP-001", nik: "RK-2024-001", name: "Budi Santoso", role: "Team Lead Operasional", department: "Produksi & Operasional", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3456-7890", email: "budi@rajaklana.com", joinDate: "12 Jan 2023", leaveBalance: 9, avatarBg: "bg-amber-500/20 text-amber-400" },
+  // Head Office & HQ
+  { id: "EMP-001", nik: "RK-2024-001", name: "Budi Santoso", role: "Team Lead Operasional", department: "HQ Operasional", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3456-7890", email: "budi@rajaklana.com", joinDate: "12 Jan 2023", leaveBalance: 9, avatarBg: "bg-amber-500/20 text-amber-400" },
   { id: "EMP-002", nik: "RK-2024-002", name: "Siti Rahmawati", role: "HR Officer", department: "HR & Legal", status: "Tetap", shift: "Normal (08:00 - 17:00)", phone: "0813-9876-5432", email: "siti.hr@rajaklana.com", joinDate: "05 Mar 2023", leaveBalance: 12, avatarBg: "bg-blue-500/20 text-blue-400" },
-  { id: "EMP-003", nik: "RK-2024-003", name: "Agus Pratama", role: "Supervisor Lapangan", department: "Layanan & Lapangan", status: "Kontrak", shift: "Shift Pagi (07:00 - 15:00)", phone: "0857-1122-3344", email: "agus.barista@rajaklana.com", joinDate: "15 Aug 2024", leaveBalance: 6, avatarBg: "bg-amber-500/20 text-amber-400" },
   { id: "EMP-004", nik: "RK-2024-004", name: "Dewi Lestari", role: "Finance Officer", department: "Finance", status: "Tetap", shift: "Normal (08:00 - 17:00)", phone: "0819-5566-7788", email: "dewi.fin@rajaklana.com", joinDate: "01 Nov 2022", leaveBalance: 8, avatarBg: "bg-purple-500/20 text-purple-400" },
-  { id: "EMP-005", nik: "RK-2024-005", name: "Rian Hidayat", role: "Operational Coordinator", department: "Operasional", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0821-3344-5566", email: "rian.ops@rajaklana.com", joinDate: "10 Feb 2024", leaveBalance: 10, avatarBg: "bg-teal-500/20 text-teal-400" },
+
+  // Outlet Jombang (Kasir)
+  { id: "EMP-010", nik: "RK-2024-010", name: "Karyati", role: "Kasir", department: "Outlet Jombang", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-1001-0001", email: "karyati@rajaklana.com", joinDate: "10 Jan 2024", leaveBalance: 12, avatarBg: "bg-teal-500/20 text-teal-400" },
+  { id: "EMP-011", nik: "RK-2024-011", name: "Amel", role: "Kasir", department: "Outlet Jombang", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0812-1001-0002", email: "amel@rajaklana.com", joinDate: "12 Feb 2024", leaveBalance: 12, avatarBg: "bg-amber-500/20 text-amber-400" },
+  { id: "EMP-012", nik: "RK-2024-012", name: "Meta", role: "Kasir", department: "Outlet Jombang", status: "Kontrak", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-1001-0003", email: "meta@rajaklana.com", joinDate: "01 Mar 2024", leaveBalance: 10, avatarBg: "bg-purple-500/20 text-purple-400" },
+  { id: "EMP-013", nik: "RK-2024-013", name: "Sella", role: "Kasir", department: "Outlet Jombang", status: "Tetap", shift: "Off / Libur", phone: "0812-1001-0004", email: "sella@rajaklana.com", joinDate: "15 Apr 2024", leaveBalance: 12, avatarBg: "bg-blue-500/20 text-blue-400" },
+
+  // Outlet Ciputat (Kasir)
+  { id: "EMP-020", nik: "RK-2024-020", name: "Ghina", role: "Kasir", department: "Outlet Ciputat", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-2002-0001", email: "ghina@rajaklana.com", joinDate: "10 Jan 2024", leaveBalance: 12, avatarBg: "bg-amber-500/20 text-amber-400" },
+  { id: "EMP-021", nik: "RK-2024-021", name: "Aisah", role: "Kasir", department: "Outlet Ciputat", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0812-2002-0002", email: "aisah@rajaklana.com", joinDate: "15 Feb 2024", leaveBalance: 12, avatarBg: "bg-teal-500/20 text-teal-400" },
+  { id: "EMP-022", nik: "RK-2024-022", name: "Alif", role: "Kasir", department: "Outlet Ciputat", status: "Kontrak", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-2002-0003", email: "alif@rajaklana.com", joinDate: "01 Mar 2024", leaveBalance: 10, avatarBg: "bg-blue-500/20 text-blue-400" },
+  { id: "EMP-023", nik: "RK-2024-023", name: "Aul", role: "Kasir", department: "Outlet Ciputat", status: "Tetap", shift: "Off / Libur", phone: "0812-2002-0004", email: "aul@rajaklana.com", joinDate: "20 May 2024", leaveBalance: 12, avatarBg: "bg-rose-500/20 text-rose-400" },
+
+  // Outlet Pahlawan (Kasir)
+  { id: "EMP-030", nik: "RK-2024-030", name: "Sulta", role: "Kasir", department: "Outlet Pahlawan", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3003-0001", email: "sulta@rajaklana.com", joinDate: "05 Jan 2024", leaveBalance: 12, avatarBg: "bg-purple-500/20 text-purple-400" },
+  { id: "EMP-031", nik: "RK-2024-031", name: "Ea", role: "Kasir", department: "Outlet Pahlawan", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0812-3003-0002", email: "ea@rajaklana.com", joinDate: "12 Feb 2024", leaveBalance: 12, avatarBg: "bg-amber-500/20 text-amber-400" },
+  { id: "EMP-032", nik: "RK-2024-032", name: "Endah", role: "Kasir", department: "Outlet Pahlawan", status: "Kontrak", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3003-0003", email: "endah@rajaklana.com", joinDate: "10 Mar 2024", leaveBalance: 10, avatarBg: "bg-teal-500/20 text-teal-400" },
+
+  // Outlet Pajajaran (Kasir)
+  { id: "EMP-040", nik: "RK-2024-040", name: "Siti", role: "Kasir", department: "Outlet Pajajaran", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-4004-0001", email: "siti.pajajaran@rajaklana.com", joinDate: "15 Jan 2024", leaveBalance: 12, avatarBg: "bg-blue-500/20 text-blue-400" },
+  { id: "EMP-041", nik: "RK-2024-041", name: "Aini", role: "Kasir", department: "Outlet Pajajaran", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0812-4004-0002", email: "aini@rajaklana.com", joinDate: "01 Feb 2024", leaveBalance: 12, avatarBg: "bg-amber-500/20 text-amber-400" },
+  { id: "EMP-042", nik: "RK-2024-042", name: "Nurul", role: "Kasir", department: "Outlet Pajajaran", status: "Kontrak", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-4004-0003", email: "nurul@rajaklana.com", joinDate: "10 Mar 2024", leaveBalance: 10, avatarBg: "bg-rose-500/20 text-rose-400" },
 ];
 
 const initialSchedules: WorkShift[] = [
