@@ -218,32 +218,32 @@ export default function SchedulePage() {
 
       {/* MATRIX VIEW (UI MATRIX ROSTER MINGGUAN) */}
       {viewMode === "matrix" && (
-        <div className="space-y-4">
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-4 shadow-lg overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
-                  Matriks Roster Jadwal Mingguan (20 - 26 Juli 2026)
+        <div className="space-y-3">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-2.5 sm:p-4 space-y-3 shadow-lg overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <h3 className="text-[11px] sm:text-xs font-bold text-slate-100 uppercase tracking-wide">
+                  Matriks Roster Mingguan (20 - 26 Jul)
                 </h3>
               </div>
-              <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                Klik sel untuk ubah
+              <span className="text-[9px] text-amber-400 font-mono bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+                Klik sel ubah
               </span>
             </div>
 
             {/* Matrix Table Scroll Container */}
             <div className="overflow-x-auto no-scrollbar rounded-xl border border-slate-800 bg-slate-950">
-              <table className="w-full text-left border-collapse min-w-[640px]">
+              <table className="w-full text-left border-collapse min-w-[440px] sm:min-w-[600px]">
                 <thead>
-                  <tr className="bg-slate-900/90 text-[11px] font-bold text-slate-400 border-b border-slate-800">
-                    <th className="p-3 sticky left-0 bg-slate-900 z-20 min-w-[160px] border-r border-slate-800 shadow-md">
-                      Staf & Departemen
+                  <tr className="bg-slate-900/90 text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                    <th className="p-2 sm:p-3 sticky left-0 bg-slate-900 z-20 w-[110px] min-w-[110px] sm:w-[150px] sm:min-w-[150px] border-r border-slate-800 shadow-md">
+                      Staf & Dept
                     </th>
                     {daysOfWeek.map((d) => (
-                      <th key={d.fullDate} className={`p-2.5 text-center min-w-[70px] ${d.isToday ? "bg-amber-500/10 text-amber-400 font-extrabold" : ""}`}>
-                        <div className="text-[10px] uppercase text-slate-400">{d.dayName}</div>
-                        <div className="text-xs font-bold mt-0.5">{d.dateNum}</div>
+                      <th key={d.fullDate} className={`p-1.5 text-center min-w-[46px] sm:min-w-[65px] ${d.isToday ? "bg-amber-500/10 text-amber-400 font-extrabold" : ""}`}>
+                        <div className="text-[9px] uppercase text-slate-400">{d.dayName}</div>
+                        <div className="text-[11px] font-bold mt-0.5">{d.dateNum}</div>
                       </th>
                     ))}
                   </tr>
@@ -259,10 +259,10 @@ export default function SchedulePage() {
                     <Fragment key={deptName}>
                       {/* Department Row Header inside Table */}
                       <tr className="bg-slate-900/60">
-                        <td colSpan={8} className="px-3 py-2 text-[10px] font-extrabold text-amber-400 uppercase tracking-wider bg-slate-900/80 border-y border-slate-800">
-                          <div className="sticky left-3 flex items-center gap-1.5 w-max">
-                            <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                            <span>{deptName} ({deptEmps.length} Staf)</span>
+                        <td colSpan={8} className="px-2 py-1.5 text-[9px] font-extrabold text-amber-400 uppercase tracking-wider bg-slate-900/80 border-y border-slate-800">
+                          <div className="sticky left-2 flex items-center gap-1 w-max">
+                            <Building2 className="w-3 h-3 text-amber-400" />
+                            <span>{deptName} ({deptEmps.length})</span>
                           </div>
                         </td>
                       </tr>
@@ -271,14 +271,14 @@ export default function SchedulePage() {
                       {deptEmps.map((emp) => (
                         <tr key={emp.id} className="hover:bg-slate-900/40 transition-colors">
                           {/* Sticky Employee Name Column */}
-                          <td className="p-3 sticky left-0 bg-slate-950 z-10 border-r border-slate-800/80 shadow-md">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-7 h-7 rounded-lg font-bold text-[10px] flex items-center justify-center border border-amber-500/30 shrink-0 ${emp.avatarBg}`}>
+                          <td className="p-2 sm:p-2.5 sticky left-0 bg-slate-950 z-10 w-[110px] min-w-[110px] max-w-[110px] sm:w-[150px] sm:min-w-[150px] border-r border-slate-800/80 shadow-md">
+                            <div className="flex items-center gap-1.5 overflow-hidden">
+                              <div className={`w-6 h-6 rounded-md font-bold text-[9px] flex items-center justify-center border border-amber-500/30 shrink-0 ${emp.avatarBg}`}>
                                 {emp.name.split(" ").map(n => n[0]).join("")}
                               </div>
-                              <div className="truncate">
-                                <h4 className="font-bold text-slate-200 text-xs truncate">{emp.name}</h4>
-                                <p className="text-[10px] text-slate-400 truncate">{emp.role}</p>
+                              <div className="truncate min-w-0">
+                                <h4 className="font-bold text-slate-200 text-[11px] truncate leading-tight">{emp.name.split(" ")[0]}</h4>
+                                <p className="text-[9px] text-slate-400 truncate">{emp.role}</p>
                               </div>
                             </div>
                           </td>
@@ -287,14 +287,14 @@ export default function SchedulePage() {
                           {daysOfWeek.map((d, dayIdx) => {
                             const shift = getWeeklyDayShift(emp, dayIdx);
                             return (
-                              <td key={d.fullDate} className={`p-1.5 text-center align-middle ${d.isToday ? "bg-amber-500/5" : ""}`}>
+                              <td key={d.fullDate} className={`p-1 text-center align-middle ${d.isToday ? "bg-amber-500/5" : ""}`}>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setSelectedEmpId(emp.id);
                                     setShowEditModal(true);
                                   }}
-                                  className={`w-full py-1.5 px-1 rounded-lg border text-[10px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer block text-center ${shift.color}`}
+                                  className={`w-full py-1 px-0.5 rounded text-[9px] font-extrabold transition-all hover:scale-105 active:scale-95 cursor-pointer block text-center truncate ${shift.color}`}
                                   title={`Edit shift ${emp.name} tanggal ${d.dateNum}`}
                                 >
                                   {shift.label}
@@ -311,18 +311,18 @@ export default function SchedulePage() {
             </div>
 
             {/* Matrix Legend */}
-            <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400 pt-1 flex-wrap">
+            <div className="flex items-center justify-center gap-3 text-[9px] text-slate-400 pt-0.5 flex-wrap">
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" /> Pagi (07-15)
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Pagi (07-15)
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Siang (12-20)
+                <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Siang (12-20)
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" /> Malam (15-23)
+                <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" /> Malam (15-23)
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" /> OFF (Libur)
+                <span className="w-2 h-2 rounded-full bg-rose-400 inline-block" /> OFF (Libur)
               </span>
             </div>
           </div>
