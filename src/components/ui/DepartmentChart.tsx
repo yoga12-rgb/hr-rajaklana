@@ -24,8 +24,18 @@ export function DepartmentChart({ data, height = 256 }: DepartmentChartProps) {
           <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
           <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
           <Tooltip
-            cursor={{ fill: '#1e293b' }}
-            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', fontSize: '12px', color: '#f8fafc' }}
+            cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+            contentStyle={{ 
+              backgroundColor: '#020617', 
+              borderColor: '#334155', 
+              borderRadius: '12px', 
+              fontSize: '12px', 
+              color: '#f8fafc',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.7)'
+            }}
+            itemStyle={{ color: '#fbbf24', fontWeight: 600 }}
+            labelStyle={{ color: '#f8fafc', fontWeight: 700, marginBottom: '2px' }}
+            formatter={(value: any) => [`${value}% Kehadiran`, 'Kehadiran']}
           />
           <Bar dataKey="hadir" radius={[4, 4, 0, 0]}>
             {data.map((entry, index) => (
