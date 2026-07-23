@@ -129,8 +129,8 @@ export default function Header() {
             )}
           </div>
 
-          {/* Notifications List */}
-          <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-0.5">
+          {/* Notifications List - Fixed height to prevent bottom sheet jumping on tab change */}
+          <div className="space-y-2.5 h-[60vh] sm:h-[50vh] overflow-y-auto pr-0.5">
             {/* Category: Cuti (Pending Leave Requests) */}
             {(activeTab === "Semua" || activeTab === "Cuti") && pendingLeaves.map((leave) => (
               <div key={leave.id} className="p-3 rounded-xl bg-slate-950 border border-amber-500/30 space-y-2">
@@ -207,8 +207,15 @@ export default function Header() {
               </div>
             ))}
 
-            {pendingLeaves.length === 0 && lateAttendance.length === 0 && announcements.length === 0 && (
-              <p className="text-xs text-slate-400 italic text-center py-6">Tidak ada notifikasi saat ini.</p>
+            {/* Empty State Logic */}
+            {((activeTab === "Semua" && pendingLeaves.length === 0 && lateAttendance.length === 0 && announcements.length === 0) ||
+              (activeTab === "Cuti" && pendingLeaves.length === 0) ||
+              (activeTab === "Presensi" && lateAttendance.length === 0) ||
+              (activeTab === "Pengumuman" && announcements.length === 0)) && (
+              <div className="h-full flex flex-col items-center justify-center space-y-2 opacity-60">
+                <Bell className="w-8 h-8 text-slate-500" />
+                <p className="text-xs text-slate-400 font-medium">Tidak ada notifikasi {activeTab !== "Semua" ? "di kategori ini." : "saat ini."}</p>
+              </div>
             )}
           </div>
         </div>
