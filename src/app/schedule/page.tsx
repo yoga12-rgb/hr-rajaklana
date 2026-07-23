@@ -136,41 +136,106 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      {/* Employees Schedule List */}
-      <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-          <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-amber-400" />
-            <span>Daftar Jadwal Staf (21 Juli)</span>
-          </h3>
-          <span className="text-[11px] text-slate-400">{filteredEmployees.length} Staf</span>
-        </div>
+      {/* Department Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+        {["Semua", ...Array.from(new Set(employees.map(e => e.department)))].map((dept) => {
+          const count = dept === "Semua" ? employees.length : employees.filter(e => e.department === dept).length;
+          const isActive = selectedDept === dept;
+          return (
+            <button
+              key={dept}
+              onClick={() => setSelectedDept(dept)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                isActive
+                  ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20"
+                  : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <span>{dept}</span>
+              <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${
+                isActive ? "bg-slate-950/20 text-slate-950" : "bg-slate-800 text-slate-400"
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-        <div className="space-y-3 pt-1">
-          {filteredEmployees.map((emp) => (
-            <div key={emp.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg font-bold text-xs flex items-center justify-center border border-amber-500/30 ${emp.avatarBg}`}>
-                  {emp.name.split(" ").map(n => n[0]).join("")}
+      {/* Grouped Employees Schedule List by Department */}
+      <div className="space-y-4">
+        {Object.entries(
+          filteredEmployees.reduce((acc, emp) => {
+            if (!acc[emp.department]) acc[emp.department] = [];
+            acc[emp.department].push(emp);
+            return acc;
+          }, {} as Record<string, typeof employees>)
+        ).map(([deptName, deptEmps]) => (
+          <div key={deptName} className="bg-slate-900 rounded-2xl border border-slate-800/80 p-4 space-y-3 shadow-md">
+            {/* Department Section Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-200 text-xs">{emp.name}</h4>
-                  <p className="text-[10px] text-slate-400">{emp.role} &bull; {emp.department}</p>
+                  <h3 className="text-xs font-bold text-slate-100 tracking-wide">{deptName}</h3>
+                  <p className="text-[10px] text-slate-400">Jadwal Shift Staf Terjadwal</p>
                 </div>
               </div>
-
-              <div className="text-right">
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-200">
-                  {getShiftIcon(emp.shift)}
-                  <span>{emp.shift.split("(")[0].trim()}</span>
-                </span>
-                <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                  {emp.shift.includes("(") ? emp.shift.split("(")[1].replace(")", "") : "07:00 - 15:00 WIB"}
-                </p>
-              </div>
+              <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 text-[10px] font-bold">
+                {deptEmps.length} Staf
+              </span>
             </div>
-          ))}
-        </div>
+
+            {/* Department Employee Cards */}
+            <div className="space-y-2.5 pt-1">
+              {deptEmps.map((emp) => (
+                <div key={emp.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/90 hover:border-slate-700 transition-colors flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg font-bold text-xs flex items-center justify-center border border-amber-500/30 ${emp.avatarBg}`}>
+                      {emp.name.split(" ").map(n => n[0]).join("")}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-200 text-xs">{emp.name}</h4>
+                      <p className="text-[10px] text-slate-400">{emp.role}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-200">
+                        {getShiftIcon(emp.shift)}
+                        <span>{emp.shift.split("(")[0].trim()}</span>
+                      </span>
+                      <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                        {emp.shift.includes("(") ? emp.shift.split("(")[1].replace(")", "") : "07:00 - 15:00 WIB"}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setSelectedEmpId(emp.id);
+                        setShowEditModal(true);
+                      }}
+                      title="Ubah Shift Staf ini"
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer border border-slate-700/60"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {filteredEmployees.length === 0 && (
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center space-y-2">
+            <Building2 className="w-8 h-8 text-slate-500 mx-auto opacity-50" />
+            <p className="text-xs text-slate-400">Tidak ada staf di departemen ini.</p>
+          </div>
+        )}
       </div>
 
       {/* Modal Edit Shift */}
