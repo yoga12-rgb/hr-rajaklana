@@ -82,7 +82,9 @@ export function TimePicker({
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenUpwards(spaceBelow < 340);
+      const spaceAbove = rect.top;
+      // Only flip upwards if space below is severely restricted (< 180px) and there's significantly more room above
+      setOpenUpwards(spaceBelow < 180 && spaceAbove > spaceBelow + 100);
 
       // Auto-scroll wheel items to center when opened
       setTimeout(() => {
