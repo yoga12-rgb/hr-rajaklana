@@ -104,11 +104,6 @@ interface HRContextType {
 }
 
 const initialEmployees: Employee[] = [
-  // Head Office & HQ
-  { id: "EMP-001", nik: "RK-2024-001", name: "Budi Santoso", role: "Team Lead Operasional", department: "HQ Operasional", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3456-7890", email: "budi@rajaklana.com", joinDate: "12 Jan 2023", leaveBalance: 9, avatarBg: "bg-amber-500/20 text-amber-400" },
-  { id: "EMP-002", nik: "RK-2024-002", name: "Siti Rahmawati", role: "HR Officer", department: "HR & Legal", status: "Tetap", shift: "Normal (08:00 - 17:00)", phone: "0813-9876-5432", email: "siti.hr@rajaklana.com", joinDate: "05 Mar 2023", leaveBalance: 12, avatarBg: "bg-blue-500/20 text-blue-400" },
-  { id: "EMP-004", nik: "RK-2024-004", name: "Dewi Lestari", role: "Finance Officer", department: "Finance", status: "Tetap", shift: "Normal (08:00 - 17:00)", phone: "0819-5566-7788", email: "dewi.fin@rajaklana.com", joinDate: "01 Nov 2022", leaveBalance: 8, avatarBg: "bg-purple-500/20 text-purple-400" },
-
   // Outlet Jombang (Kasir)
   { id: "EMP-010", nik: "RK-2024-010", name: "Karyati", role: "Kasir", department: "Outlet Jombang", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-1001-0001", email: "karyati@rajaklana.com", joinDate: "10 Jan 2024", leaveBalance: 12, avatarBg: "bg-teal-500/20 text-teal-400" },
   { id: "EMP-011", nik: "RK-2024-011", name: "Amel", role: "Kasir", department: "Outlet Jombang", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0812-1001-0002", email: "amel@rajaklana.com", joinDate: "12 Feb 2024", leaveBalance: 12, avatarBg: "bg-amber-500/20 text-amber-400" },
@@ -133,24 +128,22 @@ const initialEmployees: Employee[] = [
 ];
 
 const initialSchedules: WorkShift[] = [
-  { id: "SCH-001", employeeId: "EMP-001", employeeName: "Budi Santoso", department: "Produksi & Operasional", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "07:00 - 15:00 WIB" },
-  { id: "SCH-002", employeeId: "EMP-002", employeeName: "Siti Rahmawati", department: "HR & Legal", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "08:00 - 17:00 WIB" },
-  { id: "SCH-003", employeeId: "EMP-003", employeeName: "Agus Pratama", department: "Layanan & Lapangan", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "07:00 - 15:00 WIB" },
-  { id: "SCH-004", employeeId: "EMP-004", employeeName: "Dewi Lestari", department: "Finance", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "08:00 - 17:00 WIB" },
-  { id: "SCH-005", employeeId: "EMP-005", employeeName: "Rian Hidayat", department: "Operasional", date: "2026-07-21", shiftName: "Shift Siang", timeSlot: "12:00 - 20:00 WIB" },
+  { id: "SCH-010", employeeId: "EMP-010", employeeName: "Karyati", department: "Outlet Jombang", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "07:00 - 15:00 WIB" },
+  { id: "SCH-020", employeeId: "EMP-020", employeeName: "Ghina", department: "Outlet Ciputat", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "07:00 - 15:00 WIB" },
+  { id: "SCH-030", employeeId: "EMP-030", employeeName: "Sulta", department: "Outlet Pahlawan", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "07:00 - 15:00 WIB" },
+  { id: "SCH-040", employeeId: "EMP-040", employeeName: "Siti", department: "Outlet Pajajaran", date: "2026-07-21", shiftName: "Shift Pagi", timeSlot: "07:00 - 15:00 WIB" },
 ];
 
 const initialAttendance: AttendanceRecord[] = [
-  { id: "ATT-001", employeeId: "EMP-001", employeeName: "Budi Santoso", role: "Team Lead Operasional", department: "Produksi & Operasional", date: "21 Juli 2026", timeIn: "07:45 WIB", status: "Tepat Waktu", location: "Rajaklana HQ (Area Operasional Utama)" },
-  { id: "ATT-002", employeeId: "EMP-002", employeeName: "Siti Rahmawati", role: "HR Officer", department: "HR & Legal", date: "21 Juli 2026", timeIn: "07:55 WIB", status: "Tepat Waktu", location: "Rajaklana HQ (Main Office)" },
-  { id: "ATT-003", employeeId: "EMP-003", employeeName: "Agus Pratama", role: "Supervisor Lapangan", department: "Layanan & Lapangan", date: "21 Juli 2026", timeIn: "08:15 WIB", status: "Terlambat", location: "Rajaklana HQ (Area Depan)", notes: "Macet di jalan utama" },
-  { id: "ATT-004", employeeId: "EMP-004", employeeName: "Dewi Lestari", role: "Finance Officer", department: "Finance", date: "21 Juli 2026", timeIn: "07:50 WIB", status: "Tepat Waktu", location: "Rajaklana HQ (Main Office)" },
+  { id: "ATT-010", employeeId: "EMP-010", employeeName: "Karyati", role: "Kasir", department: "Outlet Jombang", date: "21 Juli 2026", timeIn: "06:55 WIB", status: "Tepat Waktu", location: "Outlet Jombang (Kasir 1)" },
+  { id: "ATT-020", employeeId: "EMP-020", employeeName: "Ghina", role: "Kasir", department: "Outlet Ciputat", date: "21 Juli 2026", timeIn: "07:02 WIB", status: "Tepat Waktu", location: "Outlet Ciputat (Main Cashier)" },
+  { id: "ATT-030", employeeId: "EMP-030", employeeName: "Sulta", role: "Kasir", department: "Outlet Pahlawan", date: "21 Juli 2026", timeIn: "07:15 WIB", status: "Terlambat", location: "Outlet Pahlawan", notes: "Macet di persimpangan" },
+  { id: "ATT-040", employeeId: "EMP-040", employeeName: "Siti", role: "Kasir", department: "Outlet Pajajaran", date: "21 Juli 2026", timeIn: "06:58 WIB", status: "Tepat Waktu", location: "Outlet Pajajaran" },
 ];
 
 const initialLeaveRequests: LeaveRequest[] = [
-  { id: "LV-101", employeeId: "EMP-005", employeeName: "Andi Wijaya", department: "Produksi & Operasional", type: "Cuti Tahunan", startDate: "2026-07-22", endDate: "2026-07-24", totalDays: 3, reason: "Acara keluarga di luar kota", status: "Pending", createdAt: "21 Jul 2026" },
-  { id: "LV-102", employeeId: "EMP-003", employeeName: "Nita Anggraini", department: "Layanan & Lapangan", type: "Sakit", startDate: "2026-07-21", endDate: "2026-07-21", totalDays: 1, reason: "Demam dan flu berat", status: "Pending", createdAt: "21 Jul 2026" },
-  { id: "LV-103", employeeId: "EMP-001", employeeName: "Budi Santoso", department: "Produksi & Operasional", type: "Izin Penting", startDate: "2026-07-15", endDate: "2026-07-15", totalDays: 1, reason: "Mengurus perpanjangan SIM & STNK", status: "Approved", createdAt: "14 Jul 2026" },
+  { id: "LV-101", employeeId: "EMP-013", employeeName: "Sella", department: "Outlet Jombang", type: "Cuti Tahunan", startDate: "2026-07-22", endDate: "2026-07-24", totalDays: 3, reason: "Acara keluarga di luar kota", status: "Pending", createdAt: "21 Jul 2026" },
+  { id: "LV-102", employeeId: "EMP-023", employeeName: "Aul", department: "Outlet Ciputat", type: "Sakit", startDate: "2026-07-21", endDate: "2026-07-21", totalDays: 1, reason: "Demam dan flu berat", status: "Pending", createdAt: "21 Jul 2026" },
 ];
 
 const initialAnnouncements: Announcement[] = [
