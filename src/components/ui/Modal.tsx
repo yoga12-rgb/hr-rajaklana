@@ -153,8 +153,9 @@ export function Modal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
           onClick={onClose}
-          className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
+          className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
         >
           <motion.div
             ref={contentRef}
@@ -163,10 +164,10 @@ export function Modal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
-            initial={{ y: "100%", opacity: 0 }}
+            initial={{ y: "100%", opacity: 0.5 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            transition={{ type: "tween", ease: [0.32, 0.72, 0, 1], duration: 0.32 }}
             onClick={(e) => e.stopPropagation()}
             
             /* Framer Motion Drag-to-Close Settings */
@@ -186,7 +187,7 @@ export function Modal({
               isInputFocused 
                 ? "pb-64 sm:pb-8 max-h-[65vh] sm:max-h-[90vh]" 
                 : "pb-12 sm:pb-8 max-h-[85vh] sm:max-h-[90vh]"
-            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative transition-all duration-200`}
+            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative transform-gpu will-change-transform`}
           >
             {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
             <div 
