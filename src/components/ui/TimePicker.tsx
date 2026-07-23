@@ -22,13 +22,6 @@ interface TimePickerProps {
   align?: "left" | "right";
 }
 
-const SHIFT_PRESETS = [
-  { label: "Shift Pagi (07:00)", h: "07", m: "00" },
-  { label: "Shift Siang (12:00)", h: "12", m: "00" },
-  { label: "Shift Malam (15:00)", h: "15", m: "00" },
-  { label: "Selesai Shift (23:00)", h: "23", m: "00" },
-];
-
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
@@ -154,34 +147,8 @@ export function TimePicker({
               openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5"
             }`}
           >
-            {/* Quick Shift Presets */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-extrabold text-amber-400/90 uppercase tracking-wider block">Tombol Cepat Shift:</span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {SHIFT_PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => {
-                      playClickSound();
-                      handleSelectTime(preset.h, preset.m);
-                      hourItemRefs.current[preset.h]?.scrollIntoView({ behavior: "smooth", block: "center" });
-                      minuteItemRefs.current[preset.m]?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                    className={`py-1.5 px-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer border text-center flex items-center justify-center leading-tight ${
-                      selectedHour === preset.h && selectedMinute === preset.m
-                        ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold shadow-sm"
-                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* iOS/Android Style Dual Wheel Scroll Picker */}
-            <div className="pt-2 border-t border-slate-800/80">
+            <div>
               <div className="flex items-center justify-around mb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                 <span>Jam</span>
                 <span>Menit</span>
