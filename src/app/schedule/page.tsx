@@ -56,35 +56,35 @@ export default function SchedulePage() {
   };
 
   const getShiftIcon = (shiftStr: string) => {
-    if (shiftStr.includes("Pagi")) return <Sun className="w-3.5 h-3.5 text-amber-400" />;
-    if (shiftStr.includes("Siang")) return <Sunset className="w-3.5 h-3.5 text-orange-400" />;
-    if (shiftStr.includes("Malam")) return <Moon className="w-3.5 h-3.5 text-indigo-400" />;
-    return <Coffee className="w-3.5 h-3.5 text-slate-400" />;
+    if (shiftStr.includes("Pagi")) return <Sun className="w-3.5 h-3.5 text-blue-400" />;
+    if (shiftStr.includes("Siang")) return <Sunset className="w-3.5 h-3.5 text-amber-400" />;
+    if (shiftStr.includes("Malam")) return <Moon className="w-3.5 h-3.5 text-orange-400" />;
+    return <Coffee className="w-3.5 h-3.5 text-rose-400" />;
   };
 
   // Helper to determine weekly shift matrix badge per day
   const getWeeklyDayShift = (emp: typeof employees[0], dayIndex: number) => {
     // Tuesday (index 1 = 21 July) uses employee's actual updated shift
     if (dayIndex === 1) {
-      if (emp.shift.includes("Siang")) return { code: "SIANG", label: "Siang", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
-      if (emp.shift.includes("Malam")) return { code: "MALAM", label: "Malam", color: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" };
-      if (emp.shift.includes("Off") || emp.shift.includes("Libur")) return { code: "OFF", label: "Off", color: "bg-slate-800 text-slate-400 border-slate-700" };
-      return { code: "PAGI", label: "Pagi", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
+      if (emp.shift.includes("Siang")) return { code: "SIANG", label: "Siang", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
+      if (emp.shift.includes("Malam")) return { code: "MALAM", label: "Malam", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
+      if (emp.shift.includes("Off") || emp.shift.includes("Libur")) return { code: "OFF", label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
+      return { code: "PAGI", label: "Pagi", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
     }
     // Fixed pattern for weekend days (Sab/Min) or shift variations
     if (emp.id === "EMP-003" && (dayIndex === 5 || dayIndex === 6)) {
-      return { code: "MALAM", label: "Malam", color: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" };
+      return { code: "MALAM", label: "Malam", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
     }
     if (emp.id === "EMP-005" && dayIndex === 6) {
-      return { code: "OFF", label: "Off", color: "bg-slate-800 text-slate-400 border-slate-700" };
+      return { code: "OFF", label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
     }
     if (dayIndex === 5 || dayIndex === 6) {
-      return { code: "OFF", label: "Off", color: "bg-slate-800 text-slate-400 border-slate-700" };
+      return { code: "OFF", label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
     }
     if (emp.id === "EMP-005") {
-      return { code: "SIANG", label: "Siang", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
+      return { code: "SIANG", label: "Siang", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
     }
-    return { code: "PAGI", label: "Pagi", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
+    return { code: "PAGI", label: "Pagi", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
   };
 
   return (
@@ -155,7 +155,7 @@ export default function SchedulePage() {
       {/* Shift Overview Cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
             <Sun className="w-5 h-5" />
           </div>
           <div>
@@ -165,7 +165,7 @@ export default function SchedulePage() {
         </div>
 
         <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-orange-500/10 text-orange-400 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
             <Sunset className="w-5 h-5" />
           </div>
           <div>
@@ -313,16 +313,16 @@ export default function SchedulePage() {
             {/* Matrix Legend */}
             <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400 pt-1 flex-wrap">
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Pagi (07-15)
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" /> Pagi (07-15)
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" /> Siang (12-20)
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Siang (12-20)
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 inline-block" /> Malam (15-23)
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" /> Malam (15-23)
               </span>
               <span className="flex items-center gap-1 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-600 inline-block" /> OFF (Libur)
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" /> OFF (Libur)
               </span>
             </div>
           </div>
