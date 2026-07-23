@@ -81,6 +81,16 @@ export default function BottomNav() {
     return pathname === item.href || pathname.startsWith(item.href + "/");
   };
 
+  const getActiveIndex = () => {
+    if (pathname === "/") return 0;
+    if (pathname.startsWith("/schedule")) return 1;
+    if (pathname.startsWith("/attendance")) return 2;
+    if (pathname.startsWith("/leaves")) return 3;
+    if (isSecondaryActive) return 4;
+    return 0;
+  };
+  const activeIndex = getActiveIndex();
+
   return (
     <>
       <nav 
@@ -89,6 +99,18 @@ export default function BottomNav() {
         }`}
       >
         <div className="flex items-center justify-between max-w-md mx-auto relative">
+          {/* Persistent Sliding Active Indicator Line - Uses absolute coordinate animation to prevent Framer Motion Y-scroll offset bugs */}
+          <motion.div
+            initial={false}
+            animate={{
+              left: `${activeIndex * 20 + 10}%`,
+              opacity: activeIndex === 2 ? 0 : 1,
+              scale: activeIndex === 2 ? 0.4 : 1,
+            }}
+            transition={{ type: "spring", stiffness: 400, damping: 32 }}
+            className="absolute -top-[10px] -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_1px_12px_rgba(245,158,11,0.8)] z-[60] pointer-events-none"
+          />
+
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = checkIsActive(item);
@@ -101,15 +123,6 @@ export default function BottomNav() {
                   onClick={() => playClickSound()}
                   className="flex flex-col items-center justify-center -mt-4 relative z-10 group"
                 >
-                  {/* Invisible Sliding Active Indicator Line for Center FAB continuity */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeNavTab"
-                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                      className="absolute top-4 left-1/2 -translate-x-1/2 w-7 h-1 opacity-0 pointer-events-none"
-                    />
-                  )}
-
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
                     isActive
                       ? "bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-md shadow-amber-500/30 ring-4 ring-slate-950 scale-105"
@@ -137,15 +150,6 @@ export default function BottomNav() {
                   }}
                   className="flex-1 flex flex-col items-center justify-center py-1 relative transition-colors cursor-pointer"
                 >
-                  {/* Sliding Active Indicator Line */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeNavTab"
-                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                      className="absolute -top-[11px] left-1/2 -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_1px_12px_rgba(245,158,11,0.8)] z-[60]"
-                    />
-                  )}
-
                   <Icon className={`w-5 h-5 transition-transform duration-200 ${
                     isActive
                       ? "text-amber-400 scale-110"
@@ -169,15 +173,6 @@ export default function BottomNav() {
                 onClick={() => playClickSound()}
                 className="flex-1 flex flex-col items-center justify-center py-1 relative transition-colors"
               >
-                {/* Sliding Active Indicator Line */}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeNavTab"
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                    className="absolute -top-[11px] left-1/2 -translate-x-1/2 w-7 h-1 bg-amber-400 rounded-full shadow-[0_1px_12px_rgba(245,158,11,0.8)] z-[60]"
-                  />
-                )}
-
                 <Icon className={`w-5 h-5 transition-transform duration-200 ${
                   isActive
                     ? "text-amber-400 scale-110"
