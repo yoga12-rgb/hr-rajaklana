@@ -304,7 +304,7 @@ export default function SchedulePage() {
                           })}
                         </tr>
                       ))}
-                    </React.Fragment>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
