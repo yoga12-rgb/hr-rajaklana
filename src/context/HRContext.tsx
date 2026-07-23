@@ -80,6 +80,19 @@ export interface OvertimeRequest {
   createdAt: string;
 }
 
+export interface Outlet {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  openTime: string;
+  closeTime: string;
+  isActive: boolean;
+}
+
 interface HRContextType {
   employees: Employee[];
   attendanceLogs: AttendanceRecord[];
@@ -87,6 +100,7 @@ interface HRContextType {
   schedules: WorkShift[];
   announcements: Announcement[];
   overtimeRequests: OvertimeRequest[];
+  outlets: Outlet[];
   userClockedIn: boolean;
   currentUserClockInTime: string | null;
   clockIn: (notes?: string) => void;
@@ -100,6 +114,9 @@ interface HRContextType {
   addEmployee: (emp: Omit<Employee, "id" | "nik">) => void;
   updateEmployeeShift: (employeeId: string, shiftName: WorkShift["shiftName"], timeSlot: string) => void;
   addAnnouncement: (title: string, content: string, category: Announcement["category"], isPinned?: boolean) => void;
+  addOutlet: (outlet: Omit<Outlet, "id">) => void;
+  updateOutlet: (id: string, outlet: Partial<Outlet>) => void;
+  toggleOutletStatus: (id: string) => void;
   showToast: (message: string, type?: ToastType) => void;
 }
 
@@ -117,7 +134,7 @@ const initialEmployees: Employee[] = [
   { id: "EMP-023", nik: "RK-2024-023", name: "Aul", role: "Kasir", department: "Outlet Ciputat", status: "Tetap", shift: "Off / Libur", phone: "0812-2002-0004", email: "aul@rajaklana.com", joinDate: "20 May 2024", leaveBalance: 12, avatarBg: "bg-rose-500/20 text-rose-400" },
 
   // Outlet Pahlawan (Kasir)
-  { id: "EMP-030", nik: "RK-2024-030", name: "Sulta", role: "Kasir", department: "Outlet Pahlawan", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3003-0001", email: "sulta@rajaklana.com", joinDate: "05 Jan 2024", leaveBalance: 12, avatarBg: "bg-purple-500/20 text-purple-400" },
+  { id: "EMP-030", nik: "RK-2024-030", name: "Sultan", role: "Kasir", department: "Outlet Pahlawan", status: "Tetap", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3003-0001", email: "sulta@rajaklana.com", joinDate: "05 Jan 2024", leaveBalance: 12, avatarBg: "bg-purple-500/20 text-purple-400" },
   { id: "EMP-031", nik: "RK-2024-031", name: "Ea", role: "Kasir", department: "Outlet Pahlawan", status: "Tetap", shift: "Shift Siang (12:00 - 20:00)", phone: "0812-3003-0002", email: "ea@rajaklana.com", joinDate: "12 Feb 2024", leaveBalance: 12, avatarBg: "bg-amber-500/20 text-amber-400" },
   { id: "EMP-032", nik: "RK-2024-032", name: "Endah", role: "Kasir", department: "Outlet Pahlawan", status: "Kontrak", shift: "Shift Pagi (07:00 - 15:00)", phone: "0812-3003-0003", email: "endah@rajaklana.com", joinDate: "10 Mar 2024", leaveBalance: 10, avatarBg: "bg-teal-500/20 text-teal-400" },
 
@@ -168,8 +185,15 @@ const initialAnnouncements: Announcement[] = [
 ];
 
 const initialOvertimeRequests: OvertimeRequest[] = [
-  { id: "OVT-001", employeeId: "EMP-001", employeeName: "Budi Santoso", department: "Produksi & Operasional", date: "2026-07-21", startTime: "15:00 WIB", endTime: "18:00 WIB", durationHours: 3, reason: "Persiapan stok produksi tambahan kuartal 3", status: "Approved", createdAt: "21 Jul 2026" },
-  { id: "OVT-002", employeeId: "EMP-005", employeeName: "Rian Hidayat", department: "Operasional", date: "2026-07-22", startTime: "20:00 WIB", endTime: "22:00 WIB", durationHours: 2, reason: "Supervisi stok gudang & audit peralatan", status: "Pending", createdAt: "21 Jul 2026" }
+  { id: "OVT-001", employeeId: "EMP-010", employeeName: "Karyati", department: "Outlet Jombang", date: "2026-07-21", startTime: "15:00 WIB", endTime: "18:00 WIB", durationHours: 3, reason: "Persiapan stok penutupan kasir bulanan", status: "Approved", createdAt: "21 Jul 2026" },
+  { id: "OVT-002", employeeId: "EMP-021", employeeName: "Aisah", department: "Outlet Ciputat", date: "2026-07-22", startTime: "20:00 WIB", endTime: "22:00 WIB", durationHours: 2, reason: "Audit rekonsiliasi kasir & mesin EDC", status: "Pending", createdAt: "21 Jul 2026" }
+];
+
+const initialOutlets: Outlet[] = [
+  { id: "OUT-001", name: "Outlet Jombang", code: "JBG-01", address: "Jl. Jombang Raya No. 45, Tangerang Selatan", latitude: -6.2891, longitude: 106.7214, radiusMeters: 100, openTime: "07:00", closeTime: "22:00", isActive: true },
+  { id: "OUT-002", name: "Outlet Ciputat", code: "CPT-02", address: "Jl. Ciputat Molek No. 12, Tangerang Selatan", latitude: -6.3123, longitude: 106.7456, radiusMeters: 100, openTime: "07:00", closeTime: "22:00", isActive: true },
+  { id: "OUT-003", name: "Outlet Pahlawan", code: "PHL-03", address: "Jl. Pahlawan No. 88, Tangerang Selatan", latitude: -6.3211, longitude: 106.7589, radiusMeters: 100, openTime: "07:00", closeTime: "22:00", isActive: true },
+  { id: "OUT-004", name: "Outlet Pajajaran", code: "PJJ-04", address: "Jl. Pajajaran Raya No. 19, Tangerang Selatan", latitude: -6.3345, longitude: 106.7612, radiusMeters: 100, openTime: "07:00", closeTime: "22:00", isActive: true },
 ];
 
 const HRContext = createContext<HRContextType | undefined>(undefined);
@@ -181,6 +205,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
   const [schedules, setSchedules] = useState<WorkShift[]>(initialSchedules);
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
   const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequest[]>(initialOvertimeRequests);
+  const [outlets, setOutlets] = useState<Outlet[]>(initialOutlets);
   const [userClockedIn, setUserClockedIn] = useState(false);
   const [currentUserClockInTime, setCurrentUserClockInTime] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
@@ -193,11 +218,30 @@ export function HRProvider({ children }: { children: ReactNode }) {
     }, 3500);
   };
 
+  const addOutlet = (newOut: Omit<Outlet, "id">) => {
+    const outlet: Outlet = {
+      ...newOut,
+      id: `OUT-${(outlets.length + 1).toString().padStart(3, "0")}`
+    };
+    setOutlets(prev => [...prev, outlet]);
+    showToast(`Outlet ${outlet.name} berhasil ditambahkan!`, "success");
+  };
+
+  const updateOutlet = (id: string, updatedFields: Partial<Outlet>) => {
+    setOutlets(prev => prev.map(o => o.id === id ? { ...o, ...updatedFields } : o));
+    showToast("Data outlet berhasil diperbarui!", "success");
+  };
+
+  const toggleOutletStatus = (id: string) => {
+    setOutlets(prev => prev.map(o => o.id === id ? { ...o, isActive: !o.isActive } : o));
+    showToast("Status operasional outlet diperbarui", "info");
+  };
+
   const clockIn = (notes?: string) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
     const isLate = now.getHours() >= 8 && now.getMinutes() > 0;
-    
+
     const newRecord: AttendanceRecord = {
       id: `ATT-${Date.now()}`,
       employeeId: "EMP-999",
@@ -219,14 +263,14 @@ export function HRProvider({ children }: { children: ReactNode }) {
   const clockOut = () => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
-    
+
     setAttendanceLogs(prev => prev.map((item, idx) => {
       if (idx === 0 && item.employeeId === "EMP-999") {
         return { ...item, timeOut: timeStr };
       }
       return item;
     }));
-    
+
     setUserClockedIn(false);
     setCurrentUserClockInTime(null);
   };
@@ -237,7 +281,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
     const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
     const start = new Date(startYear, startMonth - 1, startDay);
     const end = new Date(endYear, endMonth - 1, endDay);
-    
+
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
@@ -332,6 +376,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
         schedules,
         announcements,
         overtimeRequests,
+        outlets,
         userClockedIn,
         currentUserClockInTime,
         clockIn,
@@ -345,6 +390,9 @@ export function HRProvider({ children }: { children: ReactNode }) {
         addEmployee,
         updateEmployeeShift,
         addAnnouncement,
+        addOutlet,
+        updateOutlet,
+        toggleOutletStatus,
         showToast,
       }}
     >
