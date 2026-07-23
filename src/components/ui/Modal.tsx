@@ -105,12 +105,13 @@ export function Modal({
     };
 
     if (isOpen) {
-      // Robust iOS Safari scroll lock: position fixed hack
+      // Robust iOS Safari scroll lock: position fixed + documentElement lock
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
       document.documentElement.style.overscrollBehavior = "none";
       
       document.addEventListener("keydown", handleEscape);
@@ -120,6 +121,7 @@ export function Modal({
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
       document.documentElement.style.overscrollBehavior = "auto";
       
       if (scrollY) {
@@ -134,6 +136,7 @@ export function Modal({
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
       document.documentElement.style.overscrollBehavior = "auto";
       document.removeEventListener("keydown", handleEscape);
       
@@ -154,9 +157,15 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: "easeInOut" }}
-          onClick={onClose}
-          className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
         >
+          {/* Backdrop Overlay - Separate element with touch-none & onTouchMove preventDefault to completely freeze iOS background */}
+          <div
+            onClick={onClose}
+            onTouchMove={(e) => e.preventDefault()}
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm touch-none"
+          />
+
           <motion.div
             ref={contentRef}
             onFocus={handleFocusIn}
@@ -187,7 +196,7 @@ export function Modal({
               isInputFocused 
                 ? "pb-64 sm:pb-8 max-h-[65vh] sm:max-h-[90vh]" 
                 : "pb-12 sm:pb-8 max-h-[85vh] sm:max-h-[90vh]"
-            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative transform-gpu will-change-transform`}
+            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative z-10 transform-gpu will-change-transform`}
           >
             {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
             <div 
