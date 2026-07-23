@@ -63,27 +63,24 @@ export default function ProfilePage() {
         <StatCard
           title="Tingkat Kehadiran"
           value="98.5%"
-          subtitle="Bulan Juli 2026"
+          subtext="Bulan Juli 2026"
           icon={CheckCircle2}
           iconColor="text-emerald-400"
-          bgColor="bg-emerald-500/10"
         />
         <StatCard
           title="Jam Kerja Bulan Ini"
           value="168 Jam"
-          subtitle="Sesuai Target Shift"
+          subtext="Sesuai Target Shift"
           icon={Clock}
           iconColor="text-amber-400"
-          bgColor="bg-amber-500/10"
         />
         <div className="col-span-2 sm:col-span-1">
           <StatCard
             title="Sisa Hak Cuti"
             value="9 Hari"
-            subtitle="Dari Total 12 Hari"
+            subtext="Dari Total 12 Hari"
             icon={Calendar}
             iconColor="text-blue-400"
-            bgColor="bg-blue-500/10"
           />
         </div>
       </div>
