@@ -16,7 +16,7 @@ interface ModalProps {
   icon?: LucideIcon;
   /** Elemen formulir / konten utama di dalam modal */
   children: ReactNode;
-  /** Kelas penyesuai lebar maksimum Tailwind (default: 'max-w-sm') */
+  /** Kelas penyesuai lebar maksimum Tailwind (default: 'sm:max-w-sm') */
   maxWidth?: string;
 }
 
@@ -35,7 +35,7 @@ export function Modal({
   title,
   icon: Icon,
   children,
-  maxWidth = "max-w-sm"
+  maxWidth = "sm:max-w-sm"
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
@@ -120,6 +120,9 @@ export function Modal({
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.bottom = '0';
       document.body.style.width = '100%';
       document.body.style.overflow = "hidden";
       document.documentElement.style.overflow = "hidden";
@@ -130,6 +133,9 @@ export function Modal({
       const scrollY = document.body.style.top;
       document.body.style.position = '';
       document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.bottom = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -145,6 +151,9 @@ export function Modal({
       const scrollY = document.body.style.top;
       document.body.style.position = '';
       document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.bottom = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -157,6 +166,21 @@ export function Modal({
       }
     };
   }, [isOpen, onClose]);
+
+  // iOS Scroll Trap hack to prevent bounce scrolling from chaining to body
+  const handleTouchStart = () => {
+    if (!contentRef.current) return;
+    const el = contentRef.current;
+    
+    // If at absolute top, push down 1px
+    if (el.scrollTop === 0) {
+      el.scrollTop = 1;
+    } 
+    // If at absolute bottom, push up 1px
+    else if (el.scrollTop + el.clientHeight >= el.scrollHeight) {
+      el.scrollTop = el.scrollHeight - el.clientHeight - 1;
+    }
+  };
 
   if (!mounted) return null;
 
@@ -181,6 +205,7 @@ export function Modal({
             ref={contentRef}
             onFocus={handleFocusIn}
             onBlur={handleFocusOut}
+            onTouchStart={handleTouchStart}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -205,8 +230,8 @@ export function Modal({
             
             className={`bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl p-5 ${
               isInputFocused 
-                ? "pb-64 sm:pb-8 max-h-[65vh] sm:max-h-[90vh]" 
-                : "pb-12 sm:pb-8 max-h-[85vh] sm:max-h-[90vh]"
+                ? "pb-[max(16rem,env(safe-area-inset-bottom))] sm:pb-8 max-h-[75vh] sm:max-h-[90vh]" 
+                : "pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-8 max-h-[90vh]"
             } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative z-10 transform-gpu will-change-transform`}
           >
             {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
