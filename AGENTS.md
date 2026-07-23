@@ -62,7 +62,7 @@ src/
 │       ├── Combobox.tsx          # Universal Searchable Dropdown Select
 │       ├── DatePicker.tsx        # Universal Custom Single Date Picker
 │       ├── DateRangePicker.tsx   # Universal Custom Date Range Picker
-│       └── TimePicker.tsx        # Universal Custom Time Picker (Floating Overlay Popover, Shift Presets, & Click-outside)
+│       └── TimePicker.tsx        # Universal Custom Dual-Wheel Scroll Picker (Jam 00-23 & Menit 00-59 with Snap & Shift Presets)
 ├── context/
 │   └── HRContext.tsx     # Mock database & State Provider utama (Employees, Attendance, Leaves, Schedules, Announcements, Toast)
 └── utils/

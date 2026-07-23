@@ -23,21 +23,21 @@ interface TimePickerProps {
 }
 
 const SHIFT_PRESETS = [
-  { label: "Shift Pagi (07:00)", value: "07:00" },
-  { label: "Shift Siang (12:00)", value: "12:00" },
-  { label: "Shift Malam (15:00)", value: "15:00" },
-  { label: "Selesai Shift (23:00)", value: "23:00" },
+  { label: "Shift Pagi (07:00)", h: "07", m: "00" },
+  { label: "Shift Siang (12:00)", h: "12", m: "00" },
+  { label: "Shift Malam (15:00)", h: "15", m: "00" },
+  { label: "Selesai Shift (23:00)", h: "23", m: "00" },
 ];
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-const MINUTES = ["00", "15", "30", "45"];
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
 /**
- * Komponen Reusable Custom TimePicker (Pemilih Jam / Waktu) Berstandar Industri
+ * Komponen Reusable Custom TimePicker (Wheel Scroll Picker / Pemilih Roda Jam)
  * 
- * - Smart Alignment (`align="left" | "right"`) mencegah popover meluap keluar batas modal.
- * - Menggunakan Floating Popover Card (`absolute top-full z-50`) bebas dari ruang kosong asimetris.
- * - Dilengkapi tombol preset cepat, jam 00-23 monospace, click outside listener, & tombol Selesai.
+ * - Dual-Wheel Scroll Column (Jam 00-23 & Menit 00-59) berstandar iOS/Android Native.
+ * - Center Highlight Selection Band dengan animasi snap mulus.
+ * - Tombol Cepat Shift Presets & Smart Alignment Popover Card.
  */
 export function TimePicker({
   value,
@@ -51,6 +51,9 @@ export function TimePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [openUpwards, setOpenUpwards] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const hourItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const minuteItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Extract initial hour and minute from value string if available (e.g. "07:00" or "07:00 WIB")
   const match = value ? value.match(/(\d{2}):(\d{2})/) : null;
@@ -68,7 +71,7 @@ export function TimePicker({
     }
   }, [value]);
 
-  // Click Outside Handler
+  // Click Outside Handler & Auto-flip
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -76,25 +79,41 @@ export function TimePicker({
       }
     };
     
-    // Auto flip logic
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      // if space below is less than TimePicker height (~320px), open upwards
-      setOpenUpwards(spaceBelow < 320);
+      setOpenUpwards(spaceBelow < 340);
+
+      // Auto-scroll wheel items to center when opened
+      setTimeout(() => {
+        hourItemRefs.current[selectedHour]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        minuteItemRefs.current[selectedMinute]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
     }
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, selectedHour, selectedMinute]);
 
   const handleSelectTime = (h: string, m: string) => {
     setSelectedHour(h);
     setSelectedMinute(m);
     const formatted = includeSuffix ? `${h}:${m} WIB` : `${h}:${m}`;
     onChange(formatted);
+  };
+
+  const handleSelectHour = (h: string) => {
+    playClickSound();
+    handleSelectTime(h, selectedMinute);
+    hourItemRefs.current[h]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const handleSelectMinute = (m: string) => {
+    playClickSound();
+    handleSelectTime(selectedHour, m);
+    minuteItemRefs.current[m]?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const handleDone = () => {
@@ -121,7 +140,7 @@ export function TimePicker({
         <Clock className="w-4 h-4 text-amber-400 shrink-0 ml-2" />
       </button>
 
-      {/* Smart Alignment Floating Popover Overlay Card */}
+      {/* Smart Alignment Floating Popover Wheel Card */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -139,14 +158,16 @@ export function TimePicker({
               <div className="grid grid-cols-2 gap-1.5">
                 {SHIFT_PRESETS.map((preset) => (
                   <button
-                    key={preset.value}
+                    key={preset.label}
                     type="button"
                     onClick={() => {
                       playClickSound();
-                      handleSelectTime(preset.value, "00");
+                      handleSelectTime(preset.h, preset.m);
+                      hourItemRefs.current[preset.h]?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      minuteItemRefs.current[preset.m]?.scrollIntoView({ behavior: "smooth", block: "center" });
                     }}
                     className={`py-1.5 px-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer border text-center flex items-center justify-center leading-tight ${
-                      selectedHour === preset.value && selectedMinute === "00"
+                      selectedHour === preset.h && selectedMinute === preset.m
                         ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold shadow-sm"
                         : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                     }`}
@@ -157,53 +178,60 @@ export function TimePicker({
               </div>
             </div>
 
-            {/* Hour & Minute Picker Grid */}
-            <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-800/80">
-              {/* Hour Column */}
-              <div className="space-y-1 min-w-0">
-                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Jam (00 - 23):</span>
-                <div className="grid grid-cols-4 gap-1 max-h-36 overflow-y-auto overflow-x-hidden pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-900">
-                  {HOURS.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        handleSelectTime(h, selectedMinute);
-                      }}
-                      className={`h-7 rounded-lg text-xs font-mono font-bold flex items-center justify-center transition-all cursor-pointer ${
-                        selectedHour === h
-                          ? "bg-amber-500 text-slate-950 font-extrabold shadow-md shadow-amber-500/30 scale-105"
-                          : "bg-slate-950 text-slate-300 hover:bg-slate-800 hover:text-white"
-                      }`}
-                    >
-                      {h}
-                    </button>
-                  ))}
-                </div>
+            {/* iOS/Android Style Dual Wheel Scroll Picker */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <div className="flex items-center justify-around mb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                <span>Jam</span>
+                <span>Menit</span>
               </div>
 
-              {/* Minute Column */}
-              <div className="space-y-1 min-w-0">
-                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Menit:</span>
-                <div className="grid grid-cols-2 gap-1">
-                  {MINUTES.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        handleSelectTime(selectedHour, m);
-                      }}
-                      className={`h-7 rounded-lg text-xs font-mono font-bold flex items-center justify-center transition-all cursor-pointer ${
-                        selectedMinute === m
-                          ? "bg-amber-500 text-slate-950 font-extrabold shadow-md shadow-amber-500/30 scale-105"
-                          : "bg-slate-950 text-slate-300 hover:bg-slate-800 hover:text-white"
-                      }`}
-                    >
-                      :{m}
-                    </button>
-                  ))}
+              {/* Wheel Container Box */}
+              <div className="relative h-[150px] bg-slate-950 rounded-xl border border-slate-800/80 overflow-hidden flex items-center">
+                {/* Active Selection Center Band Indicator */}
+                <div className="absolute top-[55px] left-2 right-2 h-[40px] bg-amber-500/15 border-y border-amber-500/40 rounded-lg pointer-events-none z-10" />
+
+                {/* Hours Wheel Column */}
+                <div className="flex-1 h-full overflow-y-auto snap-y snap-mandatory no-scrollbar py-[55px] text-center z-20">
+                  {HOURS.map((h) => {
+                    const isSelected = selectedHour === h;
+                    return (
+                      <div
+                        key={h}
+                        ref={(el) => { hourItemRefs.current[h] = el; }}
+                        onClick={() => handleSelectHour(h)}
+                        className={`h-[40px] snap-center flex items-center justify-center cursor-pointer font-mono transition-all duration-150 select-none ${
+                          isSelected
+                            ? "text-amber-400 font-extrabold text-base scale-110"
+                            : "text-slate-500 font-medium text-xs hover:text-slate-300"
+                        }`}
+                      >
+                        {h}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <span className="text-amber-400 font-bold font-mono text-sm z-20 pb-0.5">:</span>
+
+                {/* Minutes Wheel Column */}
+                <div className="flex-1 h-full overflow-y-auto snap-y snap-mandatory no-scrollbar py-[55px] text-center z-20">
+                  {MINUTES.map((m) => {
+                    const isSelected = selectedMinute === m;
+                    return (
+                      <div
+                        key={m}
+                        ref={(el) => { minuteItemRefs.current[m] = el; }}
+                        onClick={() => handleSelectMinute(m)}
+                        className={`h-[40px] snap-center flex items-center justify-center cursor-pointer font-mono transition-all duration-150 select-none ${
+                          isSelected
+                            ? "text-amber-400 font-extrabold text-base scale-110"
+                            : "text-slate-500 font-medium text-xs hover:text-slate-300"
+                        }`}
+                      >
+                        {m}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
