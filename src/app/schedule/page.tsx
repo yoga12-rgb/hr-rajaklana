@@ -232,16 +232,16 @@ export default function SchedulePage() {
               </span>
             </div>
 
-            {/* Matrix Table Scroll Container */}
-            <div className="overflow-x-auto no-scrollbar rounded-xl border border-slate-800 bg-slate-950">
-              <table className="w-full text-left border-collapse min-w-[440px] sm:min-w-[600px]">
-                <thead>
-                  <tr className="bg-slate-900/90 text-[10px] font-bold text-slate-400 border-b border-slate-800">
-                    <th className="p-2 sm:p-3 sticky left-0 bg-slate-900 z-20 w-[110px] min-w-[110px] sm:w-[150px] sm:min-w-[150px] border-r border-slate-800 shadow-md">
+            {/* Matrix Table Scroll Container with 2D Dual-Axis Sticky Header */}
+            <div className="overflow-auto max-h-[55vh] sm:max-h-[60vh] no-scrollbar rounded-xl border border-slate-800 bg-slate-950">
+              <table className="w-full text-left border-collapse min-w-[440px] sm:min-w-[600px] relative">
+                <thead className="sticky top-0 z-30 shadow-md">
+                  <tr className="bg-slate-900 text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                    <th className="p-2 sm:p-3 sticky top-0 left-0 bg-slate-900 z-40 w-[110px] min-w-[110px] sm:w-[150px] sm:min-w-[150px] border-r border-b border-slate-800 shadow-md">
                       Staf & Dept
                     </th>
                     {daysOfWeek.map((d) => (
-                      <th key={d.fullDate} className={`p-1.5 text-center min-w-[46px] sm:min-w-[65px] ${d.isToday ? "bg-amber-500/10 text-amber-400 font-extrabold" : ""}`}>
+                      <th key={d.fullDate} className={`p-1.5 text-center min-w-[46px] sm:min-w-[65px] sticky top-0 bg-slate-900 z-30 border-b border-slate-800 ${d.isToday ? "bg-amber-500/15 text-amber-400 font-extrabold" : ""}`}>
                         <div className="text-[9px] uppercase text-slate-400">{d.dayName}</div>
                         <div className="text-[11px] font-bold mt-0.5">{d.dateNum}</div>
                       </th>
