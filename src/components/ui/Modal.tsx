@@ -151,19 +151,23 @@ export function Modal({
       const isDown = clientY < initialClientY; // Swiping up (scrolling down)
       
       // Find the closest scrollable parent
-      let target = e.target as HTMLElement | null;
+      let target = e.target as Node | null;
+      if (target && target.nodeType === 3) {
+        target = target.parentNode; // Fix text node target issue on Safari
+      }
+      let elementTarget = target as HTMLElement | null;
       let scrollable: HTMLElement | null = null;
       
-      while (target && target !== document.body && target !== document.documentElement) {
-        const style = window.getComputedStyle(target);
+      while (elementTarget && elementTarget !== document.body && elementTarget !== document.documentElement) {
+        const style = window.getComputedStyle(elementTarget);
         if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
           // Check if it actually has overflowing content
-          if (target.scrollHeight > target.clientHeight) {
-            scrollable = target;
+          if (elementTarget.scrollHeight > elementTarget.clientHeight) {
+            scrollable = elementTarget;
             break;
           }
         }
-        target = target.parentElement;
+        elementTarget = elementTarget.parentElement;
       }
 
       // 1. If touching outside any scrollable container, block completely!
@@ -173,12 +177,13 @@ export function Modal({
       }
 
       // 2. If scrollable container is at the boundary, block scroll chaining!
-      if (isUp && scrollable.scrollTop <= 0) {
+      // Using a 2px tolerance because iOS Safari often returns fractional sub-pixel scrollTop values (e.g. 0.5)
+      if (isUp && scrollable.scrollTop <= 2) {
         if (e.cancelable) e.preventDefault();
         return;
       }
       
-      if (isDown && Math.ceil(scrollable.scrollTop + scrollable.clientHeight) >= scrollable.scrollHeight) {
+      if (isDown && Math.ceil(scrollable.scrollTop + scrollable.clientHeight) >= scrollable.scrollHeight - 2) {
         if (e.cancelable) e.preventDefault();
         return;
       }
@@ -246,7 +251,7 @@ export function Modal({
               isInputFocused 
                 ? "pb-[max(16rem,env(safe-area-inset-bottom))] sm:pb-8 max-h-[75vh] sm:max-h-[90vh]" 
                 : "pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-8 max-h-[90vh]"
-            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y relative z-10 transform-gpu will-change-transform`}
+            } w-full ${maxWidth} space-y-4 shadow-2xl overflow-y-auto overflow-x-hidden overscroll-contain relative z-10 transform-gpu will-change-transform`}
           >
             {/* Drag Handle Area (Hanya area ini yang bisa ditarik/swipe-to-close) */}
             <div 
