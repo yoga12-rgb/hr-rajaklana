@@ -42,14 +42,25 @@ export function Modal({
   const dragControls = useDragControls();
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Helper to safely scroll element into view INSIDE the modal scroll container only (prevents breaking window scroll lock on iOS Safari)
+  const scrollElementInsideModal = (target: HTMLElement) => {
+    if (!contentRef.current || !target) return;
+    const container = contentRef.current;
+    const targetRect = target.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
+    const targetScrollTop = relativeTop - container.clientHeight / 2 + targetRect.height / 2;
+    container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+  };
+
   // Auto-scroll input into view & adjust bottom sheet height when virtual keyboard pops up
   const handleFocusIn = (e: React.FocusEvent) => {
     const target = e.target as HTMLElement;
-    const isInteractive = target.closest("input, textarea, select, button, [role='combobox'], [role='button']");
+    const isInteractive = target.closest("input, textarea, select, button, [role='combobox'], [role='button']") as HTMLElement;
     if (isInteractive) {
       setIsInputFocused(true);
       setTimeout(() => {
-        isInteractive.scrollIntoView({ behavior: "smooth", block: "center" });
+        scrollElementInsideModal(isInteractive);
       }, 150);
     }
   };
@@ -75,7 +86,7 @@ export function Modal({
           const activeEl = document.activeElement as HTMLElement;
           if (activeEl && contentRef.current?.contains(activeEl)) {
             setTimeout(() => {
-              activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              scrollElementInsideModal(activeEl);
             }, 100);
           }
         } else {

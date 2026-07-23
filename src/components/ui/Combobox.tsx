@@ -106,7 +106,7 @@ export function Combobox({
     };
     document.addEventListener("mousedown", handleClickOutside);
     
-    // Auto flip & scroll positioning logic
+    // Auto flip logic
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -114,11 +114,6 @@ export function Combobox({
       
       // Only flip upwards if space below is severely restricted (< 160px) AND there's plenty of space above (> 240px)
       setOpenUpwards(spaceBelow < 160 && spaceAbove > 240);
-
-      // Auto-scroll combobox container into view so dropdown is never clipped
-      setTimeout(() => {
-        containerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
     }
     
     return () => document.removeEventListener("mousedown", handleClickOutside);
