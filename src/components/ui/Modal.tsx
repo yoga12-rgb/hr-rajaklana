@@ -109,72 +109,36 @@ export function Modal({
     setMounted(true);
   }, []);
 
-  // Body Scroll Lock & Escape Key Listener (Industry Standards)
+  // Body Scroll Lock & Escape Key Listener
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
 
     if (isOpen) {
-      // Robust iOS Safari scroll lock: position fixed + documentElement lock
-      const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.bottom = '0';
-      document.body.style.width = '100%';
       document.body.style.overflow = "hidden";
       document.documentElement.style.overflow = "hidden";
-      document.documentElement.style.overscrollBehavior = "none";
-      
       document.addEventListener("keydown", handleEscape);
     } else {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.bottom = '';
-      document.body.style.width = '';
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      document.documentElement.style.overscrollBehavior = "auto";
-      
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-      }
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     }
 
     return () => {
-      // Cleanup
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.bottom = '';
-      document.body.style.width = '';
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      document.documentElement.style.overscrollBehavior = "auto";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
       document.removeEventListener("keydown", handleEscape);
-      
-      // Only restore scroll if we were actually locked
-      if (scrollY && isOpen) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-      }
     };
   }, [isOpen, onClose]);
 
-  // Foolproof iOS Scroll Lock (Prevent Scroll Chaining & Bounce)
+  // Ultimate iOS Scroll Trap (DOM-traversal for nested scroll containers like Combobox)
   useEffect(() => {
     if (!isOpen) return;
     
     let initialClientY = -1;
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.targetTouches.length === 1) {
+      if (e.targetTouches.length > 0) {
         initialClientY = e.targetTouches[0].clientY;
       }
     };
@@ -183,36 +147,53 @@ export function Modal({
       if (e.targetTouches.length !== 1) return;
       
       const clientY = e.targetTouches[0].clientY;
-      const el = contentRef.current;
-      
-      // Prevent scrolling if touch is completely outside the scrollable container
-      if (!el || !el.contains(e.target as Node)) {
-        if (e.cancelable) e.preventDefault();
-        return;
-      }
-
-      // Prevent scroll chaining when interacting inside the modal
       const isUp = clientY > initialClientY; // Swiping down (scrolling up)
       const isDown = clientY < initialClientY; // Swiping up (scrolling down)
       
-      if (isUp && el.scrollTop <= 0) {
+      // Find the closest scrollable parent
+      let target = e.target as HTMLElement | null;
+      let scrollable: HTMLElement | null = null;
+      
+      while (target && target !== document.body && target !== document.documentElement) {
+        const style = window.getComputedStyle(target);
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+          // Check if it actually has overflowing content
+          if (target.scrollHeight > target.clientHeight) {
+            scrollable = target;
+            break;
+          }
+        }
+        target = target.parentElement;
+      }
+
+      // 1. If touching outside any scrollable container, block completely!
+      if (!scrollable) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+
+      // 2. If scrollable container is at the boundary, block scroll chaining!
+      if (isUp && scrollable.scrollTop <= 0) {
         if (e.cancelable) e.preventDefault();
         return;
       }
       
-      if (isDown && el.scrollTop + el.clientHeight >= el.scrollHeight) {
+      if (isDown && Math.ceil(scrollable.scrollTop + scrollable.clientHeight) >= scrollable.scrollHeight) {
         if (e.cancelable) e.preventDefault();
         return;
       }
+      
+      // 3. Otherwise, let native scroll work on this specific container
+      e.stopPropagation();
     };
 
-    // Use passive: false to allow preventDefault()
-    document.addEventListener("touchstart", handleTouchStart, { passive: false });
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    // capture: true ensures we intercept before Framer Motion or React portals can stopPropagation
+    document.addEventListener("touchstart", handleTouchStart, { passive: false, capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
 
     return () => {
-      document.removeEventListener("touchstart", handleTouchStart);
-      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove, { capture: true });
     };
   }, [isOpen]);
 
