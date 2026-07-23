@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, Fragment } from "react";
 import { useHR, WorkShift } from "@/context/HRContext";
 import { 
   CalendarDays, 
@@ -256,7 +256,7 @@ export default function SchedulePage() {
                       return acc;
                     }, {} as Record<string, typeof employees>)
                   ).map(([deptName, deptEmps]) => (
-                    <React.Fragment key={deptName}>
+                    <Fragment key={deptName}>
                       {/* Department Row Header inside Table */}
                       <tr className="bg-slate-900/60">
                         <td colSpan={8} className="px-3 py-2 text-[10px] font-extrabold text-amber-400 uppercase tracking-wider bg-slate-900/80 border-y border-slate-800">
