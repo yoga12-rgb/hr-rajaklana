@@ -1,0 +1,2 @@
+-- Data organisasi nyata diimpor melalui alur XLSX setelah project disiapkan.
+-- Master data dasar dibuat oleh migration agar reset lokal tetap deterministik.

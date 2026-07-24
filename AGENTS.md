@@ -15,6 +15,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
 - **Styling**: Tailwind CSS v4 (Mobile-first, Premium Dark Mode UI)
 - **State Management**: React Context API (`HRProvider` & `useHR()` di `@/context/HRContext.tsx`) dengan persistensi versi di `localStorage` untuk data prototype
+- **Backend Foundation**: Supabase PostgreSQL, Auth SSR, private Storage, RLS, dan migration versioned di `supabase/`
 - **Animation**: Framer Motion (`framer-motion`) untuk transisi halaman & modal pop-up
 - **Analytics & Data Vis**: Recharts (`recharts`) untuk grafik batang & tren line
 - **Codebase Indexing**: CodeGraph (direktori `.codegraph/` di root proyek) untuk navigasi simbol & call graph cepat
@@ -66,9 +67,28 @@ src/
 │       └── TimePicker.tsx        # Universal Custom Dual-Wheel Scroll Picker (Jam 00-23 & Menit 00-59 with Snap & Shift Presets)
 ├── context/
 │   └── HRContext.tsx     # Mock database & State Provider utama (Employees, Attendance, Leaves, Schedules, Announcements, Toast)
+├── lib/supabase/
+│   ├── client.ts         # Supabase client untuk Client Components
+│   ├── server.ts         # Supabase client berbasis cookies untuk server
+│   └── proxy.ts          # Refresh sesi Supabase melalui Next.js Proxy
+├── proxy.ts              # Entry point Next.js 16 Proxy; tetap pasif tanpa env Supabase
+├── types/
+│   └── database.ts       # Tipe database; regenerasi melalui npm run supabase:types
 └── utils/
     └── clickSound.ts     # Audio feedback + Haptic Feedback (navigator.vibrate) utility
 ```
+
+---
+
+## 🗄️ Fondasi Supabase
+
+- Migration, konfigurasi local stack, RLS, dan private bucket disimpan di `supabase/` serta wajib masuk version control.
+- Salin `.env.example` menjadi `.env.local`; jangan pernah commit publishable key produksi, secret key, service role key, atau password database.
+- Gunakan `createClient()` dari `@/lib/supabase/client` hanya pada Client Components dan dari `@/lib/supabase/server` pada Server Components, Server Actions, atau Route Handlers.
+- Jangan memakai `getSession()` sebagai dasar otorisasi server. Gunakan claims terverifikasi dan tetap jadikan RLS sebagai garis pertahanan utama.
+- `src/proxy.ts` hanya menyegarkan cookie sesi. Otorisasi tetap diperiksa dekat sumber data melalui RLS/DAL.
+- Selama migrasi bertahap, `HRContext` tetap menjadi sumber data prototype. Jangan menampilkan mutasi Supabase sebagai berhasil bila environment belum terkonfigurasi.
+- Setelah schema berubah, jalankan `npm run supabase:reset`, `npm run supabase:lint`, `npm run supabase:test`, dan `npm run supabase:types`.
 
 ---
 
