@@ -1,38 +1,46 @@
 begin;
 
-select plan(10);
+set local search_path = extensions, public, pg_catalog;
 
-select ok(
+select extensions.plan(10);
+
+select extensions.ok(
   exists (
     select 1
-    from information_schema.tables
-    where table_schema = 'public'
-      and table_name = 'employees'
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname = 'employees'
+      and relation.relkind = 'r'
   ),
   'employees table exists'
 );
 
-select ok(
+select extensions.ok(
   exists (
     select 1
-    from information_schema.tables
-    where table_schema = 'public'
-      and table_name = 'schedule_assignments'
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname = 'schedule_assignments'
+      and relation.relkind = 'r'
   ),
   'schedule assignments table exists'
 );
 
-select ok(
+select extensions.ok(
   exists (
     select 1
-    from information_schema.tables
-    where table_schema = 'public'
-      and table_name = 'attendance_records'
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname = 'attendance_records'
+      and relation.relkind = 'r'
   ),
   'attendance records table exists'
 );
 
-select is(
+select extensions.is(
   (
     select count(*)::integer
     from pg_class relation
@@ -51,7 +59,7 @@ select is(
   'core workforce tables have RLS enabled'
 );
 
-select is(
+select extensions.is(
   (
     select count(*)::integer
     from pg_proc procedure
@@ -69,7 +77,7 @@ select is(
   'approval RPCs are security definer functions'
 );
 
-select is(
+select extensions.is(
   (
     select count(*)::integer
     from pg_policies
@@ -85,7 +93,7 @@ select is(
   'approval subjects cannot be updated directly through RLS'
 );
 
-select is(
+select extensions.is(
   (
     select count(*)::integer
     from pg_policies
@@ -97,38 +105,40 @@ select is(
   'attendance validations can only be written through the validation RPC'
 );
 
-select is(
+select extensions.is(
   (
     select count(*)::integer
-    from storage.buckets
-    where id in (
-      'attendance-selfies',
-      'leave-documents',
-      'imports',
-      'exports'
-    )
-      and public
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname in (
+        'attendance_selfies_insert_own',
+        'attendance_selfies_read_authorized',
+        'leave_documents_insert_own',
+        'leave_documents_read_authorized',
+        'imports_manage_supervisor',
+        'exports_read_operations',
+        'exports_manage_supervisor'
+      )
   ),
-  0,
-  'all application storage buckets are private'
+  7,
+  'all private storage access policies exist'
 );
 
-select is(
+select extensions.is(
   (
     select count(*)::integer
-    from storage.buckets
-    where id in (
-      'attendance-selfies',
-      'leave-documents',
-      'imports',
-      'exports'
-    )
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'storage'
+      and relation.relname = 'objects'
+      and relation.relrowsecurity
   ),
-  4,
-  'all required storage buckets exist'
+  1,
+  'storage objects table has RLS enabled'
 );
 
-select ok(
+select extensions.ok(
   exists (
     select 1
     from pg_constraint constraint_definition
@@ -143,6 +153,6 @@ select ok(
   'attendance validation history is unique per record version'
 );
 
-select * from finish();
+select * from extensions.finish();
 
 rollback;

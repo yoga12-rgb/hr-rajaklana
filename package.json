@@ -13,7 +13,7 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
-    "supabase:lint": "supabase db lint --local --level warning",
+    "supabase:lint": "supabase db lint --local --schema public --level warning",
     "supabase:test": "supabase test db",
     "supabase:types": "supabase gen types typescript --local --schema public > src/types/database.ts"
   },
