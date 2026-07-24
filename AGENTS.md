@@ -10,6 +10,28 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 
 ---
 
+## Status Saat Ini & Handoff Wajib
+
+> [!IMPORTANT]
+> Baca `IMPLEMENTATION_ROADMAP.md`, `PRD.md`, `ERD.md`, dan
+> `supabase/README.md` sebelum mengerjakan integrasi backend.
+
+- Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
+- Empat migration fondasi sudah diterapkan dan cocok antara lokal/remote.
+- Hosted lint schema `public` bersih dan pgTAP lulus 10/10 pada 24 Juli 2026.
+- Client browser/server dan proxy refresh sesi sudah tersedia.
+- **UI belum memakai data Supabase**: seluruh modul bisnis masih memakai
+  `HRContext` dan `localStorage`.
+- Login, route protection, supervisor pertama, data nyata, upload selfie,
+  worker retensi, dan roster otomatis belum diimplementasikan.
+- Milestone aktif adalah **M1 — Environment, Authentication, dan Supervisor
+  Pertama** pada `IMPLEMENTATION_ROADMAP.md`.
+- Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
+  selesai. Setelah menyelesaikan milestone, perbarui status roadmap dan
+  dokumentasi ini.
+
+---
+
 ## 🚀 Arsitektur & Tech Stack
 
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
@@ -78,6 +100,9 @@ src/
     └── clickSound.ts     # Audio feedback + Haptic Feedback (navigator.vibrate) utility
 ```
 
+Roadmap teknis, milestone, quality gate, dan handoff agent berada di
+`IMPLEMENTATION_ROADMAP.md` pada root repository.
+
 ---
 
 ## 🗄️ Fondasi Supabase
@@ -116,7 +141,11 @@ src/
    * Gunakan atau tambahkan komponen terpisah di `src/components/ui/` jika membuat jenis grafik baru.
 
 4. **State Data**:
-   * Selalu gunakan `useHR()` dari `@/context/HRContext` untuk membaca atau memanipulasi data karyawan, absensi, atau cuti.
+   * Modul prototype yang belum dimigrasikan wajib tetap memakai `useHR()` dari `@/context/HRContext`.
+   * Modul yang sudah dimigrasikan ke Supabase wajib memakai DAL/query hooks
+     bertipe dan tidak boleh melakukan dual-write ke `HRContext`.
+   * Ikuti urutan migrasi dan mode sumber data eksplisit pada
+     `IMPLEMENTATION_ROADMAP.md`.
 
 5. **Pengecualian Fitur (Fitur yang Dilarang)**:
    * **DILARANG EKSPLISIT** menyarankan, membuat, atau menambahkan fitur **Slip Gaji / Payroll / Ringkasan Gaji** dalam bentuk apa pun. Pengguna telah mengonfirmasi bahwa aplikasi ini difokuskan pada HR (Karyawan, Presensi, Cuti, Shift, Laporan) tanpa pengelolaan gaji.
@@ -142,9 +171,12 @@ src/
 
 ---
 
-## 🔮 Roadmap & Panduan Integrasi Database (Masa Depan)
+## 🔮 Panduan Integrasi Data Nyata
 
-Ketika proyek ini mulai terhubung dengan **Database / Backend sungguhan** (seperti Supabase, PostgreSQL, atau Firebase), AI Agent **WAJIB** mematuhi rencana arsitektur *Instant UX / Zero-Latency* berikut:
+Fondasi Supabase sudah tersedia, tetapi UI masih menggunakan data prototype.
+Urutan implementasi wajib mengikuti `IMPLEMENTATION_ROADMAP.md`. Saat setiap
+modul dipindahkan ke data nyata, AI Agent **WAJIB** mematuhi rencana arsitektur
+*Instant UX / Zero-Latency* berikut:
 
 1. **Optimistic UI Updates**:
    * Aksi pengguna (seperti Absen Masuk, Tambah Karyawan, Setujui Cuti, Tukar Shift) harus **langsung mengubah UI secara instan (0ms)** di client, sementara proses mutasi API dikirim di latar belakang secara asinkron.

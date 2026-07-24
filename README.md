@@ -10,6 +10,27 @@ Sistem Informasi HRD & Operasional Karyawan modern yang dirancang dengan pendeka
 
 ---
 
+## Status Pengembangan
+
+Fondasi Supabase PostgreSQL, Auth SSR, private Storage, RLS, migration, dan
+pengujian database sudah tersedia. Antarmuka saat ini masih berjalan sebagai
+prototype menggunakan `HRContext` dan `localStorage`; login dan data multi-user
+nyata belum diaktifkan.
+
+Dokumen pengembangan:
+
+- [Product Requirements](PRD.md)
+- [Entity Relationship Diagram](ERD.md)
+- [Implementation Roadmap & Agent Handoff](IMPLEMENTATION_ROADMAP.md)
+- [Panduan Supabase](supabase/README.md)
+- [Aturan Agent](AGENTS.md)
+
+Milestone aktif berikutnya adalah autentikasi, proteksi route, dan bootstrap
+supervisor pertama. Detail acceptance criteria dan quality gate berada pada
+`IMPLEMENTATION_ROADMAP.md`.
+
+---
+
 ## ✨ Fitur-Fitur Utama
 
 - 📱 **Mobile-First Bottom Navigation**: 5 menu ergonomis yang ramah jempol (*Thumb-Driven UX*) dengan *Center Floating Action Button (FAB)* presensi dan *More Menu Bottom Sheet*.
@@ -41,6 +62,7 @@ Aksen visual menggunakan tema **Dark Mode Premium** dengan skema warna yang eleg
 - **Framework**: [Next.js 16 (App Router)](https://nextjs.org/)
 - **UI & Logic**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Backend Foundation**: [Supabase](https://supabase.com/) PostgreSQL, Auth SSR, private Storage, dan RLS
 - **Animasi & Transisi**: [Framer Motion](https://www.framer.com/motion/)
 - **Ikon**: [Lucide React](https://lucide.dev/)
 - **Visualisasi Data**: [Recharts](https://recharts.org/)
