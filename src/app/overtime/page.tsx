@@ -26,6 +26,7 @@ export default function OvertimePage() {
     submitOvertimeRequest, 
     approveOvertimeRequest, 
     rejectOvertimeRequest,
+    preferences,
     showToast 
   } = useHR();
 
@@ -33,7 +34,7 @@ export default function OvertimePage() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Form State
-  const [selectedEmpId, setSelectedEmpId] = useState(employees[0]?.id || "EMP-001");
+  const [selectedEmpId, setSelectedEmpId] = useState(employees[0]?.id ?? "");
   const [ovtDate, setOvtDate] = useState("2026-07-22");
   const [startTime, setStartTime] = useState("17:00");
   const [endTime, setEndTime] = useState("20:00");
@@ -90,12 +91,23 @@ export default function OvertimePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedEmpId) {
+      showToast("Pilih karyawan yang mengajukan lembur.", "warning");
+      return;
+    }
     if (!reason.trim()) {
       showToast("Harap isi alasan pekerjaan lembur", "warning");
       return;
     }
 
-    const durationNum = parseFloat(duration) || 2;
+    const durationNum = Number.parseFloat(duration);
+    if (!Number.isFinite(durationNum) || durationNum < preferences.minOvertime) {
+      showToast(
+        `Durasi lembur minimum adalah ${preferences.minOvertime} jam sesuai kebijakan demo.`,
+        "warning"
+      );
+      return;
+    }
     submitOvertimeRequest(
       selectedEmpId,
       ovtDate,
@@ -138,7 +150,7 @@ export default function OvertimePage() {
           title="Total Lembur Disetujui"
           value={`${totalApprovedHours} Jam`}
           icon={Timer}
-          subtext={<span className="text-amber-400 font-medium">+8 jam minggu ini</span>}
+          subtext={<span className="text-amber-400 font-medium">{approvedCount} pengajuan disetujui</span>}
         />
         <StatCard
           title="Pending Approval"
@@ -174,7 +186,7 @@ export default function OvertimePage() {
       <div className="space-y-3">
         {/* Mobile Swipe Hint */}
         {filteredRequests.some((r) => r.status === "Pending") && (
-          <p className="text-[10px] text-slate-500 italic text-center sm:hidden">
+          <p className="text-[10px] text-slate-400 italic text-center sm:hidden">
             💡 Geser kartu ke kanan untuk menyetujui, ke kiri untuk menolak
           </p>
         )}
@@ -325,7 +337,7 @@ export default function OvertimePage() {
             <input
               type="number"
               inputMode="decimal"
-              min="0.5"
+              min={preferences.minOvertime}
               step="0.1"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
@@ -333,6 +345,9 @@ export default function OvertimePage() {
               placeholder="Contoh: 3"
               required
             />
+            <p className="text-[10px] text-slate-400">
+              Minimum pengajuan: {preferences.minOvertime} jam.
+            </p>
           </div>
 
           {/* Alasan / Task Lembur */}

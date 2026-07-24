@@ -222,7 +222,7 @@ export default function BottomNav() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">128 Staf</span>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition-colors" />
               </div>
             </Link>
 
@@ -246,7 +246,7 @@ export default function BottomNav() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Baru</span>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition-colors" />
               </div>
             </Link>
 
@@ -270,7 +270,7 @@ export default function BottomNav() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">Grafik</span>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition-colors" />
               </div>
             </Link>
 
@@ -289,12 +289,12 @@ export default function BottomNav() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-200 group-hover:text-amber-400 transition-colors">Pengaturan & Profil Akun</h4>
-                  <p className="text-[11px] text-slate-400">Manajemen outlet GPS, jam kerja, & profil HR</p>
+                  <p className="text-[11px] text-slate-400">Manajemen lokasi GPS, jam kerja, & profil HR</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">Setting</span>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition-colors" />
               </div>
             </Link>
           </div>

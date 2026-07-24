@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
@@ -139,7 +139,7 @@ export function DateRangePicker({
       >
         <div className="flex items-center gap-1.5 truncate">
           <span>{formatShort(startDate) || "Tgl Mulai"}</span>
-          <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
+          <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
           <span>{formatShort(endDate) || "Tgl Selesai"}</span>
           {startDate && endDate && (
             <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
@@ -220,7 +220,7 @@ export function DateRangePicker({
               {/* Day Names Header */}
               <div className="grid grid-cols-7 text-center gap-1">
                 {DAY_NAMES.map((day) => (
-                  <span key={day} className="text-[10px] font-semibold text-slate-500">
+                  <span key={day} className="text-[10px] font-semibold text-slate-400">
                     {day}
                   </span>
                 ))}

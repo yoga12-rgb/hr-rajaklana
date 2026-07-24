@@ -8,20 +8,24 @@ import {
   QrCode, 
   CheckCircle2, 
   Camera, 
-  Calendar, 
   AlertCircle, 
-  ChevronRight,
   ShieldCheck,
   RotateCcw,
-  RefreshCw,
   Check,
   Video
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Modal } from "@/components/ui/Modal";
 
 export default function AttendancePage() {
-  const { userClockedIn, currentUserClockInTime, clockIn, clockOut, attendanceLogs, showToast } = useHR();
+  const {
+    userClockedIn,
+    currentUserClockInTime,
+    clockIn,
+    clockOut,
+    attendanceLogs,
+    preferences,
+    showToast,
+  } = useHR();
   const [timeStr, setTimeStr] = useState<string>("");
   const [dateStr, setDateStr] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
@@ -156,8 +160,13 @@ export default function AttendancePage() {
       showToast("Gagal Absen: Anda berada di luar radius presensi kantor! (120m > Radius Maksimal 50m)", "warning");
       return;
     }
-    clockIn(notes || `Check-in GPS & Selfie (Jarak: ${simulatedDistance}m)`);
-    showToast("Absen Masuk Berhasil! Verifikasi Wajah & GPS Selesai.", "success");
+    if (preferences.requireSelfie && !capturedImage) {
+      showToast("Ambil foto selfie sebelum menyelesaikan presensi.", "warning");
+      return;
+    }
+    const verification = capturedImage ? "GPS & selfie" : "GPS";
+    clockIn(notes || `Check-in ${verification} (Jarak: ${simulatedDistance}m)`);
+    showToast(`Absen masuk berhasil. Data ${verification} tersimpan secara lokal.`, "success");
     setNotes("");
     closeClockInModal();
   };
@@ -172,7 +181,7 @@ export default function AttendancePage() {
         </div>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#f59e0b]" />
-          <ShieldCheck className="w-3.5 h-3.5" /> GPS Active
+          <ShieldCheck className="w-3.5 h-3.5" /> GPS Demo
         </span>
       </div>
 
@@ -261,7 +270,7 @@ export default function AttendancePage() {
 
               <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-900 text-slate-400">
                 <span className="font-mono text-slate-300">Masuk: {log.timeIn} {log.timeOut ? `| Keluar: ${log.timeOut}` : ""}</span>
-                <span className="text-[10px] text-slate-500">{log.date}</span>
+                <span className="text-[10px] text-slate-400">{log.date}</span>
               </div>
 
               {log.notes && (
@@ -316,10 +325,15 @@ export default function AttendancePage() {
           {/* Live Camera / Selfie Capture Box */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold text-slate-300">Foto Selfie Kehadiran Staf:</label>
+              <label className="text-[11px] font-semibold text-slate-300">
+                Foto Selfie Kehadiran Staf
+                <span className="ml-1 text-amber-400">
+                  ({preferences.requireSelfie ? "Wajib" : "Opsional"})
+                </span>
+              </label>
               {capturedImage && (
                 <span className="text-amber-400 text-[10px] flex items-center gap-1 font-bold">
-                  <Check className="w-3 h-3" /> Foto Terverifikasi
+                  <Check className="w-3 h-3" /> Foto Tersimpan
                 </span>
               )}
             </div>
@@ -331,7 +345,7 @@ export default function AttendancePage() {
               {/* Case 1: Captured Image Preview */}
               {capturedImage ? (
                 <div className="relative w-full h-full">
-                  {/* eslint-disable-next-img-element */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Foto selfie adalah data URL sementara dari canvas, bukan aset jaringan. */}
                   <img
                     src={capturedImage}
                     alt="Selfie Check-in"
@@ -405,8 +419,8 @@ export default function AttendancePage() {
               simulatedDistance <= 50 ? "text-amber-400" : "text-rose-400"
             }`}>
               {simulatedDistance <= 50
-                ? "✓ Terverifikasi di Area Rajaklana HQ (<= 50M)"
-                : "✕ GAGAL: Posisi melebihi batas radius 50 Meter"}
+                ? "✓ Simulasi berada di Area Rajaklana HQ (<= 50M)"
+                : "✕ SIMULASI DITOLAK: Posisi melebihi batas radius 50 Meter"}
             </p>
           </div>
 
@@ -417,7 +431,7 @@ export default function AttendancePage() {
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Contoh: Kerja shift pagi di area kitchen"
+              placeholder="Contoh: Bertugas pada shift pagi di area operasional"
               className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
             />
           </div>

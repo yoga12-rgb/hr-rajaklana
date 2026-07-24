@@ -14,10 +14,11 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
 - **Styling**: Tailwind CSS v4 (Mobile-first, Premium Dark Mode UI)
-- **State Management**: React Context API (`HRProvider` & `useHR()` di `@/context/HRContext.tsx`)
+- **State Management**: React Context API (`HRProvider` & `useHR()` di `@/context/HRContext.tsx`) dengan persistensi versi di `localStorage` untuk data prototype
 - **Animation**: Framer Motion (`framer-motion`) untuk transisi halaman & modal pop-up
 - **Analytics & Data Vis**: Recharts (`recharts`) untuk grafik batang & tren line
 - **Codebase Indexing**: CodeGraph (direktori `.codegraph/` di root proyek) untuk navigasi simbol & call graph cepat
+- **Quality Gate**: ESLint, TypeScript, production build, Playwright E2E, dan axe accessibility dijalankan lewat GitHub Actions
 
 ---
 
@@ -68,6 +69,16 @@ src/
 └── utils/
     └── clickSound.ts     # Audio feedback + Haptic Feedback (navigator.vibrate) utility
 ```
+
+---
+
+## 🧪 Data Demo & Pengujian Prototype
+
+- Seluruh mutasi prototype disimpan pada `localStorage` melalui `HRContext` dengan key versi `hr-rajaklana-demo-v1`.
+- Pengguna harus selalu melihat penanda **Data Demo** dan dapat mengembalikan kondisi awal melalui **Pengaturan → Keamanan & Akses → Reset Semua Data Demo**.
+- Aksi yang membutuhkan backend atau autentikasi tidak boleh menampilkan keberhasilan palsu; tampilkan sebagai belum tersedia atau simpan secara jujur sebagai simulasi lokal.
+- Pengujian E2E berada di `e2e/`, konfigurasi runner di `playwright.config.ts`, dan quality gate CI di `.github/workflows/quality.yml`.
+- Setiap perubahan alur inti wajib menjaga `npm run lint`, `npm run typecheck`, `npm run build`, dan `npm run test:e2e` tetap lulus.
 
 ---
 
@@ -122,4 +133,4 @@ Ketika proyek ini mulai terhubung dengan **Database / Backend sungguhan** (seper
 3. **Prefetching & React Suspense**:
    * Manfaatkan *prefetching* data pada tombol navigasi dan tampilkan `Skeleton` loader saat data awal memuat.
 4. **Offline-First / Local Storage Persistence**:
-   * Pertimbangkan penyimpan data lokal (IndexedDB / LocalStorage) agar aplikasi tetap responsif jika digunakan di area resto/resort dengan sinyal HP terbatas.
+   * Pertimbangkan penyimpan data lokal (IndexedDB / LocalStorage) agar aplikasi tetap responsif jika digunakan di area operasional dengan sinyal HP terbatas.

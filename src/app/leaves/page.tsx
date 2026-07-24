@@ -7,31 +7,68 @@ import {
   Plus, 
   CheckCircle2, 
   XCircle, 
-  Clock, 
-  FileText, 
   Send, 
-  UserCheck, 
-  AlertCircle,
-  Filter
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 export default function LeavesPage() {
-  const { leaveRequests, submitLeaveRequest, approveLeaveRequest, rejectLeaveRequest } = useHR();
+  const {
+    leaveRequests,
+    preferences,
+    submitLeaveRequest,
+    approveLeaveRequest,
+    rejectLeaveRequest,
+    showToast,
+  } = useHR();
   const [activeTab, setActiveTab] = useState<"saya" | "persetujuan">("saya");
   const [showModal, setShowModal] = useState<boolean>(false);
   
   // Form State
   const [leaveType, setLeaveType] = useState<LeaveRequest["type"]>("Cuti Tahunan");
-  const [startDate, setStartDate] = useState<string>("2026-07-25");
-  const [endDate, setEndDate] = useState<string>("2026-07-26");
+  const [startDate, setStartDate] = useState<string>("2026-07-27");
+  const [endDate, setEndDate] = useState<string>("2026-07-28");
   const [reason, setReason] = useState<string>("");
+
+  const myRequests = leaveRequests.filter((request) => request.employeeId === "EMP-999");
+  const usedLeaveDays = myRequests
+    .filter((request) => request.type === "Cuti Tahunan" && request.status === "Approved")
+    .reduce((total, request) => total + request.totalDays, 0);
+  const remainingLeaveDays = Math.max(
+    0,
+    preferences.defaultLeaveBalance - usedLeaveDays
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) return;
+    if (!reason.trim()) {
+      showToast("Alasan cuti wajib diisi.", "warning");
+      return;
+    }
+
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const earliestStart = new Date(today);
+    earliestStart.setDate(today.getDate() + preferences.advanceNoticeDays);
+    if (start < earliestStart) {
+      showToast(
+        `Pengajuan cuti minimum ${preferences.advanceNoticeDays} hari sebelum tanggal mulai.`,
+        "warning"
+      );
+      return;
+    }
+
+    const totalDays = Math.floor(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1;
+    if (leaveType === "Cuti Tahunan" && totalDays > remainingLeaveDays) {
+      showToast(`Sisa cuti tahunan hanya ${remainingLeaveDays} hari.`, "warning");
+      return;
+    }
+
     submitLeaveRequest(leaveType, startDate, endDate, reason);
     setReason("");
     setShowModal(false);
@@ -60,15 +97,15 @@ export default function LeavesPage() {
       <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950 p-5 border border-slate-800 shadow-xl grid grid-cols-3 gap-3 text-center">
         <div className="space-y-1">
           <p className="text-[10px] text-slate-400 uppercase font-semibold">Sisa Cuti</p>
-          <p className="text-2xl font-extrabold text-amber-400">9 <span className="text-xs text-slate-400 font-normal">Hari</span></p>
+          <p className="text-2xl font-extrabold text-amber-400">{remainingLeaveDays} <span className="text-xs text-slate-400 font-normal">Hari</span></p>
         </div>
         <div className="space-y-1 border-x border-slate-800 px-2">
           <p className="text-[10px] text-slate-400 uppercase font-semibold">Terpakai</p>
-          <p className="text-2xl font-extrabold text-slate-200">3 <span className="text-xs text-slate-400 font-normal">Hari</span></p>
+          <p className="text-2xl font-extrabold text-slate-200">{usedLeaveDays} <span className="text-xs text-slate-400 font-normal">Hari</span></p>
         </div>
         <div className="space-y-1">
           <p className="text-[10px] text-slate-400 uppercase font-semibold">Total Hak Cuti</p>
-          <p className="text-2xl font-extrabold text-blue-400">12 <span className="text-xs text-slate-400 font-normal">Hari</span></p>
+          <p className="text-2xl font-extrabold text-blue-400">{preferences.defaultLeaveBalance} <span className="text-xs text-slate-400 font-normal">Hari</span></p>
         </div>
       </div>
 
@@ -78,7 +115,7 @@ export default function LeavesPage() {
           onClick={() => setActiveTab("saya")}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
             activeTab === "saya"
-              ? "bg-amber-600 text-white shadow-sm"
+              ? "bg-amber-500 text-slate-950 shadow-sm"
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
@@ -88,7 +125,7 @@ export default function LeavesPage() {
           onClick={() => setActiveTab("persetujuan")}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
             activeTab === "persetujuan"
-              ? "bg-amber-600 text-white shadow-sm"
+              ? "bg-amber-500 text-slate-950 shadow-sm"
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
@@ -104,7 +141,7 @@ export default function LeavesPage() {
       {/* Tab Content: Pengajuan Saya */}
       {activeTab === "saya" && (
         <div className="space-y-3">
-          {leaveRequests.map((req) => (
+          {myRequests.map((req) => (
             <div key={req.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
               <div className="flex items-start justify-between">
                 <div>
@@ -126,7 +163,7 @@ export default function LeavesPage() {
 
               <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/80">
                 <span>Durasi: <strong className="text-slate-200 font-mono">{req.totalDays} Hari</strong> ({req.startDate} s/d {req.endDate})</span>
-                <span className="text-[10px] text-slate-500">{req.createdAt}</span>
+                <span className="text-[10px] text-slate-400">{req.createdAt}</span>
               </div>
             </div>
           ))}
@@ -164,7 +201,7 @@ export default function LeavesPage() {
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => approveLeaveRequest(req.id)}
-                    className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Setujui Cuti</span>
@@ -195,7 +232,7 @@ export default function LeavesPage() {
           <Combobox
             label="Tipe Cuti / Izin"
             options={[
-              { value: "Cuti Tahunan", label: "Cuti Tahunan", subtext: "Sisa hak: 9 Hari" },
+              { value: "Cuti Tahunan", label: "Cuti Tahunan", subtext: `Sisa hak: ${remainingLeaveDays} Hari` },
               { value: "Sakit", label: "Sakit", subtext: "Lampirkan surat keterangan dokter" },
               { value: "Izin Penting", label: "Izin Penting / Khusus", subtext: "Keperluan keluarga / duka" },
               { value: "Cuti Melahirkan", label: "Cuti Melahirkan", subtext: "Sesuai regulasi HRD" },
@@ -214,6 +251,9 @@ export default function LeavesPage() {
               setEndDate(end);
             }}
           />
+          <p className="text-[10px] text-slate-400">
+            Kebijakan demo: ajukan minimal {preferences.advanceNoticeDays} hari sebelum tanggal mulai.
+          </p>
 
           {/* Reason */}
           <div className="space-y-1">

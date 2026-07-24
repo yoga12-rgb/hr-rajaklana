@@ -265,7 +265,7 @@ export function TimePicker({
                         className={`h-[40px] w-full snap-center flex items-center justify-center cursor-pointer font-mono transition-all duration-150 select-none ${
                           isSelected
                             ? "text-amber-400 font-extrabold text-base scale-110"
-                            : "text-slate-500 font-medium text-xs hover:text-slate-300"
+                            : "text-slate-400 font-medium text-xs hover:text-slate-300"
                         }`}
                       >
                         {hour}
@@ -303,7 +303,7 @@ export function TimePicker({
                         className={`h-[40px] w-full snap-center flex items-center justify-center cursor-pointer font-mono transition-all duration-150 select-none ${
                           isSelected
                             ? "text-amber-400 font-extrabold text-base scale-110"
-                            : "text-slate-500 font-medium text-xs hover:text-slate-300"
+                            : "text-slate-400 font-medium text-xs hover:text-slate-300"
                         }`}
                       >
                         {minute}

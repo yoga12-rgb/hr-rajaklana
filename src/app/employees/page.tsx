@@ -3,27 +3,26 @@
 import { useState } from "react";
 import { useHR, Employee } from "@/context/HRContext";
 import { 
-  Users, 
   Search, 
-  Plus, 
   Building2, 
   Phone, 
-  Mail, 
   Calendar, 
-  UserPlus, 
-  ShieldCheck,
-  ChevronRight,
-  Filter
+  UserPlus
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
 import { DatePicker } from "@/components/ui/DatePicker";
 
-const departments = ["Semua", "Produksi & Operasional", "Layanan & Lapangan", "Operasional", "HR & Legal", "Finance"];
+const generalDepartments = [
+  "Produksi & Operasional",
+  "Layanan & Lapangan",
+  "Operasional",
+  "HR & Legal",
+  "Finance",
+];
 
 export default function EmployeesPage() {
-  const { employees, addEmployee } = useHR();
+  const { employees, preferences, addEmployee } = useHR();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("Semua");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -37,6 +36,16 @@ export default function EmployeesPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [joinDate, setJoinDate] = useState("2026-07-22");
+  const departments = [
+    "Semua",
+    ...Array.from(new Set(employees.map((employee) => employee.department))),
+  ];
+  const departmentOptions = Array.from(
+    new Set([
+      ...employees.map((employee) => employee.department),
+      ...generalDepartments,
+    ])
+  );
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -50,16 +59,27 @@ export default function EmployeesPage() {
     e.preventDefault();
     if (!name.trim() || !role.trim()) return;
 
+    const [joinYear, joinMonth, joinDay] = joinDate.split("-").map(Number);
+    const formattedJoinDate = new Date(
+      joinYear,
+      joinMonth - 1,
+      joinDay
+    ).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
     addEmployee({
-      name,
-      role,
+      name: name.trim(),
+      role: role.trim(),
       department: dept,
       status,
       shift,
       phone: phone || "0812-0000-1111",
       email: email || `${name.toLowerCase().replace(/\s+/g, ".")}@rajaklana.com`,
-      joinDate: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
-      leaveBalance: 12,
+      joinDate: formattedJoinDate,
+      leaveBalance: preferences.defaultLeaveBalance,
       avatarBg: "bg-amber-500/20 text-amber-400"
     });
 
@@ -107,7 +127,7 @@ export default function EmployeesPage() {
             onClick={() => setSelectedDept(d)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
               selectedDept === d
-                ? "bg-amber-600 text-white shadow-xs"
+                ? "bg-amber-500 text-slate-950 shadow-xs"
                 : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200"
             }`}
           >
@@ -148,11 +168,11 @@ export default function EmployeesPage() {
                 <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">{emp.nik}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-slate-500" />
+                <Phone className="w-3.5 h-3.5 text-slate-400" />
                 <span>{emp.phone}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 <span>Cuti: <strong className="text-amber-400">{emp.leaveBalance} Hr</strong></span>
               </div>
             </div>
@@ -192,7 +212,7 @@ export default function EmployeesPage() {
               type="text"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              placeholder="Contoh: Pastry Chef"
+              placeholder="Contoh: Team Lead Operasional"
               className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
               required
             />
@@ -201,13 +221,10 @@ export default function EmployeesPage() {
           <div className="grid grid-cols-2 gap-3">
             <Combobox
               label="Departemen"
-              options={[
-                { value: "Produksi & Operasional", label: "Produksi & Operasional" },
-                { value: "Layanan & Lapangan", label: "Layanan & Lapangan" },
-                { value: "Operasional", label: "Operasional" },
-                { value: "HR & Legal", label: "HR & Legal" },
-                { value: "Finance", label: "Finance" },
-              ]}
+              options={departmentOptions.map((department) => ({
+                value: department,
+                label: department,
+              }))}
               value={dept}
               onChange={setDept}
             />
@@ -223,6 +240,18 @@ export default function EmployeesPage() {
             />
           </div>
 
+          <Combobox
+            label="Shift Awal"
+            options={[
+              { value: "Shift Pagi (07:00 - 15:00)", label: "Shift Pagi", subtext: "07:00 - 15:00" },
+              { value: "Shift Siang (12:00 - 20:00)", label: "Shift Siang", subtext: "12:00 - 20:00" },
+              { value: "Shift Malam (15:00 - 23:00)", label: "Shift Malam", subtext: "15:00 - 23:00" },
+              { value: "Off / Libur", label: "Off / Libur" },
+            ]}
+            value={shift}
+            onChange={setShift}
+          />
+
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-300">Nomor WhatsApp / Telepon</label>
             <input
@@ -232,6 +261,17 @@ export default function EmployeesPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="081234567890"
+              className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-300">Email (Opsional)</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nama@perusahaan.com"
               className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
             />
           </div>

@@ -69,7 +69,7 @@ export default function Sidebar() {
               onClick={() => playClickSound()}
               className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 isActive
-                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/30"
+                  ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30"
                   : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
               }`}
             >

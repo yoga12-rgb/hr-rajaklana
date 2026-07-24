@@ -8,7 +8,6 @@ import {
   CalendarDays, 
   QrCode, 
   CheckCircle2, 
-  Building2,
   ChevronRight,
   UserPlus,
   MapPin,
@@ -51,7 +50,6 @@ export default function MobileHRDashboard() {
   const { 
     userClockedIn, 
     currentUserClockInTime, 
-    clockIn, 
     clockOut, 
     employees, 
     attendanceLogs, 
@@ -121,13 +119,13 @@ export default function MobileHRDashboard() {
               Absen Pulang
             </button>
           ) : (
-            <button
-              onClick={() => clockIn("Absen Cepat via Dashboard")}
+            <Link
+              href="/attendance"
               className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
             >
               <QrCode className="w-4 h-4" />
-              <span>Absen Masuk</span>
-            </button>
+              <span>Buka Presensi</span>
+            </Link>
           )}
         </div>
 
@@ -170,7 +168,7 @@ export default function MobileHRDashboard() {
         <StatCard
           title="Total Karyawan"
           value={<>{employees.length} <span className="text-xs font-normal text-slate-400">org</span></>}
-          subtext={<span className="text-amber-400 font-medium">+4 aktif baru</span>}
+          subtext={<span className="text-amber-400 font-medium">Tersimpan di data demo</span>}
           icon={Users}
         />
 
@@ -218,7 +216,7 @@ export default function MobileHRDashboard() {
                     {anc.category}
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-500">{anc.date}</span>
+                <span className="text-[10px] text-slate-400">{anc.date}</span>
               </div>
               <h4 className="font-bold text-slate-200 text-xs">{anc.title}</h4>
               <p className="text-xs text-slate-400 leading-relaxed">{anc.content}</p>
@@ -254,7 +252,7 @@ export default function MobileHRDashboard() {
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => approveLeaveRequest(leave.id)}
-                    className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    className="flex-1 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" /> Setujui
                   </button>

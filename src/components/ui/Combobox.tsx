@@ -281,7 +281,7 @@ export function Combobox({
         className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 hover:border-amber-500/50 rounded-lg text-slate-200 flex items-center justify-between transition-colors cursor-pointer text-left focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40"
       >
         <span id={triggerValueId} className="truncate">
-          {selectedOption ? selectedOption.label : <span className="text-slate-500">{placeholder}</span>}
+          {selectedOption ? selectedOption.label : <span className="text-slate-400">{placeholder}</span>}
         </span>
         <ChevronsUpDown aria-hidden="true" className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
       </button>
@@ -302,7 +302,7 @@ export function Combobox({
           >
             {/* Search Input */}
             <div className="relative p-1">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 ref={inputRef}
                 type="text"
@@ -330,7 +330,7 @@ export function Combobox({
                     setActiveIndex(options.length > 0 ? 0 : -1);
                     inputRef.current?.focus({ preventScroll: true });
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none focus:text-amber-400"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 focus:outline-none focus:text-amber-400"
                 >
                   <X aria-hidden="true" className="w-3 h-3" />
                 </button>
@@ -368,14 +368,14 @@ export function Combobox({
                     >
                       <div className="truncate">
                         <p>{option.label}</p>
-                        {option.subtext && <p className="text-[10px] text-slate-500 font-normal">{option.subtext}</p>}
+                        {option.subtext && <p className="text-[10px] text-slate-400 font-normal">{option.subtext}</p>}
                       </div>
                       {isSelected && <Check aria-hidden="true" className="w-3.5 h-3.5 text-amber-400 shrink-0 ml-2" />}
                     </button>
                   );
                 })
               ) : (
-                <p role="status" className="text-[11px] text-slate-500 italic p-3 text-center">
+                <p role="status" className="text-[11px] text-slate-400 italic p-3 text-center">
                   Tidak ada opsi cocok
                 </p>
               )}

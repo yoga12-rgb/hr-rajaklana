@@ -2,7 +2,6 @@
 
 import { useHR } from "@/context/HRContext";
 import { 
-  User, 
   Building2, 
   Clock, 
   Calendar, 
@@ -10,19 +9,37 @@ import {
   Phone, 
   ShieldCheck, 
   CheckCircle2, 
-  LogOut, 
-  Award,
-  TrendingUp,
   MapPin,
   Edit3
 } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 
 export default function ProfilePage() {
-  const { attendanceLogs, showToast } = useHR();
+  const { attendanceLogs, leaveRequests, preferences } = useHR();
 
   // Riwayat Absensi Pribadi (Filter Admin HRD)
   const myAttendance = attendanceLogs.filter(a => a.employeeId === "EMP-999" || a.employeeName.includes("Admin"));
+  const usedLeaveDays = leaveRequests
+    .filter(
+      (request) =>
+        request.employeeId === "EMP-999" &&
+        request.type === "Cuti Tahunan" &&
+        request.status === "Approved"
+    )
+    .reduce((total, request) => total + request.totalDays, 0);
+  const remainingLeaveDays = Math.max(
+    0,
+    preferences.defaultLeaveBalance - usedLeaveDays
+  );
+  const onTimeAttendance = myAttendance.filter(
+    (attendance) => attendance.status === "Tepat Waktu"
+  ).length;
+  const attendanceRate = myAttendance.length
+    ? `${Math.round((onTimeAttendance / myAttendance.length) * 100)}%`
+    : "—";
+  const completedSessions = myAttendance.filter(
+    (attendance) => Boolean(attendance.timeOut)
+  ).length;
 
   return (
     <div className="space-y-6 pb-6">
@@ -34,8 +51,10 @@ export default function ProfilePage() {
               HR
             </div>
             <button 
-              onClick={() => showToast("Fitur ubah foto profil diaktifkan", "info")}
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-900 border border-slate-700 text-amber-400 flex items-center justify-center shadow-md hover:bg-slate-800 transition-colors cursor-pointer"
+              type="button"
+              disabled
+              title="Ubah foto belum tersedia pada mode demo"
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-900 border border-slate-700 text-slate-400 flex items-center justify-center shadow-md cursor-not-allowed"
             >
               <Edit3 className="w-3.5 h-3.5" />
             </button>
@@ -50,7 +69,7 @@ export default function ProfilePage() {
             </div>
             <p className="text-xs text-amber-300 font-medium">NIK: RK-2026-000 &bull; Dep: HR & Legal</p>
             <p className="text-xs text-slate-400 flex items-center justify-center sm:justify-start gap-1 pt-0.5">
-              <Building2 className="w-3.5 h-3.5 text-slate-500" /> Rajaklana Group Head Office
+              <Building2 className="w-3.5 h-3.5 text-slate-400" /> Rajaklana Group Head Office
             </p>
           </div>
         </div>
@@ -62,23 +81,23 @@ export default function ProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard
           title="Tingkat Kehadiran"
-          value="98.5%"
-          subtext="Bulan Juli 2026"
+          value={attendanceRate}
+          subtext={`${myAttendance.length} catatan pribadi`}
           icon={CheckCircle2}
           iconColor="text-emerald-400"
         />
         <StatCard
-          title="Jam Kerja Bulan Ini"
-          value="168 Jam"
-          subtext="Sesuai Target Shift"
+          title="Sesi Kerja Selesai"
+          value={completedSessions.toString()}
+          subtext="Berdasarkan clock-out demo"
           icon={Clock}
           iconColor="text-amber-400"
         />
         <div className="col-span-2 sm:col-span-1">
           <StatCard
             title="Sisa Hak Cuti"
-            value="9 Hari"
-            subtext="Dari Total 12 Hari"
+            value={`${remainingLeaveDays} Hari`}
+            subtext={`Dari Total ${preferences.defaultLeaveBalance} Hari`}
             icon={Calendar}
             iconColor="text-blue-400"
           />
@@ -90,8 +109,10 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">Informasi Biodata & Kontak</h3>
           <button 
-            onClick={() => showToast("Mode edit profil dibuka", "info")}
-            className="text-[11px] text-amber-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+            type="button"
+            disabled
+            title="Edit profil belum tersedia pada mode demo"
+            className="text-[11px] text-slate-400 font-bold flex items-center gap-1 cursor-not-allowed"
           >
             <Edit3 className="w-3 h-3" /> Edit Profil
           </button>
@@ -157,14 +178,10 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Logout Action */}
-      <button 
-        onClick={() => showToast("Sesi akun berhasil keluar", "warning")}
-        className="w-full py-3 rounded-xl bg-slate-900 hover:bg-rose-950/40 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 text-slate-400 font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-      >
-        <LogOut className="w-4 h-4 text-rose-400" />
-        <span>Keluar dari Akun Admin</span>
-      </button>
+      <div className="w-full rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-center text-xs text-slate-400">
+        <ShieldCheck className="mr-1.5 inline h-4 w-4 text-amber-400" />
+        Mode demo tidak menggunakan sesi akun atau autentikasi.
+      </div>
     </div>
   );
 }

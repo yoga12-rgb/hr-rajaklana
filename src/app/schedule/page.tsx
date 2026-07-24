@@ -18,27 +18,34 @@ import { TimePicker } from "@/components/ui/TimePicker";
 
 const daysOfWeek = [
   { dayName: "Sen", dateNum: "20", fullDate: "2026-07-20" },
-  { dayName: "Sel", dateNum: "21", fullDate: "2026-07-21", isToday: true },
+  { dayName: "Sel", dateNum: "21", fullDate: "2026-07-21" },
   { dayName: "Rab", dateNum: "22", fullDate: "2026-07-22" },
   { dayName: "Kam", dateNum: "23", fullDate: "2026-07-23" },
-  { dayName: "Jum", dateNum: "24", fullDate: "2026-07-24" },
+  { dayName: "Jum", dateNum: "24", fullDate: "2026-07-24", isToday: true },
   { dayName: "Sab", dateNum: "25", fullDate: "2026-07-25" },
   { dayName: "Min", dateNum: "26", fullDate: "2026-07-26" },
 ];
 
 export default function SchedulePage() {
-  const { employees, updateEmployeeShift, showToast } = useHR();
-  const [selectedDate, setSelectedDate] = useState("2026-07-21");
+  const {
+    employees,
+    schedules,
+    updateEmployeeShift,
+    submitShiftSwapRequest,
+    showToast,
+  } = useHR();
+  const [selectedDate, setSelectedDate] = useState("2026-07-24");
   const [selectedDept, setSelectedDept] = useState("Semua");
   const [viewMode, setViewMode] = useState<"matrix" | "daily">("matrix");
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
 
   // Form State
-  const [selectedEmpId, setSelectedEmpId] = useState("EMP-001");
+  const [selectedEmpId, setSelectedEmpId] = useState(employees[0]?.id ?? "");
   const [newShiftName, setNewShiftName] = useState<WorkShift["shiftName"]>("Shift Pagi");
   const [shiftStartTime, setShiftStartTime] = useState("07:00");
   const [shiftEndTime, setShiftEndTime] = useState("15:00");
+  const [swapReason, setSwapReason] = useState("");
 
   const newTimeSlot = newShiftName === "Off / Libur"
     ? "Libur / Off"
@@ -50,7 +57,11 @@ export default function SchedulePage() {
 
   const handleUpdateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateEmployeeShift(selectedEmpId, newShiftName, newTimeSlot);
+    if (!selectedEmpId) {
+      showToast("Pilih karyawan yang akan diatur.", "warning");
+      return;
+    }
+    updateEmployeeShift(selectedEmpId, selectedDate, newShiftName, newTimeSlot);
     showToast("Shift karyawan berhasil diperbarui", "success");
     setShowEditModal(false);
   };
@@ -62,29 +73,53 @@ export default function SchedulePage() {
     return <Coffee className="w-3.5 h-3.5 text-rose-400" />;
   };
 
-  // Helper to determine weekly shift matrix badge per day
-  const getWeeklyDayShift = (emp: typeof employees[0], dayIndex: number) => {
-    // Tuesday (index 1 = 21 July) uses employee's actual updated shift
-    if (dayIndex === 1) {
-      if (emp.shift.includes("Siang")) return { code: "SIANG", label: "Siang", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
-      if (emp.shift.includes("Malam")) return { code: "MALAM", label: "Malam", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
-      if (emp.shift.includes("Off") || emp.shift.includes("Libur")) return { code: "OFF", label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
-      return { code: "PAGI", label: "Pagi", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
+  const getEmployeeShiftForDate = (
+    employee: (typeof employees)[number],
+    date: string
+  ) => {
+    const scheduledShift = schedules.find(
+      (schedule) => schedule.employeeId === employee.id && schedule.date === date
+    );
+    if (scheduledShift) return scheduledShift;
+
+    const day = new Date(`${date}T00:00:00`).getDay();
+    const isWeekend = day === 0 || day === 6;
+    const shiftName: WorkShift["shiftName"] = isWeekend
+      ? "Off / Libur"
+      : employee.shift.includes("Siang")
+        ? "Shift Siang"
+        : employee.shift.includes("Malam")
+          ? "Shift Malam"
+          : employee.shift.includes("Off") || employee.shift.includes("Libur")
+            ? "Off / Libur"
+            : "Shift Pagi";
+    const timeSlot =
+      shiftName === "Off / Libur"
+        ? "Libur / Off"
+        : employee.shift.match(/\(([^)]+)\)/)?.[1] ?? "07:00 - 15:00";
+
+    return {
+      id: `fallback-${employee.id}-${date}`,
+      employeeId: employee.id,
+      employeeName: employee.name,
+      department: employee.department,
+      date,
+      shiftName,
+      timeSlot: timeSlot.endsWith("WIB") ? timeSlot : `${timeSlot} WIB`,
+    } satisfies WorkShift;
+  };
+
+  const getShiftBadge = (shiftName: WorkShift["shiftName"]) => {
+    if (shiftName === "Shift Siang") {
+      return { label: "Siang", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
     }
-    // Fixed pattern for weekend days (Sab/Min) or shift variations
-    if (emp.id === "EMP-003" && (dayIndex === 5 || dayIndex === 6)) {
-      return { code: "MALAM", label: "Malam", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
+    if (shiftName === "Shift Malam") {
+      return { label: "Malam", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
     }
-    if (emp.id === "EMP-005" && dayIndex === 6) {
-      return { code: "OFF", label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
+    if (shiftName === "Off / Libur") {
+      return { label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
     }
-    if (dayIndex === 5 || dayIndex === 6) {
-      return { code: "OFF", label: "Off", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
-    }
-    if (emp.id === "EMP-005") {
-      return { code: "SIANG", label: "Siang", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
-    }
-    return { code: "PAGI", label: "Pagi", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
+    return { label: "Pagi", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
   };
 
   return (
@@ -284,14 +319,17 @@ export default function SchedulePage() {
                           </td>
 
                           {/* 7 Days Shift Cells */}
-                          {daysOfWeek.map((d, dayIdx) => {
-                            const shift = getWeeklyDayShift(emp, dayIdx);
+                          {daysOfWeek.map((d) => {
+                            const shift = getShiftBadge(
+                              getEmployeeShiftForDate(emp, d.fullDate).shiftName
+                            );
                             return (
                               <td key={d.fullDate} className={`p-1 text-center align-middle ${d.isToday ? "bg-amber-500/5" : ""}`}>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setSelectedEmpId(emp.id);
+                                    setSelectedDate(d.fullDate);
                                     setShowEditModal(true);
                                   }}
                                   className={`w-full py-1 px-0.5 rounded text-[9px] font-extrabold transition-all hover:scale-105 active:scale-95 cursor-pointer block text-center truncate ${shift.color}`}
@@ -358,49 +396,53 @@ export default function SchedulePage() {
 
               {/* Department Employee Cards */}
               <div className="space-y-2.5 pt-1">
-                {deptEmps.map((emp) => (
-                  <div key={emp.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/90 hover:border-slate-700 transition-colors flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg font-bold text-xs flex items-center justify-center border border-amber-500/30 ${emp.avatarBg}`}>
-                        {emp.name.split(" ").map(n => n[0]).join("")}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-200 text-xs">{emp.name}</h4>
-                        <p className="text-[10px] text-slate-400">{emp.role}</p>
-                      </div>
-                    </div>
+                {deptEmps.map((emp) => {
+                  const dailyShift = getEmployeeShiftForDate(emp, selectedDate);
 
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-200">
-                          {getShiftIcon(emp.shift)}
-                          <span>{emp.shift.split("(")[0].trim()}</span>
-                        </span>
-                        <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                          {emp.shift.includes("(") ? emp.shift.split("(")[1].replace(")", "") : "07:00 - 15:00 WIB"}
-                        </p>
+                  return (
+                    <div key={emp.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/90 hover:border-slate-700 transition-colors flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-lg font-bold text-xs flex items-center justify-center border border-amber-500/30 ${emp.avatarBg}`}>
+                          {emp.name.split(" ").map(n => n[0]).join("")}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-200 text-xs">{emp.name}</h4>
+                          <p className="text-[10px] text-slate-400">{emp.role}</p>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setSelectedEmpId(emp.id);
-                          setShowEditModal(true);
-                        }}
-                        title="Ubah Shift Staf ini"
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer border border-slate-700/60"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-200">
+                            {getShiftIcon(dailyShift.shiftName)}
+                            <span>{dailyShift.shiftName}</span>
+                          </span>
+                          <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            {dailyShift.timeSlot}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setSelectedEmpId(emp.id);
+                            setShowEditModal(true);
+                          }}
+                          title="Ubah Shift Staf ini"
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer border border-slate-700/60"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
 
           {filteredEmployees.length === 0 && (
             <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center space-y-2">
-              <Building2 className="w-8 h-8 text-slate-500 mx-auto opacity-50" />
+              <Building2 className="w-8 h-8 text-slate-400 mx-auto opacity-50" />
               <p className="text-xs text-slate-400">Tidak ada staf di departemen ini.</p>
             </div>
           )}
@@ -415,6 +457,19 @@ export default function SchedulePage() {
         icon={Edit3}
       >
         <form onSubmit={handleUpdateSubmit} className="space-y-4">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+              Tanggal jadwal
+            </p>
+            <p className="mt-0.5 text-xs font-bold text-slate-100">
+              {new Intl.DateTimeFormat("id-ID", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }).format(new Date(`${selectedDate}T00:00:00`))}
+            </p>
+          </div>
           <Combobox
             label="Pilih Karyawan"
             options={employees.map(e => ({ value: e.id, label: e.name, subtext: `${e.role} • ${e.department}` }))}
@@ -492,11 +547,26 @@ export default function SchedulePage() {
       {/* Modal Swap Shift */}
       <Modal
         isOpen={showSwapModal}
-        onClose={() => setShowSwapModal(false)}
+        onClose={() => {
+          setSwapReason("");
+          setShowSwapModal(false);
+        }}
         title="Pengajuan Tukar Shift"
         icon={RefreshCw}
       >
         <div className="space-y-4">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-xs text-slate-300">
+            Pengajuan untuk jadwal{" "}
+            <span className="font-bold text-amber-400">
+              {new Intl.DateTimeFormat("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }).format(new Date(`${selectedDate}T00:00:00`))}
+            </span>{" "}
+            akan disimpan sebagai data demo lokal.
+          </div>
+
           <Combobox
             label="Tukar Shift Dengan Staf"
             options={employees.map(e => ({ value: e.id, label: e.name, subtext: `${e.role} • ${e.shift}` }))}
@@ -509,6 +579,8 @@ export default function SchedulePage() {
             <label className="text-xs font-medium text-slate-300">Alasan Tukar Shift</label>
             <textarea
               rows={2}
+              value={swapReason}
+              onChange={(event) => setSwapReason(event.target.value)}
               placeholder="Tuliskan alasan keperluan pertukaran shift..."
               className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
             />
@@ -516,14 +588,28 @@ export default function SchedulePage() {
 
           <div className="flex items-center gap-2 pt-2">
             <button
-              onClick={() => setShowSwapModal(false)}
+              type="button"
+              onClick={() => {
+                setSwapReason("");
+                setShowSwapModal(false);
+              }}
               className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
             >
               Batal
             </button>
             <button
+              type="button"
               onClick={() => {
-                showToast("Permohonan tukar shift berhasil dikirim ke atasan!", "success");
+                if (!selectedEmpId) {
+                  showToast("Pilih rekan kerja untuk pertukaran shift.", "warning");
+                  return;
+                }
+                if (!swapReason.trim()) {
+                  showToast("Alasan pertukaran shift wajib diisi.", "warning");
+                  return;
+                }
+                submitShiftSwapRequest(selectedEmpId, selectedDate, swapReason);
+                setSwapReason("");
                 setShowSwapModal(false);
               }}
               className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 cursor-pointer"

@@ -5,26 +5,44 @@ import Link from "next/link";
 import { 
   Search, 
   Bell, 
-  QrCode, 
   CalendarDays, 
   Clock, 
   Megaphone, 
   CheckCircle2, 
   ChevronRight, 
   CheckCheck,
-  UserCheck
+  Database
 } from "lucide-react";
 import { useHR } from "@/context/HRContext";
 import { Modal } from "@/components/ui/Modal";
 
 export default function Header() {
-  const { leaveRequests, attendanceLogs, announcements, approveLeaveRequest, showToast } = useHR();
+  const {
+    employees,
+    leaveRequests,
+    attendanceLogs,
+    announcements,
+    approveLeaveRequest,
+    showToast,
+  } = useHR();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [isRead, setIsRead] = useState(false);
   const [activeTab, setActiveTab] = useState<"Semua" | "Cuti" | "Presensi" | "Pengumuman">("Semua");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const pendingLeaves = leaveRequests.filter((r) => r.status === "Pending");
   const lateAttendance = attendanceLogs.filter((a) => a.status === "Terlambat");
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase("id-ID");
+  const searchResults = normalizedQuery
+    ? employees
+        .filter((employee) =>
+          [employee.name, employee.nik, employee.role, employee.department]
+            .join(" ")
+            .toLocaleLowerCase("id-ID")
+            .includes(normalizedQuery)
+        )
+        .slice(0, 5)
+    : [];
 
   // Calculate unread count (e.g. pending leaves + late logs + pinned announcements)
   const unreadCount = isRead ? 0 : pendingLeaves.length + lateAttendance.length + announcements.filter(a => a.isPinned).length;
@@ -38,7 +56,7 @@ export default function Header() {
     <header className="bg-slate-900/85 backdrop-blur-xl text-white border-b border-slate-800/80 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40 shadow-sm h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
       {/* Mobile Brand / Logo */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-teal-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950 font-bold text-base md:hidden">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950 font-bold text-base md:hidden">
           HR
         </div>
         <div className="md:hidden">
@@ -53,21 +71,62 @@ export default function Header() {
             <input
               type="text"
               placeholder="Cari karyawan atau NIK..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setSearchQuery("");
+              }}
+              aria-label="Cari karyawan atau NIK"
               className="w-full pl-9 pr-4 py-1.5 text-base sm:text-xs bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-500 text-slate-200 placeholder-slate-400"
             />
+            {normalizedQuery && (
+              <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
+                {searchResults.length > 0 ? (
+                  searchResults.map((employee) => (
+                    <Link
+                      key={employee.id}
+                      href="/employees"
+                      onClick={() => setSearchQuery("")}
+                      className="block border-b border-slate-800 px-3 py-2.5 last:border-0 hover:bg-slate-800"
+                    >
+                      <span className="block text-xs font-bold text-slate-100">
+                        {employee.name}
+                      </span>
+                      <span className="block truncate text-[10px] text-slate-400">
+                        {employee.nik} • {employee.role} • {employee.department}
+                      </span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="px-3 py-3 text-xs text-slate-400">
+                    Karyawan tidak ditemukan.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Right Actions */}
       <div className="flex items-center gap-2 md:gap-3">
-        {/* Quick QR Presensi Button */}
+        <Link
+          href="/settings"
+          className="hidden sm:flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-bold text-amber-400 transition-colors hover:bg-amber-500/15"
+          title="Prototype menggunakan data demo lokal"
+        >
+          <Database className="h-3.5 w-3.5" />
+          <span>Data Demo</span>
+        </Link>
+
+        {/* Quick Presensi Button */}
         <Link
           href="/attendance"
+          aria-label="Presensi"
           className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 active:scale-95 rounded-lg text-xs font-bold shadow-sm shadow-amber-500/20 transition-all cursor-pointer"
         >
-          <QrCode className="w-4 h-4" />
-          <span className="hidden sm:inline">Absen QR</span>
+          <Clock className="w-4 h-4" />
+          <span className="hidden sm:inline">Presensi</span>
         </Link>
 
         {/* Notification Bell Button */}
@@ -142,7 +201,7 @@ export default function Header() {
                       <h4 className="text-xs font-bold text-slate-200">{leave.employeeName}</h4>
                     </div>
                   </div>
-                  <span className="text-[10px] text-slate-500">{leave.createdAt}</span>
+                  <span className="text-[10px] text-slate-400">{leave.createdAt}</span>
                 </div>
                 <p className="text-xs text-slate-300">
                   Mengajukan <strong className="text-amber-400">{leave.type}</strong> ({leave.totalDays} Hari) dari {leave.startDate} s/d {leave.endDate}.
@@ -181,7 +240,7 @@ export default function Header() {
                       <h4 className="text-xs font-bold text-slate-200">{log.employeeName}</h4>
                     </div>
                   </div>
-                  <span className="text-[10px] text-slate-500">{log.date}</span>
+                  <span className="text-[10px] text-slate-400">{log.date}</span>
                 </div>
                 <p className="text-xs text-slate-300">
                   Absen masuk pukul <strong className="text-rose-400">{log.timeIn}</strong> di {log.location}.
@@ -200,7 +259,7 @@ export default function Header() {
                       {anc.category}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500">{anc.date}</span>
+                  <span className="text-[10px] text-slate-400">{anc.date}</span>
                 </div>
                 <h4 className="text-xs font-bold text-slate-200 mt-1">{anc.title}</h4>
                 <p className="text-xs text-slate-400">{anc.content}</p>
@@ -213,7 +272,7 @@ export default function Header() {
               (activeTab === "Presensi" && lateAttendance.length === 0) ||
               (activeTab === "Pengumuman" && announcements.length === 0)) && (
               <div className="h-full flex flex-col items-center justify-center space-y-2 opacity-60">
-                <Bell className="w-8 h-8 text-slate-500" />
+                <Bell className="w-8 h-8 text-slate-400" />
                 <p className="text-xs text-slate-400 font-medium">Tidak ada notifikasi {activeTab !== "Semua" ? "di kategori ini." : "saat ini."}</p>
               </div>
             )}

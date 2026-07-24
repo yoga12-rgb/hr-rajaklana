@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -161,7 +161,7 @@ export function DatePicker({
               {/* Day Names Header */}
               <div className="grid grid-cols-7 text-center gap-1">
                 {DAY_NAMES.map((day) => (
-                  <span key={day} className="text-[10px] font-semibold text-slate-500">
+                  <span key={day} className="text-[10px] font-semibold text-slate-400">
                     {day}
                   </span>
                 ))}

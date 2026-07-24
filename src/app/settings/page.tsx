@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useHR, Outlet } from "@/context/HRContext";
+import { useHR } from "@/context/HRContext";
 import { 
   Building2, 
   MapPin, 
@@ -13,13 +13,10 @@ import {
   Bell, 
   Navigation, 
   SlidersHorizontal, 
-  CheckCircle2, 
-  LogOut, 
-  Mail, 
-  Phone, 
   Compass, 
   Power,
-  ChevronRight
+  Database,
+  RotateCcw
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 
@@ -29,11 +26,15 @@ export default function SettingsPage() {
     addOutlet, 
     toggleOutletStatus, 
     employees, 
-    showToast 
+    preferences,
+    updatePreferences,
+    resetDemoData,
+    showToast
   } = useHR();
 
   const [activeTab, setActiveTab] = useState<"outlets" | "work_policy" | "leave_policy" | "security">("outlets");
   const [showAddOutletModal, setShowAddOutletModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   // Form State Tambah Outlet Baru
   const [name, setName] = useState("");
@@ -45,24 +46,15 @@ export default function SettingsPage() {
   const [openTime, setOpenTime] = useState("07:00");
   const [closeTime, setCloseTime] = useState("22:00");
 
-  // State Kebijakan Jam Kerja
-  const [lateTolerance, setLateTolerance] = useState(15);
-  const [requireSelfie, setRequireSelfie] = useState(true);
-  const [minOvertime, setMinOvertime] = useState(1);
-
-  // State Kebijakan Cuti
-  const [defaultLeaveBalance, setDefaultLeaveBalance] = useState(12);
-  const [advanceNoticeDays, setAdvanceNoticeDays] = useState(3);
-
   const handleAddOutletSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !code || !address) {
-      showToast("Harap isi semua bidang outlet yang wajib!", "warning");
+      showToast("Harap isi semua bidang lokasi yang wajib!", "warning");
       return;
     }
 
     addOutlet({
-      name: name.trim().startsWith("Outlet") ? name.trim() : `Outlet ${name.trim()}`,
+      name: name.trim(),
       code: code.toUpperCase().trim(),
       address: address.trim(),
       latitude: parseFloat(latitude) || -6.2891,
@@ -90,16 +82,16 @@ export default function SettingsPage() {
           </div>
           <div>
             <h1 className="text-base font-extrabold text-slate-100">Pengaturan Sistem & Operations Portal</h1>
-            <p className="text-xs text-amber-400 font-semibold">Manajemen Outlet GPS, Geofencing, Shift & Kebijakan HR</p>
+            <p className="text-xs text-amber-400 font-semibold">Manajemen Lokasi GPS, Geofencing, Shift & Kebijakan HR</p>
             <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-              <Building2 className="w-3 h-3 text-slate-500" /> Rajaklana HR Operational Hub
+              <Building2 className="w-3 h-3 text-slate-400" /> Rajaklana HR Operational Hub
             </p>
           </div>
         </div>
 
         <div className="hidden sm:block text-right relative z-10">
-          <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Konfigurasi Aktif
+          <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold inline-flex items-center gap-1">
+            <Database className="w-3 h-3" /> Data Demo Lokal
           </span>
         </div>
 
@@ -117,7 +109,7 @@ export default function SettingsPage() {
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Outlet & Geofencing GPS</span>
+          <span>Lokasi & Geofencing GPS</span>
           <span className="px-1.5 py-0.2 text-[10px] rounded-full font-bold bg-slate-950/20 text-slate-950">
             {outlets.length}
           </span>
@@ -160,22 +152,22 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* TAB 1: MANAJEMEN OUTLET & GEOFENCING GPS */}
+      {/* TAB 1: MANAJEMEN LOKASI & GEOFENCING GPS */}
       {activeTab === "outlets" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
-                Daftar Outlet & Cabang Operasional
+                Daftar Lokasi & Area Operasional
               </h3>
-              <p className="text-[11px] text-slate-400">Pengaturan lokasi GPS Geofencing presensi kasir & staf</p>
+              <p className="text-[11px] text-slate-400">Pengaturan lokasi GPS Geofencing presensi seluruh staf</p>
             </div>
             <button
               onClick={() => setShowAddOutletModal(true)}
               className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
             >
               <Plus className="w-4 h-4" />
-              <span>Tambah Outlet</span>
+              <span>Tambah Lokasi</span>
             </button>
           </div>
 
@@ -203,14 +195,14 @@ export default function SettingsPage() {
                           </span>
                         </h4>
                         <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-slate-500" /> {out.address}
+                          <MapPin className="w-3 h-3 text-slate-400" /> {out.address}
                         </p>
                       </div>
                     </div>
 
                     <button
                       onClick={() => toggleOutletStatus(out.id)}
-                      title={out.isActive ? "Nonaktifkan Outlet" : "Aktifkan Outlet"}
+                      title={out.isActive ? "Nonaktifkan Lokasi" : "Aktifkan Lokasi"}
                       className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                         out.isActive 
                           ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30" 
@@ -244,10 +236,10 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between pt-1 text-[11px]">
                     <span className="text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-500" /> Jam Buka: <strong className="text-slate-200">{out.openTime} - {out.closeTime} WIB</strong>
+                      <Clock className="w-3 h-3 text-slate-400" /> Jam Buka: <strong className="text-slate-200">{out.openTime} - {out.closeTime} WIB</strong>
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-[10px]">
-                      {staffCount} Kasir
+                      {staffCount} Staf
                     </span>
                   </div>
                 </div>
@@ -277,8 +269,12 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={lateTolerance}
-                  onChange={(e) => setLateTolerance(Number(e.target.value))}
+                  min={0}
+                  max={120}
+                  value={preferences.lateTolerance}
+                  onChange={(e) => updatePreferences({
+                    lateTolerance: Math.min(120, Math.max(0, Number(e.target.value) || 0)),
+                  })}
                   className="w-16 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-amber-400 font-bold text-xs text-center focus:outline-none focus:border-amber-500"
                 />
                 <span className="text-xs text-slate-400">Menit</span>
@@ -289,19 +285,22 @@ export default function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-xs font-bold text-slate-200">Wajib Foto Selfie GPS</h4>
-                <p className="text-[10px] text-slate-400">Kasir/Staf harus memotret foto selfie saat melakukan Masuk/Keluar</p>
+                <p className="text-[10px] text-slate-400">Staf harus memotret foto selfie saat melakukan Masuk/Keluar</p>
               </div>
               <button
                 onClick={() => {
-                  setRequireSelfie(!requireSelfie);
-                  showToast(`Persyaratan foto selfie ${!requireSelfie ? "Diaktifkan" : "Dinonaktifkan"}`, "info");
+                  const nextValue = !preferences.requireSelfie;
+                  updatePreferences({ requireSelfie: nextValue });
+                  showToast(`Persyaratan foto selfie ${nextValue ? "diaktifkan" : "dinonaktifkan"} pada data demo.`, "info");
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  requireSelfie ? "bg-amber-500" : "bg-slate-800"
+                  preferences.requireSelfie ? "bg-amber-500" : "bg-slate-800"
                 }`}
+                aria-label="Wajibkan foto selfie presensi"
+                aria-pressed={preferences.requireSelfie}
               >
                 <div className={`w-5 h-5 rounded-full bg-slate-950 absolute top-0.5 transition-transform ${
-                  requireSelfie ? "right-0.5" : "left-0.5"
+                  preferences.requireSelfie ? "right-0.5" : "left-0.5"
                 }`} />
               </button>
             </div>
@@ -315,8 +314,13 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={minOvertime}
-                  onChange={(e) => setMinOvertime(Number(e.target.value))}
+                  min={0.5}
+                  max={24}
+                  step={0.5}
+                  value={preferences.minOvertime}
+                  onChange={(e) => updatePreferences({
+                    minOvertime: Math.min(24, Math.max(0.5, Number(e.target.value) || 0.5)),
+                  })}
                   className="w-16 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-amber-400 font-bold text-xs text-center focus:outline-none focus:border-amber-500"
                 />
                 <span className="text-xs text-slate-400">Jam</span>
@@ -345,8 +349,12 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={defaultLeaveBalance}
-                  onChange={(e) => setDefaultLeaveBalance(Number(e.target.value))}
+                  min={0}
+                  max={365}
+                  value={preferences.defaultLeaveBalance}
+                  onChange={(e) => updatePreferences({
+                    defaultLeaveBalance: Math.min(365, Math.max(0, Number(e.target.value) || 0)),
+                  })}
                   className="w-16 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-amber-400 font-bold text-xs text-center focus:outline-none focus:border-amber-500"
                 />
                 <span className="text-xs text-slate-400">Hari</span>
@@ -361,8 +369,12 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={advanceNoticeDays}
-                  onChange={(e) => setAdvanceNoticeDays(Number(e.target.value))}
+                  min={0}
+                  max={90}
+                  value={preferences.advanceNoticeDays}
+                  onChange={(e) => updatePreferences({
+                    advanceNoticeDays: Math.min(90, Math.max(0, Number(e.target.value) || 0)),
+                  })}
                   className="w-16 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-amber-400 font-bold text-xs text-center focus:outline-none focus:border-amber-500"
                 />
                 <span className="text-xs text-slate-400">Hari</span>
@@ -378,44 +390,88 @@ export default function SettingsPage() {
           <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-2">
             <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider mb-2">Keamanan Sistem HRD</h3>
 
-            <button 
-              onClick={() => showToast("Form ganti password dikirim ke email admin!", "info")}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-950 hover:bg-slate-800/60 border border-slate-800/80 transition-colors text-xs text-slate-300 cursor-pointer"
-            >
+            <div className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400">
               <div className="flex items-center gap-3">
-                <Lock className="w-4 h-4 text-amber-400" />
-                <span>Ganti Kata Sandi (Password) Admin</span>
+                <Lock className="w-4 h-4 text-slate-400" />
+                <div>
+                  <span className="block">Kata Sandi Admin</span>
+                  <span className="text-[10px] text-slate-400">Menunggu integrasi autentikasi</span>
+                </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-500" />
-            </button>
+              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">
+                Demo
+              </span>
+            </div>
 
             <button 
-              onClick={() => showToast("Notifikasi presensi disinkronkan!", "success")}
+              onClick={() => {
+                const nextValue = !preferences.notificationsEnabled;
+                updatePreferences({ notificationsEnabled: nextValue });
+                showToast(
+                  `Notifikasi demo ${nextValue ? "diaktifkan" : "dinonaktifkan"} secara lokal.`,
+                  "info"
+                );
+              }}
               className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-950 hover:bg-slate-800/60 border border-slate-800/80 transition-colors text-xs text-slate-300 cursor-pointer"
+              aria-pressed={preferences.notificationsEnabled}
             >
               <div className="flex items-center gap-3">
                 <Bell className="w-4 h-4 text-amber-400" />
-                <span>Pengaturan Alert & Push Notification</span>
+                <div className="text-left">
+                  <span className="block">Notifikasi Data Demo</span>
+                  <span className="text-[10px] text-slate-400">
+                    {preferences.notificationsEnabled ? "Aktif di perangkat ini" : "Nonaktif di perangkat ini"}
+                  </span>
+                </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-500" />
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                preferences.notificationsEnabled
+                  ? "bg-amber-500/15 text-amber-400"
+                  : "bg-slate-800 text-slate-400"
+              }`}>
+                {preferences.notificationsEnabled ? "Aktif" : "Nonaktif"}
+              </span>
+            </button>
+          </div>
+
+          <div className="bg-slate-900 rounded-2xl border border-rose-500/20 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                <Database className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-slate-100">Data Demo Lokal</h3>
+                <p className="mt-0.5 text-[10px] leading-relaxed text-slate-400">
+                  Perubahan tersimpan di browser ini. Reset akan mengembalikan karyawan,
+                  presensi, cuti, jadwal, dan konfigurasi ke data awal prototype.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowResetModal(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/15"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset Semua Data Demo
             </button>
           </div>
         </div>
       )}
 
-      {/* Modal Tambah Outlet Baru */}
+      {/* Modal Tambah Lokasi Baru */}
       <Modal
         isOpen={showAddOutletModal}
         onClose={() => setShowAddOutletModal(false)}
-        title="Tambah Outlet Baru"
+        title="Tambah Lokasi Baru"
         icon={Building2}
       >
         <form onSubmit={handleAddOutletSubmit} className="space-y-3.5">
           <div>
-            <label className="text-xs font-medium text-slate-300 block mb-1">Nama Outlet / Cabang</label>
+            <label className="text-xs font-medium text-slate-300 block mb-1">Nama Lokasi / Area</label>
             <input
               type="text"
-              placeholder="Contoh: Outlet Bintaro"
+              placeholder="Contoh: Area Operasional Bintaro"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3 py-2 text-base sm:text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-amber-500"
@@ -425,7 +481,7 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">Kode Outlet</label>
+              <label className="text-xs font-medium text-slate-300 block mb-1">Kode Lokasi</label>
               <input
                 type="text"
                 placeholder="Contoh: BTR-05"
@@ -451,7 +507,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-300 block mb-1">Alamat Lengkap Outlet</label>
+            <label className="text-xs font-medium text-slate-300 block mb-1">Alamat Lengkap Lokasi</label>
             <textarea
               rows={2}
               placeholder="Masukkan alamat lengkap lokasi cabang..."
@@ -518,10 +574,43 @@ export default function SettingsPage() {
               type="submit"
               className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 cursor-pointer"
             >
-              Simpan Outlet
+              Simpan Lokasi
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        title="Reset Data Demo"
+        icon={RotateCcw}
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs leading-relaxed text-slate-300">
+            Semua perubahan lokal pada prototype akan dihapus dan data awal akan
+            dimuat kembali. Tindakan ini hanya memengaruhi browser ini.
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowResetModal(false)}
+              className="flex-1 rounded-xl bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                resetDemoData();
+                setShowResetModal(false);
+              }}
+              className="flex-1 rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white hover:bg-rose-400"
+            >
+              Ya, Reset Data
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
