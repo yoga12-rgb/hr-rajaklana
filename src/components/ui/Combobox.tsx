@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 
@@ -27,12 +34,28 @@ interface ComboboxProps {
   className?: string;
 }
 
+const normalizeSearchText = (text: string) =>
+  text.trim().toLocaleLowerCase("id-ID");
+
+const filterOptions = (options: ComboboxOption[], searchTerm: string) => {
+  const normalizedSearch = normalizeSearchText(searchTerm);
+  if (!normalizedSearch) return options;
+
+  return options.filter((option) => {
+    const searchableText = `${option.label} ${option.subtext ?? ""}`;
+    return normalizeSearchText(searchableText).includes(normalizedSearch);
+  });
+};
+
 /**
  * Komponen Reusable Searchable Combobox Dropdown
- * 
- * Memungkinkan pengguna untuk mencari opsi via input teks interaktif
- * atau memilih opsi dari daftar dropdown berbasis animasi Framer Motion.
- * 
+ *
+ * - Mendukung pencarian, klik, dan navigasi keyboard Arrow/Home/End/Enter/Escape.
+ * - Menggunakan pola ARIA combobox + listbox dan menjaga opsi aktif tetap terlihat.
+ * - Mengembalikan fokus ke trigger setelah memilih atau membatalkan pilihan.
+ * - Menghapus pencarian sementara setiap kali dropdown ditutup.
+ * - Menyesuaikan arah dan tinggi dropdown terhadap viewport atau batas Modal.
+ *
  * @example
  * <Combobox
  *   label="Pilih Karyawan"
@@ -54,96 +77,226 @@ export function Combobox({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [openUpwards, setOpenUpwards] = useState(false);
-  
+  const [dropdownMaxHeight, setDropdownMaxHeight] = useState(288);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const labelId = useId();
+  const triggerValueId = useId();
+  const popoverId = useId();
+  const listboxId = useId();
 
-  const selectedOption = options.find((opt) => opt.value === value);
-
-  const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (opt.subtext && opt.subtext.toLowerCase().includes(searchTerm.toLowerCase()))
+  const selectedOption = useMemo(
+    () => options.find((option) => option.value === value),
+    [options, value]
   );
 
-  // Reset active index when search changes
-  useEffect(() => {
+  const filteredOptions = useMemo(
+    () => filterOptions(options, searchTerm),
+    [options, searchTerm]
+  );
+
+  const activeOption = filteredOptions[activeIndex];
+  const activeOptionId = activeOption
+    ? `${listboxId}-option-${activeIndex}`
+    : undefined;
+
+  const measurePlacement = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
+    const dialog = container.closest<HTMLElement>('[role="dialog"]');
+    const dialogRect = dialog?.getBoundingClientRect();
+    const visibleTop = Math.max(viewportTop, dialogRect?.top ?? viewportTop);
+    const visibleBottom = Math.min(viewportBottom, dialogRect?.bottom ?? viewportBottom);
+    const spaceAbove = Math.max(0, containerRect.top - visibleTop);
+    const spaceBelow = Math.max(0, visibleBottom - containerRect.bottom);
+    const shouldOpenUpwards = spaceBelow < 280 && spaceAbove > spaceBelow;
+    const availableSpace = shouldOpenUpwards ? spaceAbove : spaceBelow;
+
+    setOpenUpwards(shouldOpenUpwards);
+    setDropdownMaxHeight(Math.max(120, Math.min(288, availableSpace - 8)));
+  }, []);
+
+  const closeDropdown = useCallback((restoreTriggerFocus = false) => {
+    setIsOpen(false);
+    setSearchTerm("");
     setActiveIndex(-1);
-  }, [searchTerm]);
 
-  // Keyboard Navigation (Industry Standard A11y)
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen) {
-      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
-        e.preventDefault();
-        setIsOpen(true);
-      }
-      return;
+    if (restoreTriggerFocus) {
+      window.requestAnimationFrame(() => {
+        triggerRef.current?.focus({ preventScroll: true });
+      });
     }
+  }, []);
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : prev));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
-    } else if (e.key === "Enter" && activeIndex >= 0 && activeIndex < filteredOptions.length) {
-      e.preventDefault();
-      onChange(filteredOptions[activeIndex].value);
-      setIsOpen(false);
-      setSearchTerm("");
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      setIsOpen(false);
+  const openDropdown = (initialPosition: "selected" | "first" | "last" = "selected") => {
+    const selectedIndex = options.findIndex((option) => option.value === value);
+    let initialIndex = selectedIndex >= 0 ? selectedIndex : options.length > 0 ? 0 : -1;
+
+    if (initialPosition === "first") initialIndex = options.length > 0 ? 0 : -1;
+    if (initialPosition === "last") initialIndex = options.length - 1;
+
+    setSearchTerm("");
+    setActiveIndex(initialIndex);
+    measurePlacement();
+    setIsOpen(true);
+
+    window.requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const selectOption = (option: ComboboxOption) => {
+    onChange(option.value);
+    closeDropdown(true);
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextSearchTerm = event.target.value;
+    const nextFilteredOptions = filterOptions(options, nextSearchTerm);
+
+    setSearchTerm(nextSearchTerm);
+    setActiveIndex(nextFilteredOptions.length > 0 ? 0 : -1);
+  };
+
+  const handleTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      openDropdown(event.key === "ArrowUp" ? "last" : "first");
     }
   };
 
-  // Close dropdown on click outside and measure space
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (filteredOptions.length === 0) {
+        setActiveIndex(-1);
+        return;
+      }
+      setActiveIndex((current) =>
+        Math.min(filteredOptions.length - 1, current + 1)
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (filteredOptions.length === 0) {
+        setActiveIndex(-1);
+        return;
+      }
+      setActiveIndex((current) =>
+        current <= 0 ? Math.max(0, filteredOptions.length - 1) : current - 1
+      );
+      return;
+    }
+
+    if (event.key === "Home" && filteredOptions.length > 0) {
+      event.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+
+    if (event.key === "End" && filteredOptions.length > 0) {
+      event.preventDefault();
+      setActiveIndex(filteredOptions.length - 1);
+      return;
+    }
+
+    if (event.key === "Enter" && activeOption) {
+      event.preventDefault();
+      selectOption(activeOption);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDropdown(true);
+      return;
+    }
+
+    if (event.key === "Tab") {
+      window.setTimeout(() => closeDropdown(false), 0);
+    }
+  };
+
+  // Keep the keyboard-active option visible without synchronously changing state in an effect.
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (!isOpen || activeIndex < 0) return;
+    optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, isOpen]);
+
+  // Close on outside pointer and keep placement correct when the mobile viewport changes.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        closeDropdown(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    
-    // Auto flip logic
-    if (isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      
-      // Only flip upwards if space below is severely restricted (< 160px) AND there's plenty of space above (> 240px)
-      setOpenUpwards(spaceBelow < 160 && spaceAbove > 240);
-    }
-    
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("resize", measurePlacement);
+    window.visualViewport?.addEventListener("resize", measurePlacement);
+    window.visualViewport?.addEventListener("scroll", measurePlacement);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("resize", measurePlacement);
+      window.visualViewport?.removeEventListener("resize", measurePlacement);
+      window.visualViewport?.removeEventListener("scroll", measurePlacement);
+    };
+  }, [closeDropdown, isOpen, measurePlacement]);
 
   return (
-    <div className={`space-y-1 relative ${className}`} ref={containerRef} onKeyDown={handleKeyDown}>
-      {label && <label className="text-xs font-medium text-slate-300">{label}</label>}
+    <div className={`space-y-1 relative ${className}`} ref={containerRef}>
+      {label && (
+        <span id={labelId} className="text-xs font-medium text-slate-300 block">
+          {label}
+        </span>
+      )}
 
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 hover:border-amber-500/50 rounded-lg text-slate-200 flex items-center justify-between transition-colors cursor-pointer text-left focus:outline-none focus:border-amber-500"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        aria-labelledby={label ? `${labelId} ${triggerValueId}` : triggerValueId}
+        onClick={() => {
+          if (isOpen) closeDropdown(false);
+          else openDropdown();
+        }}
+        onKeyDown={handleTriggerKeyDown}
+        className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 hover:border-amber-500/50 rounded-lg text-slate-200 flex items-center justify-between transition-colors cursor-pointer text-left focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40"
       >
-        <span className="truncate">
+        <span id={triggerValueId} className="truncate">
           {selectedOption ? selectedOption.label : <span className="text-slate-500">{placeholder}</span>}
         </span>
-        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
+        <ChevronsUpDown aria-hidden="true" className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
       </button>
 
       {/* Animated Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            id={popoverId}
             initial={{ opacity: 0, y: openUpwards ? 6 : -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: openUpwards ? 6 : -6, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className={`absolute z-[120] left-0 right-0 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden p-1.5 space-y-1 max-h-56 flex flex-col ${
+            style={{ maxHeight: dropdownMaxHeight }}
+            className={`absolute z-[120] left-0 right-0 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden p-1.5 space-y-1 flex flex-col ${
               openUpwards ? "bottom-full mb-1" : "top-full mt-1"
             }`}
           >
@@ -153,25 +306,44 @@ export function Combobox({
               <input
                 ref={inputRef}
                 type="text"
+                role="combobox"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
+                onKeyDown={handleInputKeyDown}
                 placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                aria-autocomplete="list"
+                aria-expanded="true"
+                aria-controls={listboxId}
+                aria-activedescendant={activeOptionId}
+                autoComplete="off"
                 className="w-full pl-7 pr-7 py-2 sm:py-1.5 text-base sm:text-xs bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
                 autoFocus
               />
               {searchTerm && (
                 <button
                   type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  aria-label="Hapus pencarian"
+                  onPointerDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setActiveIndex(options.length > 0 ? 0 : -1);
+                    inputRef.current?.focus({ preventScroll: true });
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none focus:text-amber-400"
                 >
-                  <X className="w-3 h-3" />
+                  <X aria-hidden="true" className="w-3 h-3" />
                 </button>
               )}
             </div>
 
             {/* Options List */}
-            <div className="overflow-y-auto flex-1 space-y-0.5 pr-0.5">
+            <div
+              id={listboxId}
+              role="listbox"
+              aria-label={label ?? placeholder}
+              className="overflow-y-auto flex-1 min-h-0 space-y-0.5 pr-0.5 overscroll-contain"
+            >
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((option, index) => {
                   const isSelected = option.value === value;
@@ -179,12 +351,15 @@ export function Combobox({
                   return (
                     <button
                       key={option.value}
-                      type="button"
-                      onClick={() => {
-                        onChange(option.value);
-                        setIsOpen(false);
-                        setSearchTerm("");
+                      id={`${listboxId}-option-${index}`}
+                      ref={(element) => {
+                        optionRefs.current[index] = element;
                       }}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      tabIndex={-1}
+                      onClick={() => selectOption(option)}
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
                         isSelected || isActive
                           ? "bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20"
@@ -195,12 +370,14 @@ export function Combobox({
                         <p>{option.label}</p>
                         {option.subtext && <p className="text-[10px] text-slate-500 font-normal">{option.subtext}</p>}
                       </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 ml-2" />}
+                      {isSelected && <Check aria-hidden="true" className="w-3.5 h-3.5 text-amber-400 shrink-0 ml-2" />}
                     </button>
                   );
                 })
               ) : (
-                <p className="text-[11px] text-slate-500 italic p-3 text-center">Tidak ada opsi cocok</p>
+                <p role="status" className="text-[11px] text-slate-500 italic p-3 text-center">
+                  Tidak ada opsi cocok
+                </p>
               )}
             </div>
           </motion.div>
