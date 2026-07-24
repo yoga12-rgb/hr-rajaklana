@@ -272,7 +272,7 @@ export default function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-xs font-bold text-slate-200">Toleransi Keterlambatan</h4>
-                <p className="text-[10px] text-slate-400">Batas menit sebelum absensi dicatat sebagai "Terlambat"</p>
+                <p className="text-[10px] text-slate-400">Batas menit sebelum absensi dicatat sebagai &ldquo;Terlambat&rdquo;</p>
               </div>
               <div className="flex items-center gap-2">
                 <input

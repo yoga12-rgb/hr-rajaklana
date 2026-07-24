@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useHR } from "@/context/HRContext";
+import { useHR, type Announcement } from "@/context/HRContext";
 import { 
   Users, 
   Clock, 
@@ -31,6 +31,21 @@ const miniChartData = [
   { day: "Kamis", hadir: 45 },
   { day: "Jumat", hadir: 46 },
 ];
+
+const announcementCategoryOptions: Array<{
+  value: Announcement["category"];
+  label: string;
+}> = [
+  { value: "Operasional", label: "Operasional" },
+  { value: "Info K3", label: "Info K3" },
+  { value: "Event Perusahaan", label: "Event Perusahaan" },
+  { value: "Kebijakan HR", label: "Kebijakan HR" },
+];
+
+const isAnnouncementCategory = (
+  value: string
+): value is Announcement["category"] =>
+  announcementCategoryOptions.some((option) => option.value === value);
 
 export default function MobileHRDashboard() {
   const { 
@@ -324,14 +339,13 @@ export default function MobileHRDashboard() {
 
           <Combobox
             label="Kategori Pengumuman"
-            options={[
-              { value: "Operasional", label: "Operasional" },
-              { value: "Info K3", label: "Info K3" },
-              { value: "Event Perusahaan", label: "Event Perusahaan" },
-              { value: "Kebijakan HR", label: "Kebijakan HR" },
-            ]}
+            options={announcementCategoryOptions}
             value={ancCategory}
-            onChange={(val) => setAncCategory(val as any)}
+            onChange={(nextCategory) => {
+              if (isAnnouncementCategory(nextCategory)) {
+                setAncCategory(nextCategory);
+              }
+            }}
           />
 
           <div className="space-y-1.5">

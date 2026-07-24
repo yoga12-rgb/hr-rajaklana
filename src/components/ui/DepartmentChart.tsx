@@ -35,7 +35,7 @@ export function DepartmentChart({ data, height = 256 }: DepartmentChartProps) {
             }}
             itemStyle={{ color: '#fbbf24', fontWeight: 600 }}
             labelStyle={{ color: '#f8fafc', fontWeight: 700, marginBottom: '2px' }}
-            formatter={(value: any) => [`${value}% Kehadiran`, 'Kehadiran']}
+            formatter={(value) => [`${value}% Kehadiran`, 'Kehadiran']}
           />
           <Bar dataKey="hadir" radius={[4, 4, 0, 0]}>
             {data.map((entry, index) => (

@@ -36,6 +36,7 @@ export default function AttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraRequestRef = useRef(0);
 
   useEffect(() => {
     const updateTime = () => {
@@ -49,6 +50,9 @@ export default function AttendancePage() {
   }, []);
 
   const startCamera = async () => {
+    const requestId = cameraRequestRef.current + 1;
+    cameraRequestRef.current = requestId;
+
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -59,11 +63,28 @@ export default function AttendancePage() {
           aspectRatio: { ideal: 0.75 }
         }
       });
+
+      // Modal bisa ditutup ketika dialog izin kamera masih terbuka.
+      if (requestId !== cameraRequestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       streamRef.current = stream;
       setIsCameraActive(true);
-    } catch (err: any) {
-      console.error("Camera access error:", err);
-      setCameraError("Izin kamera ditolak atau perangkat kamera tidak ditemukan.");
+    } catch (error: unknown) {
+      if (requestId !== cameraRequestRef.current) return;
+
+      console.error("Camera access error:", error);
+      const permissionDenied =
+        error instanceof DOMException &&
+        (error.name === "NotAllowedError" || error.name === "SecurityError");
+
+      setCameraError(
+        permissionDenied
+          ? "Izin kamera ditolak. Aktifkan izin kamera pada pengaturan browser."
+          : "Perangkat kamera tidak ditemukan atau tidak dapat digunakan."
+      );
       setIsCameraActive(false);
     }
   };
@@ -76,9 +97,14 @@ export default function AttendancePage() {
   }, [isCameraActive]);
 
   const stopCamera = () => {
+    cameraRequestRef.current += 1;
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
   };
@@ -109,13 +135,21 @@ export default function AttendancePage() {
     startCamera();
   };
 
-  // Auto cleanup camera stream when modal is closed
+  // Pastikan stream perangkat dilepas ketika halaman tidak lagi dirender.
   useEffect(() => {
-    if (!showModal) {
-      stopCamera();
-      setCapturedImage(null);
-    }
-  }, [showModal]);
+    return () => {
+      cameraRequestRef.current += 1;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  const closeClockInModal = () => {
+    stopCamera();
+    setCapturedImage(null);
+    setCameraError(null);
+    setShowModal(false);
+  };
 
   const handleClockInSubmit = () => {
     if (simulatedDistance > 50) {
@@ -125,7 +159,7 @@ export default function AttendancePage() {
     clockIn(notes || `Check-in GPS & Selfie (Jarak: ${simulatedDistance}m)`);
     showToast("Absen Masuk Berhasil! Verifikasi Wajah & GPS Selesai.", "success");
     setNotes("");
-    setShowModal(false);
+    closeClockInModal();
   };
 
   return (
@@ -243,7 +277,7 @@ export default function AttendancePage() {
       {/* Clock In Form Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={closeClockInModal}
         title="Form Presensi Masuk"
         icon={Camera}
       >
@@ -390,7 +424,7 @@ export default function AttendancePage() {
 
           <div className="flex items-center gap-2 pt-2">
             <button
-              onClick={() => setShowModal(false)}
+              onClick={closeClockInModal}
               className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
             >
               Batal
