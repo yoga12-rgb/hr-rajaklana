@@ -1,6 +1,14 @@
 "use client";
 
-import React, { ReactNode, useEffect, useState, useRef } from "react";
+import React, {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { LucideIcon, X } from "lucide-react";
@@ -20,13 +28,99 @@ interface ModalProps {
   maxWidth?: string;
 }
 
+interface ScrollLockSnapshot {
+  scrollY: number;
+  bodyPosition: string;
+  bodyTop: string;
+  bodyLeft: string;
+  bodyRight: string;
+  bodyWidth: string;
+  bodyOverflow: string;
+  bodyPaddingRight: string;
+  htmlOverflow: string;
+}
+
+const subscribeToClient = () => () => undefined;
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "textarea:not([disabled])",
+  "select:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+let scrollLockCount = 0;
+let scrollLockSnapshot: ScrollLockSnapshot | null = null;
+
+const isKeyboardInput = (element: Element | null): element is HTMLElement => {
+  if (!(element instanceof HTMLElement)) return false;
+  return element.matches("input, textarea, select, [contenteditable='true']");
+};
+
+const lockBodyScroll = () => {
+  scrollLockCount += 1;
+  if (scrollLockCount > 1) return;
+
+  const body = document.body;
+  const html = document.documentElement;
+  const scrollY = window.scrollY;
+  const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth);
+  const computedPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+
+  scrollLockSnapshot = {
+    scrollY,
+    bodyPosition: body.style.position,
+    bodyTop: body.style.top,
+    bodyLeft: body.style.left,
+    bodyRight: body.style.right,
+    bodyWidth: body.style.width,
+    bodyOverflow: body.style.overflow,
+    bodyPaddingRight: body.style.paddingRight,
+    htmlOverflow: html.style.overflow,
+  };
+
+  body.style.position = "fixed";
+  body.style.top = `-${scrollY}px`;
+  body.style.left = "0";
+  body.style.right = "0";
+  body.style.width = "100%";
+  body.style.overflow = "hidden";
+  if (scrollbarWidth > 0) {
+    body.style.paddingRight = `${computedPaddingRight + scrollbarWidth}px`;
+  }
+  html.style.overflow = "hidden";
+};
+
+const unlockBodyScroll = () => {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount > 0 || !scrollLockSnapshot) return;
+
+  const body = document.body;
+  const html = document.documentElement;
+  const snapshot = scrollLockSnapshot;
+
+  body.style.position = snapshot.bodyPosition;
+  body.style.top = snapshot.bodyTop;
+  body.style.left = snapshot.bodyLeft;
+  body.style.right = snapshot.bodyRight;
+  body.style.width = snapshot.bodyWidth;
+  body.style.overflow = snapshot.bodyOverflow;
+  body.style.paddingRight = snapshot.bodyPaddingRight;
+  html.style.overflow = snapshot.htmlOverflow;
+
+  scrollLockSnapshot = null;
+  window.scrollTo(0, snapshot.scrollY);
+};
+
 /**
  * Komponen Modal & Mobile Bottom Sheet Universal (Industry Standard)
  * 
  * - Portal: Dirender di document.body untuk menghindari masalah z-index & overflow.
- * - Accessibility (A11y): Mendukung penutupan dengan tombol 'Escape' (Esc) & memiliki atribut ARIA.
+ * - Accessibility (A11y): Focus trap, initial/restore focus, tombol Escape, dan atribut ARIA dialog.
  * - Swipe-to-Dismiss: Bagian header dapat ditarik ke bawah (drag-to-close) untuk menutup di layar sentuh.
- * - Body Scroll Lock: Mengunci scroll latar belakang utama saat terbuka.
+ * - Body Scroll Lock: Mengunci posisi body secara reference-counted agar aman di iOS dan multi-modal.
+ * - Smart Keyboard: Padding dan auto-scroll hanya aktif untuk input yang benar-benar memunculkan keyboard.
  * - Responsive: Bottom Sheet pada Mobile (< 640px) & Centered Popup pada Desktop (>= 640px).
  */
 export function Modal({
@@ -37,13 +131,16 @@ export function Modal({
   children,
   maxWidth = "sm:max-w-sm"
 }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToClient, () => true, () => false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const dragControls = useDragControls();
   const contentRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
 
   // Helper to safely scroll element into view INSIDE the modal scroll container only (prevents breaking window scroll lock on iOS Safari)
-  const scrollElementInsideModal = (target: HTMLElement) => {
+  const scrollElementInsideModal = useCallback((target: HTMLElement) => {
     if (!contentRef.current || !target) return;
     const container = contentRef.current;
     const targetRect = target.getBoundingClientRect();
@@ -51,45 +148,66 @@ export function Modal({
     const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
     const targetScrollTop = relativeTop - container.clientHeight / 2 + targetRect.height / 2;
     container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
-  };
+  }, []);
 
   // Auto-scroll input into view & adjust bottom sheet height when virtual keyboard pops up
   const handleFocusIn = (e: React.FocusEvent) => {
     const target = e.target as HTMLElement;
-    const isInteractive = target.closest("input, textarea, select, button, [role='combobox'], [role='button']") as HTMLElement;
-    if (isInteractive) {
+    const keyboardInput = target.closest(
+      "input, textarea, select, [contenteditable='true']"
+    ) as HTMLElement | null;
+
+    if (keyboardInput) {
       setIsInputFocused(true);
-      setTimeout(() => {
-        scrollElementInsideModal(isInteractive);
+      window.setTimeout(() => {
+        scrollElementInsideModal(keyboardInput);
       }, 150);
     }
   };
 
   const handleFocusOut = () => {
-    setTimeout(() => {
-      if (contentRef.current && !contentRef.current.contains(document.activeElement)) {
+    window.setTimeout(() => {
+      const activeElement = document.activeElement;
+      const keyboardInputIsActive =
+        isKeyboardInput(activeElement) &&
+        Boolean(contentRef.current?.contains(activeElement));
+
+      if (!keyboardInputIsActive) {
         setIsInputFocused(false);
       }
     }, 100);
   };
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = useCallback(() => {
+    setIsInputFocused(false);
+    onCloseRef.current();
+  }, []);
 
   // Industry Standard: Mobile Visual Viewport API listener to track virtual keyboard state 100% accurately
   useEffect(() => {
     if (!isOpen) return;
 
     const handleViewportChange = () => {
-      if (typeof window !== "undefined" && window.visualViewport) {
-        // Keyboard is visible if visualViewport height is significantly smaller than full innerHeight
-        const isKeyboardVisible = window.visualViewport.height < window.innerHeight * 0.75;
-        if (isKeyboardVisible) {
+      const viewport = window.visualViewport;
+      if (viewport) {
+        const activeElement = document.activeElement;
+        const activeInputIsInside =
+          isKeyboardInput(activeElement) && Boolean(contentRef.current?.contains(activeElement));
+        const keyboardGap = window.innerHeight - viewport.height;
+        const isKeyboardVisible = keyboardGap > Math.max(150, window.innerHeight * 0.2);
+
+        if (activeInputIsInside) {
           setIsInputFocused(true);
-          const activeEl = document.activeElement as HTMLElement;
-          if (activeEl && contentRef.current?.contains(activeEl)) {
-            setTimeout(() => {
-              scrollElementInsideModal(activeEl);
+          if (isKeyboardVisible) {
+            window.setTimeout(() => {
+              scrollElementInsideModal(activeElement);
             }, 100);
           }
-        } else {
+        } else if (!isKeyboardVisible) {
           setIsInputFocused(false);
         }
       }
@@ -102,34 +220,64 @@ export function Modal({
       window.visualViewport?.removeEventListener("resize", handleViewportChange);
       window.visualViewport?.removeEventListener("scroll", handleViewportChange);
     };
-  }, [isOpen]);
+  }, [isOpen, scrollElementInsideModal]);
 
-  // Hydration check for Portal
+  // Reference-counted iOS body lock, Escape handling, focus trap, and focus restoration.
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!isOpen) return;
 
-  // Body Scroll Lock & Escape Key Listener
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus({ preventScroll: true });
+    });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+        return;
+      }
+
+      if (e.key !== "Tab" || !contentRef.current) return;
+
+      const focusableElements = Array.from(
+        contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((element) => element.getClientRects().length > 0);
+
+      if (focusableElements.length === 0) {
+        e.preventDefault();
+        contentRef.current.focus({ preventScroll: true });
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (!contentRef.current.contains(activeElement)) {
+        e.preventDefault();
+        (e.shiftKey ? lastElement : firstElement).focus();
+      } else if (e.shiftKey && activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      } else if (!e.shiftKey && activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
     };
 
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-      document.addEventListener("keydown", handleEscape);
-    } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-    }
+    lockBodyScroll();
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      document.removeEventListener("keydown", handleEscape);
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      unlockBodyScroll();
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
     };
-  }, [isOpen, onClose]);
+  }, [handleClose, isOpen]);
 
   // Ultimate iOS Scroll Trap (DOM-traversal for nested scroll containers like Combobox)
   useEffect(() => {
@@ -216,7 +364,7 @@ export function Modal({
         >
           {/* Backdrop Overlay - Separate element with touch-none & onTouchMove preventDefault to completely freeze iOS background */}
           <div
-            onClick={onClose}
+            onClick={handleClose}
             onTouchMove={(e) => e.preventDefault()}
             className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm touch-none"
           />
@@ -227,7 +375,8 @@ export function Modal({
             onBlur={handleFocusOut}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-title"
+            aria-labelledby={titleId}
+            tabIndex={-1}
             initial={{ y: "100%", opacity: 0.5 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
@@ -243,7 +392,7 @@ export function Modal({
             onDragEnd={(_, info) => {
               // Jika ditarik ke bawah melebihi threshold atau dengan kecepatan tinggi, tutup modal
               if (info.offset.y > 150 || info.velocity.y > 500) {
-                onClose();
+                handleClose();
               }
             }}
             
@@ -262,13 +411,14 @@ export function Modal({
               <div className="w-12 h-1.5 bg-slate-700/70 rounded-full mx-auto sm:hidden mb-2" />
 
               <div className="flex items-center justify-between">
-                <h3 id="modal-title" className="font-bold text-slate-100 text-sm flex items-center gap-2 select-none">
+                <h3 id={titleId} className="font-bold text-slate-100 text-sm flex items-center gap-2 select-none">
                   {Icon && <Icon className="w-4 h-4 text-amber-400" />}
                   <span>{title}</span>
                 </h3>
                 <button
+                  ref={closeButtonRef}
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   aria-label="Tutup Modal"
                   className="text-slate-400 hover:text-slate-200 text-xs font-semibold p-1 cursor-pointer transition-colors bg-slate-800/50 sm:bg-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >

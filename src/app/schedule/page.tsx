@@ -4,18 +4,13 @@ import React, { useState, Fragment } from "react";
 import { useHR, WorkShift } from "@/context/HRContext";
 import { 
   CalendarDays, 
-  Clock, 
-  UserCheck, 
   Building2, 
   RefreshCw, 
   Edit3, 
-  ChevronRight, 
-  CheckCircle2, 
   Sun, 
   Sunset, 
   Moon, 
-  Coffee,
-  Plus
+  Coffee
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
@@ -42,7 +37,12 @@ export default function SchedulePage() {
   // Form State
   const [selectedEmpId, setSelectedEmpId] = useState("EMP-001");
   const [newShiftName, setNewShiftName] = useState<WorkShift["shiftName"]>("Shift Pagi");
-  const [newTimeSlot, setNewTimeSlot] = useState("07:00 - 15:00 WIB");
+  const [shiftStartTime, setShiftStartTime] = useState("07:00");
+  const [shiftEndTime, setShiftEndTime] = useState("15:00");
+
+  const newTimeSlot = newShiftName === "Off / Libur"
+    ? "Libur / Off"
+    : `${shiftStartTime} - ${shiftEndTime} WIB`;
 
   const filteredEmployees = employees.filter((emp) => 
     selectedDept === "Semua" || emp.department === selectedDept
@@ -435,18 +435,41 @@ export default function SchedulePage() {
             onChange={(val) => {
               const s = val as WorkShift["shiftName"];
               setNewShiftName(s);
-              if (s === "Shift Pagi") setNewTimeSlot("07:00 - 15:00 WIB");
-              else if (s === "Shift Siang") setNewTimeSlot("12:00 - 20:00 WIB");
-              else if (s === "Shift Malam") setNewTimeSlot("15:00 - 23:00 WIB");
-              else setNewTimeSlot("Libur / Off");
+              if (s === "Shift Pagi") {
+                setShiftStartTime("07:00");
+                setShiftEndTime("15:00");
+              } else if (s === "Shift Siang") {
+                setShiftStartTime("12:00");
+                setShiftEndTime("20:00");
+              } else if (s === "Shift Malam") {
+                setShiftStartTime("15:00");
+                setShiftEndTime("23:00");
+              }
             }}
           />
 
-          <TimePicker
-            label="Jam Kerja / Slot"
-            value={newTimeSlot}
-            onChange={setNewTimeSlot}
-          />
+          {newShiftName === "Off / Libur" ? (
+            <div className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs text-slate-400">
+              Shift libur tidak memerlukan jam mulai dan selesai.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TimePicker
+                label="Jam Mulai Shift"
+                value={shiftStartTime}
+                onChange={setShiftStartTime}
+                includeSuffix={false}
+                align="left"
+              />
+              <TimePicker
+                label="Jam Selesai Shift"
+                value={shiftEndTime}
+                onChange={setShiftEndTime}
+                includeSuffix={false}
+                align="right"
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2 pt-2">
             <button

@@ -7,9 +7,6 @@ import {
   CheckCircle2, 
   XCircle, 
   AlertCircle, 
-  Calendar, 
-  Users, 
-  FileText,
   Check,
   X,
   Timer
@@ -48,15 +45,15 @@ export default function OvertimePage() {
     if (!start || !end) return 0;
     
     // Hapus suffix " WIB" jika ada agar fungsi Number() tidak mengembalikan NaN
-    const cleanStart = start.replace(" WIB", "");
-    const cleanEnd = end.replace(" WIB", "");
+    const cleanStart = start.replace(/(?:\s+WIB)+$/i, "");
+    const cleanEnd = end.replace(/(?:\s+WIB)+$/i, "");
 
     const [sh, sm] = cleanStart.split(":").map(Number);
     const [eh, em] = cleanEnd.split(":").map(Number);
 
     if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return 0;
 
-    let startTotal = sh * 60 + sm;
+    const startTotal = sh * 60 + sm;
     let endTotal = eh * 60 + em;
 
     if (endTotal <= startTotal) {
@@ -305,12 +302,14 @@ export default function OvertimePage() {
               label="Jam Mulai Lembur"
               value={startTime}
               onChange={handleStartTimeChange}
+              includeSuffix={false}
               align="left"
             />
             <TimePicker
               label="Jam Selesai Lembur"
               value={endTime}
               onChange={handleEndTimeChange}
+              includeSuffix={false}
               align="right"
             />
           </div>
