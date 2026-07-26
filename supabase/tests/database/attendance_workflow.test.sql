@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(17);
+select extensions.plan(20);
 
 select extensions.ok(
   not has_function_privilege('anon', 'public.get_attendance_workspace()', 'execute'),
@@ -23,6 +23,14 @@ select extensions.ok(
     'execute'
   ),
   'anonymous cannot clock out'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.preview_attendance_geofence(uuid,numeric,numeric,numeric,timestamptz)',
+    'execute'
+  ),
+  'anonymous cannot preview attendance geofence'
 );
 select extensions.ok(
   not has_table_privilege('authenticated', 'public.attendance_records', 'insert'),
@@ -186,10 +194,29 @@ select extensions.throws_ok(
   'Akun ini tidak dapat melakukan presensi.',
   'management cannot clock in'
 );
+select extensions.throws_ok(
+  $$select public.preview_attendance_geofence(
+    '73000000-0000-0000-0000-000000000001',
+    -6.2, 106.8, 10, now()
+  )$$,
+  '42501',
+  'Akun ini tidak dapat memeriksa geofence presensi.',
+  'management cannot preview attendance geofence'
+);
 
 reset role;
 select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000001', true);
 set local role authenticated;
+select extensions.is(
+  (
+    public.preview_attendance_geofence(
+      '73000000-0000-0000-0000-000000000001',
+      -6.2, 106.8, 10, now()
+    )->>'within_geofence'
+  )::boolean,
+  true,
+  'supervisor receives a server-calculated geofence preview'
+);
 select extensions.throws_ok(
   $$select public.clock_in_attendance(
     '7a000000-0000-0000-0000-000000000001',
@@ -276,7 +303,7 @@ select extensions.ok(
 
 \else
 
-select extensions.skip(12, 'database role cannot seed attendance fixtures');
+select extensions.skip(14, 'database role cannot seed attendance fixtures');
 
 \endif
 

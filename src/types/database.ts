@@ -2543,6 +2543,16 @@ export type Database = {
         Returns: Json
       }
       is_supervisor: { Args: never; Returns: boolean }
+      preview_attendance_geofence: {
+        Args: {
+          p_accuracy_m: number
+          p_captured_at: string
+          p_latitude: number
+          p_longitude: number
+          p_outlet_id: string
+        }
+        Returns: Json
+      }
       publish_manual_roster: {
         Args: { p_reason: string; p_roster_version_id: string }
         Returns: Json

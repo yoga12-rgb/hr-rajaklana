@@ -17,8 +17,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Enam belas migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 209/209 pada
+- Tujuh belas migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 212/212 pada
   26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -48,9 +48,10 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Cuti/Izin live sudah mendukung saldo tahunan, reservasi, dokumen privat,
   pembatalan, jenis cuti dinamis, serta keputusan atomik. Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
-- Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan
-  pada M5 dan menunggu smoke test perangkat nyata; worker retensi dan
-  optimizer roster otomatis belum diimplementasikan.
+- Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
+  UI menampilkan preview jarak server, status proses, kondisi offline, serta
+  retry upload idempotent; worker retensi dan optimizer roster otomatis belum
+  diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.

@@ -13,15 +13,22 @@ import {
   RotateCcw,
   ShieldCheck,
   Video,
+  WifiOff,
 } from "lucide-react";
+import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
 import { useHR } from "@/context/HRContext";
 import {
   useAttendanceWorkspace,
+  useAttendanceGeofencePreview,
   useClockInAttendance,
   useClockOutAttendance,
 } from "@/lib/attendance/queries";
-import type { DeviceLocation } from "@/lib/attendance/repository";
+import type {
+  ClockInPhase,
+  DeviceLocation,
+  GeofencePreview,
+} from "@/lib/attendance/repository";
 import { playClickSound } from "@/utils/clickSound";
 
 function errorMessage(error: unknown) {
@@ -40,6 +47,26 @@ function formatTime(value: string | null) {
 function formatDuration(minutes: number | null) {
   if (minutes == null) return "Sesi terbuka";
   return `${Math.floor(minutes / 60)}j ${minutes % 60}m`;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(`${value}T12:00:00+07:00`));
+}
+
+function validationLabel(status: string) {
+  return (
+    {
+      pending: "Menunggu Validasi",
+      approved: "Disetujui",
+      rejected: "Ditolak",
+      needs_correction: "Perlu Koreksi",
+    }[status] ?? status
+  );
 }
 
 function stateLabel(state: string | null) {
@@ -86,6 +113,7 @@ function getDeviceLocation() {
 export function LiveAttendancePage() {
   const { showToast } = useHR();
   const workspace = useAttendanceWorkspace();
+  const previewMutation = useAttendanceGeofencePreview();
   const clockInMutation = useClockInAttendance();
   const clockOutMutation = useClockOutAttendance();
   const [now, setNow] = useState(() => new Date());
@@ -94,6 +122,15 @@ export function LiveAttendancePage() {
   const [outletId, setOutletId] = useState("");
   const [location, setLocation] = useState<DeviceLocation | null>(null);
   const [locationPending, setLocationPending] = useState(false);
+  const [geofencePreview, setGeofencePreview] =
+    useState<GeofencePreview | null>(null);
+  const [clockInPhase, setClockInPhase] = useState<
+    "locating" | ClockInPhase | null
+  >(null);
+  const [clockOutPhase, setClockOutPhase] = useState<
+    "locating" | "saving" | null
+  >(null);
+  const [isOnline, setIsOnline] = useState(true);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<Blob | null>(null);
@@ -103,11 +140,23 @@ export function LiveAttendancePage() {
   const streamRef = useRef<MediaStream | null>(null);
   const cameraRequestRef = useRef(0);
   const submitRef = useRef(false);
+  const clockOutRef = useRef(false);
   const eventIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const updateConnection = () => setIsOnline(navigator.onLine);
+    updateConnection();
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+    return () => {
+      window.removeEventListener("online", updateConnection);
+      window.removeEventListener("offline", updateConnection);
+    };
   }, []);
 
   const stopCamera = () => {
@@ -187,15 +236,29 @@ export function LiveAttendancePage() {
     );
   };
 
-  const refreshLocation = async () => {
+  const refreshLocation = async (targetOutletId = outletId) => {
+    if (!navigator.onLine) {
+      showToast(
+        "Perangkat sedang offline. Sambungkan internet sebelum mengambil lokasi.",
+        "warning"
+      );
+      return;
+    }
+    if (!targetOutletId) return;
     setLocationPending(true);
+    setClockInPhase("locating");
+    setGeofencePreview(null);
     try {
       const next = await getDeviceLocation();
       setLocation(next);
-      const maxAccuracy = workspace.data?.policy.gps_max_accuracy_m ?? 100;
-      if (next.accuracy > maxAccuracy) {
+      const preview = await previewMutation.mutateAsync({
+        outletId: targetOutletId,
+        location: next,
+      });
+      setGeofencePreview(preview);
+      if (!preview.accuracy_ok) {
         showToast(
-          `Akurasi GPS ${Math.round(next.accuracy)} m, batas maksimal ${maxAccuracy} m. Coba lagi.`,
+          `Akurasi GPS ${Math.round(next.accuracy)} m, batas maksimal ${Math.round(preview.max_accuracy_m)} m. Coba lagi.`,
           "warning"
         );
       }
@@ -203,6 +266,7 @@ export function LiveAttendancePage() {
       showToast(errorMessage(error), "warning");
     } finally {
       setLocationPending(false);
+      setClockInPhase(null);
     }
   };
 
@@ -212,6 +276,7 @@ export function LiveAttendancePage() {
     setSelfie(null);
     setSelfieUrl(null);
     setLocation(null);
+    setGeofencePreview(null);
     setCameraError(null);
   };
 
@@ -241,14 +306,30 @@ export function LiveAttendancePage() {
     setOutletId(initialOutlet);
     eventIdRef.current = crypto.randomUUID();
     setModalOpen(true);
-    void refreshLocation();
+    void refreshLocation(initialOutlet);
   };
 
   const handleClockIn = async () => {
     const data = workspace.data;
     if (submitRef.current) return;
-    if (!data || !location) {
+    if (!isOnline) {
+      showToast("Clock-in membutuhkan koneksi internet.", "warning");
+      return;
+    }
+    if (!data || !location || !geofencePreview) {
       showToast("Ambil lokasi perangkat terbaru terlebih dahulu.", "warning");
+      return;
+    }
+    if (!geofencePreview.location_fresh) {
+      showToast("Lokasi sudah kedaluwarsa. Ambil lokasi kembali.", "warning");
+      return;
+    }
+    if (!geofencePreview.accuracy_ok) {
+      showToast("Akurasi GPS belum memenuhi batas presensi.", "warning");
+      return;
+    }
+    if (!geofencePreview.within_geofence) {
+      showToast("Posisi masih berada di luar geofence outlet.", "warning");
       return;
     }
     if (data.requires_selfie && !selfie) {
@@ -264,6 +345,7 @@ export function LiveAttendancePage() {
         location,
         selfie,
         notes: notes.trim(),
+        onPhase: setClockInPhase,
       });
       playClickSound();
       showToast("Clock-in berhasil diverifikasi oleh server.", "success");
@@ -274,14 +356,22 @@ export function LiveAttendancePage() {
       showToast(errorMessage(error), "warning");
     } finally {
       submitRef.current = false;
+      setClockInPhase(null);
     }
   };
 
   const handleClockOut = async () => {
     const session = workspace.data?.open_session;
-    if (!session || clockOutMutation.isPending) return;
+    if (!session || clockOutRef.current) return;
+    if (!navigator.onLine) {
+      showToast("Clock-out membutuhkan koneksi internet.", "warning");
+      return;
+    }
+    clockOutRef.current = true;
+    setClockOutPhase("locating");
     try {
       const currentLocation = await getDeviceLocation();
+      setClockOutPhase("saving");
       await clockOutMutation.mutateAsync({
         attendanceId: session.id,
         location: currentLocation,
@@ -290,12 +380,25 @@ export function LiveAttendancePage() {
       showToast("Clock-out berhasil. Durasi kerja sudah dihitung.", "success");
     } catch (error) {
       showToast(errorMessage(error), "warning");
+    } finally {
+      clockOutRef.current = false;
+      setClockOutPhase(null);
     }
   };
 
   const data = workspace.data;
   const maxAccuracy = data?.policy.gps_max_accuracy_m ?? 100;
-  const locationReady = location && location.accuracy <= maxAccuracy;
+  const locationAgeSeconds = location
+    ? Math.max(0, Math.floor((now.getTime() - new Date(location.capturedAt).getTime()) / 1000))
+    : null;
+  const locationFresh = locationAgeSeconds != null && locationAgeSeconds <= 90;
+  const locationReady = Boolean(
+    location &&
+      locationFresh &&
+      geofencePreview?.accuracy_ok &&
+      geofencePreview.location_fresh &&
+      geofencePreview.within_geofence
+  );
   const selectedOutlet = useMemo(
     () => data?.available_outlets.find((outlet) => outlet.id === outletId),
     [data?.available_outlets, outletId]
@@ -325,6 +428,13 @@ export function LiveAttendancePage() {
 
   return (
     <div className="space-y-5 pb-8">
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs font-semibold text-rose-200">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          Perangkat offline. Riwayat tersimpan dapat terlihat, tetapi presensi
+          membutuhkan internet.
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-100">Presensi & Kehadiran</h1>
@@ -379,7 +489,7 @@ export function LiveAttendancePage() {
         </div>
         <button
           type="button"
-          disabled={clockOutMutation.isPending}
+          disabled={clockOutPhase !== null || !isOnline}
           onClick={data.open_session ? handleClockOut : openClockIn}
           className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black transition active:scale-[0.98] disabled:opacity-60 ${
             data.open_session
@@ -387,14 +497,20 @@ export function LiveAttendancePage() {
               : "bg-amber-500 text-slate-950"
           }`}
         >
-          {clockOutMutation.isPending ? (
+          {clockOutPhase !== null ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : data.open_session ? (
             <RotateCcw className="h-4 w-4" />
           ) : (
             <MapPin className="h-4 w-4" />
           )}
-          {data.open_session ? "Clock Out" : "Clock In"}
+          {clockOutPhase === "locating"
+            ? "Mengambil Lokasi…"
+            : clockOutPhase === "saving"
+              ? "Menyimpan Clock-out…"
+              : data.open_session
+                ? "Clock Out"
+                : "Clock In"}
         </button>
       </section>
 
@@ -416,7 +532,7 @@ export function LiveAttendancePage() {
               <div>
                 <p className="text-xs font-bold text-slate-100">{record.outlet_name}</p>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  {record.work_date} · {formatTime(record.clock_in_at)}–{formatTime(record.clock_out_at)}
+                  {formatDate(record.work_date)} · {formatTime(record.clock_in_at)}–{formatTime(record.clock_out_at)}
                 </p>
               </div>
               <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
@@ -424,7 +540,11 @@ export function LiveAttendancePage() {
               </span>
             </div>
             <p className="mt-2 text-[10px] text-slate-500">
-              {formatDuration(record.worked_duration_min)} · Validasi {record.validation_status}
+              {formatDuration(record.worked_duration_min)} ·{" "}
+              {validationLabel(record.validation_status)}
+              {record.clock_out_state && record.clock_in_state === "late"
+                ? " · Datang Terlambat"
+                : ""}
             </p>
           </article>
         ))}
@@ -433,21 +553,31 @@ export function LiveAttendancePage() {
       <Modal isOpen={modalOpen} onClose={closeModal} title="Clock In" icon={Camera}>
         <div className="space-y-4">
           {data.role === "supervisor" && (
-            <div className="space-y-1">
-              <label htmlFor="attendance-outlet" className="text-xs font-semibold text-slate-300">
-                Outlet presensi
-              </label>
-              <select
-                id="attendance-outlet"
-                value={outletId}
-                onChange={(event) => setOutletId(event.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-base text-slate-100 sm:text-sm"
-              >
-                {data.available_outlets.map((outlet) => (
-                  <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
-                ))}
-              </select>
-            </div>
+            <Combobox
+              label="Outlet presensi"
+              value={outletId}
+              onChange={(value) => {
+                setOutletId(value);
+                setGeofencePreview(null);
+                if (location && locationFresh) {
+                  void previewMutation
+                    .mutateAsync({ outletId: value, location })
+                    .then(setGeofencePreview)
+                    .catch((error) =>
+                      showToast(errorMessage(error), "warning")
+                    );
+                } else {
+                  void refreshLocation(value);
+                }
+              }}
+              options={data.available_outlets.map((outlet) => ({
+                value: outlet.id,
+                label: outlet.name,
+                subtext: `${outlet.address} · Radius ${outlet.geofence_radius_m} m`,
+              }))}
+              placeholder="Pilih outlet"
+              searchPlaceholder="Cari nama atau alamat outlet…"
+            />
           )}
 
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
@@ -458,13 +588,13 @@ export function LiveAttendancePage() {
                 </p>
                 <p className="mt-1 text-[10px] text-slate-400">
                   {location
-                    ? `Akurasi ±${Math.round(location.accuracy)} m`
+                    ? `Akurasi ±${Math.round(location.accuracy)} m · usia ${locationAgeSeconds ?? 0} dtk`
                     : "Lokasi perangkat belum diperoleh"}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={refreshLocation}
+                onClick={() => void refreshLocation()}
                 disabled={locationPending}
                 className="flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] font-bold text-amber-300"
               >
@@ -473,8 +603,33 @@ export function LiveAttendancePage() {
               </button>
             </div>
             {location && !locationReady && (
-              <p className="mt-2 flex items-center gap-1 text-[10px] text-rose-300">
-                <AlertCircle className="h-3 w-3" /> Akurasi harus ≤ {maxAccuracy} m.
+              <div className="mt-2 space-y-1 text-[10px] text-rose-300">
+                {!locationFresh ? (
+                  <p className="flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Lokasi kedaluwarsa.
+                    Ambil ulang sebelum presensi.
+                  </p>
+                ) : !geofencePreview?.accuracy_ok ? (
+                  <p className="flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Akurasi harus ≤{" "}
+                    {maxAccuracy} m.
+                  </p>
+                ) : geofencePreview && !geofencePreview.within_geofence ? (
+                  <p className="flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Jarak{" "}
+                    {Math.round(geofencePreview.distance_m)} m, di luar radius{" "}
+                    {geofencePreview.radius_m} m.
+                  </p>
+                ) : (
+                  <p>Geofence sedang diverifikasi server…</p>
+                )}
+              </div>
+            )}
+            {geofencePreview && locationReady && (
+              <p className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-amber-300">
+                <CheckCircle2 className="h-3 w-3" /> Jarak{" "}
+                {Math.round(geofencePreview.distance_m)} m · di dalam radius{" "}
+                {geofencePreview.radius_m} m.
               </p>
             )}
           </div>
@@ -520,11 +675,25 @@ export function LiveAttendancePage() {
           <button
             type="button"
             onClick={handleClockIn}
-            disabled={clockInMutation.isPending || !locationReady || (data.requires_selfie && !selfie)}
+            disabled={
+              clockInMutation.isPending ||
+              clockInPhase !== null ||
+              !isOnline ||
+              !locationReady ||
+              (data.requires_selfie && !selfie)
+            }
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3.5 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {clockInMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Verifikasi & Clock In
+            {(clockInMutation.isPending || clockInPhase !== null) && (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            )}
+            {clockInPhase === "locating"
+              ? "Mengambil Lokasi…"
+              : clockInPhase === "uploading"
+                ? "Mengunggah Selfie…"
+                : clockInPhase === "saving"
+                  ? "Menyimpan Presensi…"
+                  : "Verifikasi & Clock In"}
           </button>
         </div>
       </Modal>

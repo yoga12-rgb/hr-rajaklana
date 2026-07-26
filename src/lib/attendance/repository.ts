@@ -19,6 +19,21 @@ export interface AttendanceOutlet {
   geofence_radius_m: number;
 }
 
+export interface GeofencePreview {
+  outlet_id: string;
+  outlet_name: string;
+  distance_m: number;
+  radius_m: number;
+  within_geofence: boolean;
+  accuracy_m: number;
+  max_accuracy_m: number;
+  accuracy_ok: boolean;
+  location_age_seconds: number;
+  location_fresh: boolean;
+}
+
+export type ClockInPhase = "uploading" | "saving";
+
 export interface AttendanceSession {
   id: string;
   outlet_id: string;
@@ -83,6 +98,7 @@ export interface ClockInInput {
   location: DeviceLocation;
   selfie: Blob | null;
   notes: string;
+  onPhase?: (phase: ClockInPhase) => void;
 }
 
 function attendanceError(prefix: string, error: { message: string }) {
@@ -108,10 +124,48 @@ function jakartaDatePath() {
   return `${value("year")}/${value("month")}/${value("day")}`;
 }
 
+function isDuplicateUpload(error: { message: string }) {
+  const candidate = error as {
+    message: string;
+    statusCode?: number | string;
+  };
+  const message = candidate.message.toLocaleLowerCase("en-US");
+  return (
+    String(candidate.statusCode ?? "") === "409" ||
+    message.includes("already exists") ||
+    message.includes("duplicate")
+  );
+}
+
 export async function getAttendanceWorkspace(client: AttendanceClient) {
   const { data, error } = await client.rpc("get_attendance_workspace");
   if (error) throw attendanceError("Data presensi belum dapat dimuat", error);
   return parseWorkspace(data);
+}
+
+export async function previewAttendanceGeofence(
+  client: AttendanceClient,
+  outletId: string,
+  location: DeviceLocation
+) {
+  const args = {
+    p_outlet_id: outletId,
+    p_latitude: location.latitude,
+    p_longitude: location.longitude,
+    p_accuracy_m: location.accuracy,
+    p_captured_at: location.capturedAt,
+  } as unknown as Database["public"]["Functions"]["preview_attendance_geofence"]["Args"];
+  const { data, error } = await client.rpc(
+    "preview_attendance_geofence",
+    args
+  );
+  if (error) {
+    throw attendanceError("Geofence belum dapat diverifikasi", error);
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Respons preview geofence tidak valid.");
+  }
+  return data as unknown as GeofencePreview;
 }
 
 export async function clockInAttendance(
@@ -122,6 +176,7 @@ export async function clockInAttendance(
   let evidence: Json = null;
 
   if (input.selfie) {
+    input.onPhase?.("uploading");
     storagePath = `${input.currentEmployeeId}/${jakartaDatePath()}/${input.clientEventId}.jpg`;
     const upload = await client.storage
       .from("attendance-selfies")
@@ -129,7 +184,7 @@ export async function clockInAttendance(
         contentType: "image/jpeg",
         upsert: false,
       });
-    if (upload.error) {
+    if (upload.error && !isDuplicateUpload(upload.error)) {
       throw attendanceError("Selfie belum dapat diunggah", upload.error);
     }
     evidence = {
@@ -139,6 +194,7 @@ export async function clockInAttendance(
     };
   }
 
+  input.onPhase?.("saving");
   const args = {
     p_client_event_id: input.clientEventId,
     p_outlet_id: input.outletId,

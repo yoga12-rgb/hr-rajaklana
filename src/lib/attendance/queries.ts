@@ -7,6 +7,7 @@ import {
   clockInAttendance,
   clockOutAttendance,
   getAttendanceWorkspace,
+  previewAttendanceGeofence,
   type ClockInInput,
   type DeviceLocation,
 } from "./repository";
@@ -15,6 +16,17 @@ export function useAttendanceWorkspace() {
   return useQuery({
     queryKey: attendanceKeys.workspace(),
     queryFn: () => getAttendanceWorkspace(createClient()),
+  });
+}
+
+export function useAttendanceGeofencePreview() {
+  return useMutation({
+    mutationFn: (input: { outletId: string; location: DeviceLocation }) =>
+      previewAttendanceGeofence(
+        createClient(),
+        input.outletId,
+        input.location
+      ),
   });
 }
 

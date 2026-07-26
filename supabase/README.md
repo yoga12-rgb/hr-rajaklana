@@ -89,6 +89,9 @@ Jangan menjalankan reset terhadap production.
 - Presensi live wajib melalui RPC `clock_in_attendance` dan
   `clock_out_attendance`; jarak Haversine, accuracy GPS, jadwal terbit,
   geofence, dan status waktu dihitung ulang di database.
+- UI memakai `preview_attendance_geofence` untuk menampilkan jarak/radius
+  sebelum submit. Hasil preview hanya feedback; RPC clock-in/out tetap
+  menghitung dan memvalidasi ulang seluruh lokasi secara atomik.
 - Selfie clock-in kasir disimpan pada bucket private `attendance-selfies`
   dengan path `<employee>/<YYYY>/<MM>/<DD>/<client-event>.jpg`. Upload yang
   belum terdaftar boleh dibersihkan pemilik, tetapi bukti yang sudah terhubung
