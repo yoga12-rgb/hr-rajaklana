@@ -14,9 +14,13 @@ Sistem Informasi HRD & Operasional Karyawan modern yang dirancang dengan pendeka
 
 Fondasi Supabase PostgreSQL, Auth SSR, private Storage, RLS, migration, dan
 pengujian database sudah tersedia. Login, logout, proteksi route, dan wajib
-ganti password pada login pertama sudah diimplementasikan. Modul bisnis masih
-berjalan sebagai prototype menggunakan `HRContext` dan `localStorage` sampai
-dimigrasikan per milestone.
+ganti password pada login pertama sudah diimplementasikan. Fondasi M2 berupa
+mode data eksplisit, TanStack Query, dan repository master data juga tersedia.
+Halaman karyawan memiliki jalur Supabase untuk baca, tambah, ubah, arsip, dan
+riwayat penempatan berbasis role. Lokasi/geofence, kebijakan kerja/cuti
+berversi, serta template shift historis juga sudah memiliki jalur live.
+Modul lainnya tetap berjalan sebagai prototype sampai dimigrasikan per
+milestone.
 
 Dokumen pengembangan:
 
@@ -67,6 +71,7 @@ Aksen visual menggunakan tema **Dark Mode Premium** dengan skema warna yang eleg
 - **Animasi & Transisi**: [Framer Motion](https://www.framer.com/motion/)
 - **Ikon**: [Lucide React](https://lucide.dev/)
 - **Visualisasi Data**: [Recharts](https://recharts.org/)
+- **Server State & Cache**: [TanStack Query](https://tanstack.com/query/latest)
 - **Portal & Accessibility**: React Portal + ARIA Modal Standards
 
 ---
@@ -95,7 +100,9 @@ Buka [http://localhost:3000](http://localhost:3000) pada browser Anda (gunakan m
 
 ### 3.1 Environment dan supervisor pertama
 
-Salin `.env.example` menjadi `.env.local`, isi tiga environment Supabase, lalu
+Salin `.env.example` menjadi `.env.local`, isi tiga environment Supabase,
+kemudian pilih `APP_DATA_SOURCE=demo` untuk prototype atau
+`APP_DATA_SOURCE=supabase` untuk jalur data live. Setelah itu,
 jalankan bootstrap hanya dari terminal lokal:
 
 ```bash

@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
-import { HRProvider } from "@/context/HRContext";
+import { AppProviders } from "@/components/providers/AppProviders";
+import { resolveDataSource } from "@/lib/data-source";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,15 +42,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const dataSource = resolveDataSource(process.env.APP_DATA_SOURCE);
+
   return (
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full w-full flex-row bg-slate-950 font-sans text-slate-100">
-        <HRProvider>
+        <AppProviders dataSource={dataSource}>
           <AppShell>{children}</AppShell>
-        </HRProvider>
+        </AppProviders>
       </body>
     </html>
   );

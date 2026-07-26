@@ -17,10 +17,21 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Empat migration fondasi sudah diterapkan dan cocok antara lokal/remote.
-- Hosted lint schema `public` bersih dan pgTAP lulus 28/28 pada 26 Juli 2026.
+- Sepuluh migration sudah diterapkan dan cocok antara lokal/remote.
+- Hosted lint schema `public` bersih dan pgTAP lulus 74/74 pada 26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
-- **UI belum memakai data Supabase**: seluruh modul bisnis masih memakai
+- Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
+  query key factory, dan repository bertipe data master sudah tersedia.
+- Halaman karyawan sudah memiliki jalur baca serta create/update/archive
+  Supabase terpisah. Perubahan outlet mempertahankan riwayat penempatan dan
+  arsip menutup penempatan serta menonaktifkan akun terkait.
+- Tab Lokasi & Geofencing pada Pengaturan sudah memakai Supabase untuk
+  read/create/update/activate/deactivate. Outlet dengan penempatan aktif tidak
+  dapat dinonaktifkan.
+- Tab kebijakan kerja/cuti dan template shift outlet sudah memakai Supabase.
+  Kebijakan diterbitkan sebagai versi baru; penggantian template shift
+  mempertahankan record lama untuk referensi jadwal historis.
+- Modul selain data karyawan dan Pengaturan master data masih memakai
   `HRContext` dan `localStorage`.
 - Login, logout, route protection, wajib ganti password, operasi akun
   server-only, dan script bootstrap supervisor sudah diimplementasikan.
@@ -28,7 +39,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   logout, dan login ulang telah berhasil diuji secara lokal.
 - Otorisasi anonymous, employee, supervisor, dan management telah diuji;
   management wajib read-only dan tidak boleh menjalankan aksi supervisor.
-- Data bisnis nyata, upload selfie, worker retensi, dan roster otomatis belum
+- Impor dry-run, upload selfie, worker retensi, dan roster otomatis belum
   diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
@@ -44,7 +55,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
 - **Styling**: Tailwind CSS v4 (Mobile-first, Premium Dark Mode UI)
-- **State Management**: React Context API (`HRProvider` & `useHR()` di `@/context/HRContext.tsx`) dengan persistensi versi di `localStorage` untuk data prototype
+- **State Management**: TanStack Query untuk data Supabase; React Context API (`HRProvider` & `useHR()` di `@/context/HRContext.tsx`) dengan persistensi versi di `localStorage` untuk modul prototype
 - **Backend Foundation**: Supabase PostgreSQL, Auth SSR, private Storage, RLS, dan migration versioned di `supabase/`
 - **Animation**: Framer Motion (`framer-motion`) untuk transisi halaman & modal pop-up
 - **Analytics & Data Vis**: Recharts (`recharts`) untuk grafik batang & tren line
@@ -83,6 +94,8 @@ src/
 │   ├── reports/          # Laporan & Analytics HR Page
 │   └── schedule/         # Jadwal Shift Staf Page
 ├── components/
+│   ├── providers/
+│   │   └── AppProviders.tsx # Query, data-source, dan provider prototype
 │   ├── Header.tsx        # Header navigasi desktop/mobile dengan Pusat Notifikasi HR (Bell Icon)
 │   ├── Sidebar.tsx       # Sidebar navigasi desktop
 │   ├── BottomNav.tsx     # Mobile Bottom Navigation (5 Menu Ergonomis + Center FAB Presensi + More Menu Bottom Sheet ⋯)
@@ -98,7 +111,12 @@ src/
 │       ├── DateRangePicker.tsx   # Universal Custom Date Range Picker
 │       └── TimePicker.tsx        # Universal Custom Dual-Wheel Scroll Picker (Jam 00-23 & Menit 00-59 with Snap & Shift Presets)
 ├── context/
-│   └── HRContext.tsx     # Mock database & State Provider utama (Employees, Attendance, Leaves, Schedules, Announcements, Toast)
+│   ├── DataSourceContext.tsx # Mode data demo/live tervalidasi server
+│   └── HRContext.tsx     # Mock database & provider modul prototype + Toast
+├── lib/master-data/
+│   ├── query-keys.ts     # Query key factory data master
+│   ├── queries.ts        # TanStack Query hooks data master
+│   └── repository.ts     # Repository Supabase bertipe dan dibatasi RLS
 ├── lib/supabase/
 │   ├── client.ts         # Supabase client untuk Client Components
 │   ├── server.ts         # Supabase client berbasis cookies untuk server

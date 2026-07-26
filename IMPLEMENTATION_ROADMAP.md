@@ -2,17 +2,17 @@
 
 ## Informasi dokumen
 
-| Atribut               | Nilai                                                                       |
-| --------------------- | --------------------------------------------------------------------------- |
-| Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya             |
-| Terakhir diverifikasi | 26 Juli 2026                                                                |
-| Fase saat ini         | M1 selesai; milestone aktif berikutnya M2 — DAL dan master data               |
-| Branch utama          | `main`                                                                      |
-| Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                                  |
-| Supabase project ref  | `ttbogurultjbporryylb`                                                      |
-| Dokumen produk        | `PRD.md`                                                                    |
-| Model data            | `ERD.md`                                                                    |
-| Aturan agent          | `AGENTS.md`                                                                 |
+| Atribut               | Nilai                                                           |
+| --------------------- | --------------------------------------------------------------- |
+| Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
+| Terakhir diverifikasi | 26 Juli 2026                                                    |
+| Fase saat ini         | M2 berjalan — master data live; impor dry-run berikutnya        |
+| Branch utama          | `main`                                                          |
+| Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
+| Supabase project ref  | `ttbogurultjbporryylb`                                          |
+| Dokumen produk        | `PRD.md`                                                        |
+| Model data            | `ERD.md`                                                        |
+| Aturan agent          | `AGENTS.md`                                                     |
 
 Dokumen ini adalah backlog teknis kanonis. Agent yang melanjutkan pekerjaan
 wajib membaca `AGENTS.md`, `PRD.md`, `ERD.md`, dokumen ini, dan
@@ -21,6 +21,7 @@ wajib membaca `AGENTS.md`, `PRD.md`, `ERD.md`, dokumen ini, dan
 ## Legenda status
 
 - `DONE`: sudah diterapkan dan diverifikasi.
+- `IN PROGRESS`: sedang dikerjakan dan belum memenuhi seluruh exit criteria.
 - `NEXT`: milestone pertama yang boleh dikerjakan.
 - `BACKLOG`: belum dikerjakan dan bergantung pada milestone sebelumnya.
 - `BLOCKED`: tidak boleh dilanjutkan sebelum input atau akses tersedia.
@@ -72,30 +73,35 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan enam migration berikut identik antara
+- Project hosted sudah terhubung dan sepuluh migration berikut identik antara
   lokal dan remote:
 
-| Migration                                              | Fungsi                                  |
-| ------------------------------------------------------ | --------------------------------------- |
-| `20260724104032_initial_workforce_schema.sql`          | Schema inti workforce                   |
-| `20260724104038_secure_storage_and_rls.sql`            | RLS, private Storage, RPC, dan keamanan |
-| `20260724183617_enable_database_testing.sql`           | Mengaktifkan pgTAP                      |
-| `20260724183900_grant_cli_database_testing_access.sql` | Akses minimum role CLI untuk tes        |
-| `20260726153000_complete_password_change.sql`          | Aktivasi akun dan audit password atomik |
-| `20260726193000_harden_auth_role_helper_privileges.sql` | Hardening hak eksekusi helper role     |
+| Migration                                               | Fungsi                                    |
+| ------------------------------------------------------- | ----------------------------------------- |
+| `20260724104032_initial_workforce_schema.sql`           | Schema inti workforce                     |
+| `20260724104038_secure_storage_and_rls.sql`             | RLS, private Storage, RPC, dan keamanan   |
+| `20260724183617_enable_database_testing.sql`            | Mengaktifkan pgTAP                        |
+| `20260724183900_grant_cli_database_testing_access.sql`  | Akses minimum role CLI untuk tes          |
+| `20260726153000_complete_password_change.sql`           | Aktivasi akun dan audit password atomik   |
+| `20260726193000_harden_auth_role_helper_privileges.sql` | Hardening hak eksekusi helper role        |
+| `20260726213000_employee_master_data_rpcs.sql`          | CRUD/arsip karyawan dan penempatan atomik |
+| `20260726230000_outlet_master_data_rpcs.sql`            | CRUD/status outlet dan geofence atomik    |
+| `20260727003000_policy_and_shift_template_rpcs.sql`     | Kebijakan versioned dan template shift    |
+| `20260727013000_harden_policy_shift_write_paths.sql`    | Tutup jalur tulis langsung tabel historis |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `28/28`.
+- pgTAP lulus `74/74`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
 Fondasi backend dan autentikasi sudah aktif, tetapi aplikasi belum sepenuhnya
 menjadi aplikasi multi-user:
 
-- Seluruh halaman bisnis masih membaca dan memutasi `HRContext`.
+- Halaman karyawan pada mode live tidak membaca atau memutasi data bisnis
+  `HRContext`; modul bisnis lain masih memakai data prototype.
 - Halaman login, logout, perubahan kata sandi pertama, proteksi route, dan
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
@@ -137,6 +143,7 @@ Nama variabel yang diizinkan:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
+APP_DATA_SOURCE=demo
 ```
 
 Aturan:
@@ -325,7 +332,7 @@ Seluruh exit criteria M1 selesai pada 26 Juli 2026.
 
 ---
 
-## M2 — Data Access Layer dan Master Data (`NEXT`)
+## M2 — Data Access Layer dan Master Data (`IN PROGRESS`)
 
 ### Tujuan
 
@@ -344,6 +351,54 @@ template shift, serta kebijakan dari mock ke Supabase.
 - Buat template impor data dengan validasi dry-run dan laporan kesalahan.
 - Tambahkan RLS tests untuk akses employee, supervisor, dan management.
 - Regenerasi `src/types/database.ts` setiap schema berubah.
+
+### Progres terverifikasi 26 Juli 2026
+
+Selesai:
+
+- `@tanstack/react-query`, provider global, kebijakan retry/cache, dan query
+  key factory data master sudah ditambahkan.
+- `APP_DATA_SOURCE=demo|supabase` divalidasi di Server Component lalu
+  diteruskan ke client provider. Konfigurasi kosong ditandai jelas sebagai
+  demo belum diatur; nilai tidak valid menghentikan build/render.
+- Header menampilkan indikator `Live Bertahap`, `Data Demo`, atau
+  `Data Demo · Belum Diatur`.
+- Repository bertipe dan query hooks RLS-aware tersedia untuk karyawan,
+  outlet, jabatan, serta status kerja.
+- Halaman karyawan memisahkan komponen demo dan live. Query live tidak
+  fallback ke `HRContext`; error Supabase ditampilkan secara jujur dan mutasi
+  demo tidak tersedia pada mode live.
+- RPC transaksional create/update/archive karyawan telah diterapkan lokal dan
+  hosted. RPC memeriksa role supervisor, menulis audit, mempertahankan riwayat
+  perpindahan outlet, mencegah supervisor mengarsipkan diri sendiri, serta
+  menonaktifkan akun saat data karyawan diarsipkan.
+- UI live menampilkan aksi mutasi hanya untuk supervisor. Employee dan
+  management memperoleh akses baca; RLS/RPC tetap menjadi otorisasi utama.
+- Tab Lokasi & Geofencing memakai daftar dan mutasi Supabase pada mode live.
+  Create/update/status outlet menulis audit; penonaktifan ditolak selama masih
+  ada penempatan aktif dan tidak menghapus record historis.
+- Tab kebijakan kerja/cuti dan template shift outlet memakai query/mutation
+  Supabase pada mode live. Employee dan management memperoleh mode baca.
+- Kebijakan diterbitkan sebagai versi baru dan menutup versi efektif
+  sebelumnya. Penerbitan presensi + lembur berjalan atomik; alasan serta
+  snapshot sebelum/sesudah dicatat pada audit.
+- Penggantian template shift menonaktifkan template aktif lama lalu membuat
+  record baru sehingga jadwal historis tidak berubah. Jam Pagi/Middle/Malam,
+  toleransi terlambat, dan toleransi pulang awal dapat berbeda per outlet.
+- Hak tulis langsung client pada tabel kebijakan dan template shift dicabut;
+  seluruh perubahan wajib melewati RPC versioned yang diaudit.
+- Migration lokal/hosted identik. Lint lokal/hosted, pgTAP lokal dan hosted
+  `74/74`, types generation, lint aplikasi, typecheck, production build, serta
+  14 E2E desktop/mobile lulus. Reset lokal sempat melaporkan Storage container
+  tidak sehat setelah schema selesai diterapkan; validasi PostgreSQL tetap
+  lulus penuh.
+- Lint, typecheck, production build, dan 14 skenario E2E desktop/mobile lulus
+  setelah fondasi ini ditambahkan.
+
+Berikutnya:
+
+- Tambahkan template impor dry-run beserta laporan validasi baris.
+- Lengkapi pengujian akses dan alur impor, lalu tutup exit criteria M2.
 
 ### Exit criteria
 
@@ -365,8 +420,8 @@ otomatis dibuat.
 
 ### Pekerjaan
 
-- Migrasikan template shift dan jam operasional outlet, termasuk outlet yang
-  tutup lebih awal.
+- Gunakan template shift per outlet yang sudah versioned untuk jadwal manual,
+  termasuk outlet yang tutup lebih awal.
 - Implementasikan off day supervisor dan karyawan.
 - Dukung peminjaman jatah off pekan berikutnya dengan ledger/audit yang jelas.
 - Implementasikan draft, publish, superseded version, serta acknowledgement.

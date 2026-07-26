@@ -2097,6 +2097,10 @@ export type Database = {
       }
     }
     Functions: {
+      archive_employee_master: {
+        Args: { p_employee_id: string; p_reason: string }
+        Returns: boolean
+      }
       can_view_announcement: {
         Args: { target_announcement_id: string }
         Returns: boolean
@@ -2121,6 +2125,31 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_employee_master: {
+        Args: {
+          p_change_reason?: string
+          p_employment_status_id: string
+          p_full_name: string
+          p_job_position_id: string
+          p_joined_at: string
+          p_nik: string
+          p_outlet_id: string
+          p_phone: string
+        }
+        Returns: string
+      }
+      create_outlet_master: {
+        Args: {
+          p_address: string
+          p_code: string
+          p_geofence_radius_m: number
+          p_latitude: number
+          p_longitude: number
+          p_name: string
+          p_reason?: string
+        }
+        Returns: string
       }
       current_access_role: {
         Args: never
@@ -2222,6 +2251,62 @@ export type Database = {
         }
       }
       is_supervisor: { Args: never; Returns: boolean }
+      publish_policy_version: {
+        Args: { p_configuration: Json; p_policy_type: string; p_reason: string }
+        Returns: string
+      }
+      publish_work_policy: {
+        Args: {
+          p_attendance_configuration: Json
+          p_overtime_configuration: Json
+          p_reason: string
+        }
+        Returns: Json
+      }
+      replace_outlet_shift_template: {
+        Args: {
+          p_early_checkout_tolerance_min: number
+          p_ends_at: string
+          p_late_tolerance_min: number
+          p_outlet_id: string
+          p_reason: string
+          p_shift_type: Database["public"]["Enums"]["shift_type"]
+          p_starts_at: string
+        }
+        Returns: string
+      }
+      set_outlet_active: {
+        Args: { p_is_active: boolean; p_outlet_id: string; p_reason: string }
+        Returns: undefined
+      }
+      update_employee_master: {
+        Args: {
+          p_change_reason: string
+          p_effective_date: string
+          p_employee_id: string
+          p_employment_status_id: string
+          p_full_name: string
+          p_job_position_id: string
+          p_joined_at: string
+          p_nik: string
+          p_outlet_id: string
+          p_phone: string
+        }
+        Returns: undefined
+      }
+      update_outlet_master: {
+        Args: {
+          p_address: string
+          p_code: string
+          p_geofence_radius_m: number
+          p_latitude: number
+          p_longitude: number
+          p_name: string
+          p_outlet_id: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
       validate_attendance: {
         Args: {
           attendance_id: string

@@ -15,10 +15,12 @@ import {
   LogOut
 } from "lucide-react";
 import { useHR } from "@/context/HRContext";
+import { useDataSource } from "@/context/DataSourceContext";
 import { Modal } from "@/components/ui/Modal";
 import { signOutAction } from "@/lib/auth/actions";
 
 export default function Header() {
+  const dataSource = useDataSource();
   const {
     employees,
     leaveRequests,
@@ -114,11 +116,26 @@ export default function Header() {
       <div className="flex items-center gap-2 md:gap-3">
         <Link
           href="/settings"
-          className="hidden sm:flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-bold text-amber-400 transition-colors hover:bg-amber-500/15"
-          title="Prototype menggunakan data demo lokal"
+          className="flex items-center gap-1 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5 text-[9px] font-bold text-amber-400 transition-colors hover:bg-amber-500/15 sm:gap-1.5 sm:px-2.5 sm:text-[10px]"
+          title={
+            dataSource.mode === "supabase"
+              ? "Migrasi bertahap aktif; modul yang selesai menggunakan Supabase"
+              : dataSource.isExplicit
+                ? "Aplikasi menggunakan data demo lokal"
+                : "Mode belum dikonfigurasi; aplikasi menggunakan data demo lokal"
+          }
         >
           <Database className="h-3.5 w-3.5" />
-          <span>Data Demo</span>
+          <span className="sm:hidden">
+            {dataSource.mode === "supabase" ? "Live" : "Demo"}
+          </span>
+          <span className="hidden sm:inline">
+            {dataSource.mode === "supabase"
+              ? "Live Bertahap"
+              : dataSource.isExplicit
+                ? "Data Demo"
+                : "Data Demo · Belum Diatur"}
+          </span>
         </Link>
 
         {/* Quick Presensi Button */}

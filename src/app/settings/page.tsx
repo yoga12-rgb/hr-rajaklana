@@ -1,7 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useHR } from "@/context/HRContext";
+import { useDataSource } from "@/context/DataSourceContext";
+import {
+  useActiveShiftTemplates,
+  useCreateOutletMaster,
+  useCurrentPolicies,
+  useCurrentAccessRole,
+  useLiveEmployees,
+  useLiveOutlets,
+  usePublishPolicyVersion,
+  usePublishWorkPolicy,
+  useReplaceOutletShiftTemplate,
+  useSetOutletActive,
+  useUpdateOutletMaster,
+} from "@/lib/master-data/queries";
+import type { LiveOutlet } from "@/lib/master-data/repository";
 import { 
   Building2, 
   MapPin, 
@@ -16,11 +31,20 @@ import {
   Compass, 
   Power,
   Database,
-  RotateCcw
+  RotateCcw,
+  Pencil,
+  LoaderCircle,
+  TriangleAlert,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { playClickSound, playSuccessHaptic } from "@/utils/clickSound";
 
 export default function SettingsPage() {
+  const dataSource = useDataSource();
+  const liveOutletCountQuery = useLiveOutlets(
+    dataSource.mode === "supabase",
+    true
+  );
   const { 
     outlets, 
     addOutlet, 
@@ -91,7 +115,8 @@ export default function SettingsPage() {
 
         <div className="hidden sm:block text-right relative z-10">
           <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold inline-flex items-center gap-1">
-            <Database className="w-3 h-3" /> Data Demo Lokal
+            <Database className="w-3 h-3" />{" "}
+            {dataSource.mode === "supabase" ? "Live Bertahap" : "Data Demo Lokal"}
           </span>
         </div>
 
@@ -111,7 +136,9 @@ export default function SettingsPage() {
           <Building2 className="w-4 h-4" />
           <span>Lokasi & Geofencing GPS</span>
           <span className="px-1.5 py-0.2 text-[10px] rounded-full font-bold bg-slate-950/20 text-slate-950">
-            {outlets.length}
+            {dataSource.mode === "supabase"
+              ? (liveOutletCountQuery.data?.length ?? "…")
+              : outlets.length}
           </span>
         </button>
 
@@ -152,8 +179,18 @@ export default function SettingsPage() {
         </button>
       </div>
 
+      {dataSource.mode === "supabase" && activeTab === "security" && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
+          Pengaturan notifikasi dan reset demo pada tab ini masih bersifat
+          lokal. Akun pengguna sudah dilindungi Supabase Auth.
+        </div>
+      )}
+
       {/* TAB 1: MANAJEMEN LOKASI & GEOFENCING GPS */}
       {activeTab === "outlets" && (
+        dataSource.mode === "supabase" ? (
+          <LiveOutletManager />
+        ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -247,10 +284,14 @@ export default function SettingsPage() {
             })}
           </div>
         </div>
+        )
       )}
 
       {/* TAB 2: KEBIJAKAN JAM KERJA & PRESENSI */}
       {activeTab === "work_policy" && (
+        dataSource.mode === "supabase" ? (
+          <LiveWorkPolicyManager />
+        ) : (
         <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 space-y-4 shadow-md">
           <div>
             <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
@@ -285,7 +326,7 @@ export default function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-xs font-bold text-slate-200">Wajib Foto Selfie GPS</h4>
-                <p className="text-[10px] text-slate-400">Staf harus memotret foto selfie saat melakukan Masuk/Keluar</p>
+                <p className="text-[10px] text-slate-400">Staf harus mengambil selfie melalui kamera saat presensi masuk</p>
               </div>
               <button
                 onClick={() => {
@@ -328,10 +369,14 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+        )
       )}
 
       {/* TAB 3: KEBIJAKAN CUTI & HAK STAF */}
       {activeTab === "leave_policy" && (
+        dataSource.mode === "supabase" ? (
+          <LiveLeavePolicyManager />
+        ) : (
         <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 space-y-4 shadow-md">
           <div>
             <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
@@ -382,6 +427,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+        )
       )}
 
       {/* TAB 4: KEAMANAN AKUN HRD */}
@@ -613,5 +659,1152 @@ export default function SettingsPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+function LiveOutletManager() {
+  const outletsQuery = useLiveOutlets(true, true);
+  const employeesQuery = useLiveEmployees();
+  const roleQuery = useCurrentAccessRole();
+  const statusMutation = useSetOutletActive();
+  const { showToast } = useHR();
+  const [formOutlet, setFormOutlet] = useState<LiveOutlet | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [statusOutlet, setStatusOutlet] = useState<LiveOutlet | null>(null);
+  const [statusReason, setStatusReason] = useState("");
+
+  const queryError =
+    outletsQuery.error ?? employeesQuery.error ?? roleQuery.error;
+
+  if (
+    outletsQuery.isPending ||
+    employeesQuery.isPending ||
+    roleQuery.isPending
+  ) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">
+        Memuat outlet dan geofence Supabase…
+      </div>
+    );
+  }
+
+  if (queryError) {
+    return (
+      <div
+        role="alert"
+        className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300"
+      >
+        {queryError.message}
+      </div>
+    );
+  }
+
+  const outlets = outletsQuery.data ?? [];
+  const employees = employeesQuery.data ?? [];
+  const canManage = roleQuery.data === "supervisor";
+  const canViewCounts =
+    roleQuery.data === "supervisor" || roleQuery.data === "management";
+
+  const openCreate = () => {
+    playClickSound();
+    setFormOutlet(null);
+    setShowForm(true);
+  };
+
+  const openEdit = (outlet: LiveOutlet) => {
+    playClickSound();
+    setFormOutlet(outlet);
+    setShowForm(true);
+  };
+
+  const openStatus = (outlet: LiveOutlet) => {
+    playClickSound();
+    setStatusReason("");
+    setStatusOutlet(outlet);
+  };
+
+  const handleStatusSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!statusOutlet || !statusReason.trim()) return;
+
+    const nextStatus = !statusOutlet.is_active;
+
+    try {
+      await statusMutation.mutateAsync({
+        outletId: statusOutlet.id,
+        isActive: nextStatus,
+        reason: statusReason.trim(),
+      });
+      playSuccessHaptic();
+      showToast(
+        `${statusOutlet.name} berhasil ${
+          nextStatus ? "diaktifkan" : "dinonaktifkan"
+        }.`,
+        "success"
+      );
+      setStatusOutlet(null);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Status outlet belum dapat diubah.",
+        "warning"
+      );
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+              Daftar Lokasi & Area Operasional
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Koordinat dan radius berikut berasal dari Supabase.
+            </p>
+          </div>
+          {canManage ? (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition-all hover:bg-amber-400 active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              Tambah Lokasi
+            </button>
+          ) : (
+            <span className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-slate-400">
+              Akses Baca
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          {outlets.map((outlet) => {
+            const staffCount = canViewCounts
+              ? employees.filter((employee) =>
+                  employee.placements.some(
+                    (placement) =>
+                      placement.end_date === null &&
+                      placement.outlet?.id === outlet.id
+                  )
+                ).length
+              : null;
+
+            return (
+              <div
+                key={outlet.id}
+                className={`space-y-3 rounded-2xl border bg-slate-900 p-4 transition-all ${
+                  outlet.is_active
+                    ? "border-slate-800 shadow-md"
+                    : "border-rose-900/40 opacity-75"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-2">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-100">
+                        <span>{outlet.name}</span>
+                        <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] text-amber-300">
+                          {outlet.code}
+                        </span>
+                      </h4>
+                      <p className="mt-0.5 flex items-start gap-1 text-[10px] text-slate-400">
+                        <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                        {outlet.address}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                      outlet.is_active
+                        ? "border border-amber-500/25 bg-amber-500/10 text-amber-400"
+                        : "border border-rose-500/25 bg-rose-500/10 text-rose-300"
+                    }`}
+                  >
+                    {outlet.is_active ? "Aktif" : "Nonaktif"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="rounded-lg border border-slate-800 bg-slate-950 p-2">
+                    <span className="flex items-center gap-1 font-medium text-slate-400">
+                      <Compass className="h-3 w-3 text-amber-400" /> Koordinat
+                    </span>
+                    <p className="mt-0.5 truncate font-mono text-slate-200">
+                      {outlet.latitude.toFixed(4)},{" "}
+                      {outlet.longitude.toFixed(4)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-slate-800 bg-slate-950 p-2">
+                    <span className="flex items-center gap-1 font-medium text-slate-400">
+                      <Navigation className="h-3 w-3 text-amber-400" /> Geofence
+                    </span>
+                    <p className="mt-0.5 font-bold text-amber-400">
+                      {outlet.geofence_radius_m} Meter
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-[10px]">
+                  <span className="text-slate-400">
+                    {staffCount === null
+                      ? "Jumlah staf dibatasi oleh hak akses"
+                      : `${staffCount} penempatan aktif`}
+                  </span>
+                  {canManage && (
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(outlet)}
+                        className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-300 transition-colors hover:text-amber-400"
+                        aria-label={`Ubah ${outlet.name}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openStatus(outlet)}
+                        className={`rounded-lg border p-1.5 transition-colors ${
+                          outlet.is_active
+                            ? "border-rose-500/25 bg-rose-500/10 text-rose-300"
+                            : "border-amber-500/25 bg-amber-500/10 text-amber-400"
+                        }`}
+                        aria-label={`${
+                          outlet.is_active ? "Nonaktifkan" : "Aktifkan"
+                        } ${outlet.name}`}
+                      >
+                        <Power className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {showForm && (
+        <LiveOutletFormModal
+          key={formOutlet?.id ?? "new"}
+          outlet={formOutlet}
+          onClose={() => setShowForm(false)}
+          onSuccess={(message) => {
+            setShowForm(false);
+            showToast(message, "success");
+          }}
+        />
+      )}
+
+      <Modal
+        isOpen={statusOutlet !== null}
+        onClose={() => {
+          if (!statusMutation.isPending) setStatusOutlet(null);
+        }}
+        title={
+          statusOutlet?.is_active ? "Nonaktifkan Outlet" : "Aktifkan Outlet"
+        }
+        icon={Power}
+      >
+        <form onSubmit={handleStatusSubmit} className="space-y-4">
+          <div className="flex gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-100">
+            <TriangleAlert className="h-5 w-5 shrink-0 text-amber-400" />
+            <p>
+              Outlet tidak dihapus. Penonaktifan ditolak jika masih memiliki
+              penempatan karyawan aktif.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-300">
+              Alasan perubahan status
+            </label>
+            <textarea
+              rows={3}
+              value={statusReason}
+              onChange={(event) => setStatusReason(event.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setStatusOutlet(null)}
+              disabled={statusMutation.isPending}
+              className="flex-1 rounded-xl bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={statusMutation.isPending || !statusReason.trim()}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
+            >
+              {statusMutation.isPending && (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              )}
+              Konfirmasi
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
+function LiveOutletFormModal({
+  outlet,
+  onClose,
+  onSuccess,
+}: {
+  outlet: LiveOutlet | null;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}) {
+  const createMutation = useCreateOutletMaster();
+  const updateMutation = useUpdateOutletMaster();
+  const [name, setName] = useState(outlet?.name ?? "");
+  const [code, setCode] = useState(outlet?.code ?? "");
+  const [address, setAddress] = useState(outlet?.address ?? "");
+  const [latitude, setLatitude] = useState(
+    outlet?.latitude.toString() ?? "-6.2891"
+  );
+  const [longitude, setLongitude] = useState(
+    outlet?.longitude.toString() ?? "106.7214"
+  );
+  const [radius, setRadius] = useState(
+    outlet?.geofence_radius_m.toString() ?? "100"
+  );
+  const [reason, setReason] = useState(
+    outlet ? "Pembaruan data outlet" : "Membuat outlet baru"
+  );
+  const [formError, setFormError] = useState("");
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    const latitudeNumber = Number(latitude);
+    const longitudeNumber = Number(longitude);
+    const radiusNumber = Number(radius);
+
+    if (
+      !name.trim() ||
+      !code.trim() ||
+      !address.trim() ||
+      !reason.trim() ||
+      !Number.isFinite(latitudeNumber) ||
+      !Number.isFinite(longitudeNumber) ||
+      !Number.isInteger(radiusNumber)
+    ) {
+      setFormError("Lengkapi data outlet dengan nilai koordinat yang valid.");
+      return;
+    }
+
+    try {
+      const input = {
+        code: code.trim().toUpperCase(),
+        name: name.trim(),
+        address: address.trim(),
+        latitude: latitudeNumber,
+        longitude: longitudeNumber,
+        geofenceRadiusM: radiusNumber,
+        reason: reason.trim(),
+      };
+
+      if (outlet) {
+        await updateMutation.mutateAsync({ ...input, outletId: outlet.id });
+      } else {
+        await createMutation.mutateAsync(input);
+      }
+
+      playSuccessHaptic();
+      onSuccess(
+        outlet
+          ? `${name.trim()} berhasil diperbarui.`
+          : `${name.trim()} berhasil ditambahkan.`
+      );
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Data outlet belum dapat disimpan."
+      );
+    }
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={() => {
+        if (!isPending) onClose();
+      }}
+      title={outlet ? "Ubah Outlet & Geofence" : "Tambah Outlet Live"}
+      icon={outlet ? Pencil : Building2}
+      maxWidth="max-w-lg"
+    >
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        {formError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"
+          >
+            {formError}
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300">
+              Nama outlet
+            </label>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300">
+              Kode outlet
+            </label>
+            <input
+              value={code}
+              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-base uppercase text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-300">
+            Alamat lengkap
+          </label>
+          <textarea
+            rows={2}
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300">
+              Latitude
+            </label>
+            <input
+              type="number"
+              step="0.000001"
+              min="-90"
+              max="90"
+              value={latitude}
+              onChange={(event) => setLatitude(event.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300">
+              Longitude
+            </label>
+            <input
+              type="number"
+              step="0.000001"
+              min="-180"
+              max="180"
+              value={longitude}
+              onChange={(event) => setLongitude(event.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300">
+              Radius geofence
+            </label>
+            <select
+              value={radius}
+              onChange={(event) => setRadius(event.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            >
+              {[50, 100, 200, 500].map((value) => (
+                <option key={value} value={value}>
+                  {value} Meter
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-300">
+              Alasan perubahan
+            </label>
+            <input
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+          </div>
+        </div>
+        <p className="rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-[10px] text-slate-400">
+          Jam operasional akan dikelola melalui template shift outlet pada
+          tahap kebijakan berikutnya.
+        </p>
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="flex-1 rounded-xl bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
+          >
+            {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />}
+            {outlet ? "Simpan Perubahan" : "Simpan Outlet"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function jsonObject(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function policyNumber(
+  configuration: Record<string, unknown>,
+  key: string,
+  fallback: number
+) {
+  const value = configuration[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function LiveWorkPolicyManager() {
+  const { showToast } = useHR();
+  const roleQuery = useCurrentAccessRole();
+  const policyQuery = useCurrentPolicies();
+  const outletQuery = useLiveOutlets(true);
+  const shiftQuery = useActiveShiftTemplates();
+  const publishMutation = usePublishWorkPolicy();
+  const shiftMutation = useReplaceOutletShiftTemplate();
+  const isSupervisor = roleQuery.data === "supervisor";
+  const attendancePolicy = policyQuery.data?.find(
+    (policy) => policy.policy_type === "attendance"
+  );
+  const overtimePolicy = policyQuery.data?.find(
+    (policy) => policy.policy_type === "overtime"
+  );
+  const attendanceConfig = jsonObject(attendancePolicy?.configuration);
+  const overtimeConfig = jsonObject(overtimePolicy?.configuration);
+
+  const [lateTolerance, setLateTolerance] = useState(15);
+  const [requireSelfie, setRequireSelfie] = useState(true);
+  const [minimumOvertimeHours, setMinimumOvertimeHours] = useState(1);
+  const [policyReason, setPolicyReason] = useState("");
+  const [selectedOutletId, setSelectedOutletId] = useState("");
+  const [shiftType, setShiftType] = useState<"morning" | "middle" | "night">(
+    "morning"
+  );
+  const [startsAt, setStartsAt] = useState("07:00");
+  const [endsAt, setEndsAt] = useState("15:00");
+  const [shiftLateTolerance, setShiftLateTolerance] = useState(15);
+  const [earlyCheckoutTolerance, setEarlyCheckoutTolerance] = useState(15);
+  const [shiftReason, setShiftReason] = useState("");
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    setLateTolerance(
+      policyNumber(attendanceConfig, "late_tolerance_minutes", 15)
+    );
+    setRequireSelfie(
+      typeof attendanceConfig.clock_in_selfie_required === "boolean"
+        ? attendanceConfig.clock_in_selfie_required
+        : true
+    );
+    setMinimumOvertimeHours(
+      policyNumber(overtimeConfig, "minimum_minutes", 60) / 60
+    );
+  }, [
+    attendanceConfig.clock_in_selfie_required,
+    attendanceConfig.late_tolerance_minutes,
+    overtimeConfig.minimum_minutes,
+  ]);
+
+  useEffect(() => {
+    if (!selectedOutletId && outletQuery.data?.[0]) {
+      setSelectedOutletId(outletQuery.data[0].id);
+    }
+  }, [outletQuery.data, selectedOutletId]);
+
+  useEffect(() => {
+    const template = shiftQuery.data?.find(
+      (item) =>
+        item.outlet_id === selectedOutletId && item.shift_type === shiftType
+    );
+    const defaults = {
+      morning: ["07:00", "15:00"],
+      middle: ["12:00", "20:00"],
+      night: ["15:00", "23:00"],
+    } as const;
+
+    setStartsAt(template?.starts_at.slice(0, 5) ?? defaults[shiftType][0]);
+    setEndsAt(template?.ends_at.slice(0, 5) ?? defaults[shiftType][1]);
+    setShiftLateTolerance(template?.late_tolerance_min ?? lateTolerance);
+    setEarlyCheckoutTolerance(
+      template?.early_checkout_tolerance_min ??
+        policyNumber(
+          attendanceConfig,
+          "early_checkout_tolerance_minutes",
+          15
+        )
+    );
+  }, [
+    attendanceConfig.early_checkout_tolerance_minutes,
+    lateTolerance,
+    selectedOutletId,
+    shiftQuery.data,
+    shiftType,
+  ]);
+
+  if (
+    roleQuery.isLoading ||
+    policyQuery.isLoading ||
+    outletQuery.isLoading ||
+    shiftQuery.isLoading
+  ) {
+    return (
+      <div className="flex min-h-40 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900">
+        <LoaderCircle className="h-5 w-5 animate-spin text-amber-400" />
+      </div>
+    );
+  }
+
+  const queryError =
+    roleQuery.error ?? policyQuery.error ?? outletQuery.error ?? shiftQuery.error;
+
+  if (queryError) {
+    return (
+      <div
+        role="alert"
+        className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300"
+      >
+        {queryError.message}
+      </div>
+    );
+  }
+
+  const handlePolicySubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!policyReason.trim()) {
+      setFormError("Alasan perubahan kebijakan wajib diisi.");
+      return;
+    }
+
+    try {
+      await publishMutation.mutateAsync({
+        attendanceConfiguration: {
+          late_tolerance_minutes: lateTolerance,
+          clock_in_selfie_required: requireSelfie,
+        },
+        overtimeConfiguration: {
+          minimum_minutes: Math.round(minimumOvertimeHours * 60),
+        },
+        reason: policyReason.trim(),
+      });
+      setPolicyReason("");
+      playSuccessHaptic();
+      showToast("Versi kebijakan kerja berhasil diterbitkan.", "success");
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Kebijakan kerja belum dapat disimpan."
+      );
+    }
+  };
+
+  const handleShiftSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!selectedOutletId || !shiftReason.trim()) {
+      setFormError("Pilih outlet dan isi alasan perubahan template shift.");
+      return;
+    }
+
+    try {
+      await shiftMutation.mutateAsync({
+        outletId: selectedOutletId,
+        shiftType,
+        startsAt,
+        endsAt,
+        lateToleranceMin: shiftLateTolerance,
+        earlyCheckoutToleranceMin: earlyCheckoutTolerance,
+        reason: shiftReason.trim(),
+      });
+      setShiftReason("");
+      playSuccessHaptic();
+      showToast("Template shift outlet berhasil disimpan.", "success");
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Template shift belum dapat disimpan."
+      );
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {!isSupervisor && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
+          Kebijakan dan template shift tersedia dalam mode baca. Hanya
+          supervisor yang dapat menerbitkan perubahan.
+        </div>
+      )}
+      {formError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"
+        >
+          {formError}
+        </div>
+      )}
+
+      <form
+        onSubmit={handlePolicySubmit}
+        className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-md sm:p-5"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+              Kebijakan Presensi & Lembur
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Nilai global; toleransi per outlet dapat dioverride pada template
+              shift.
+            </p>
+          </div>
+          <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
+            Presensi v{attendancePolicy?.version_number ?? "—"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <PolicyNumberField
+            label="Toleransi terlambat default"
+            value={lateTolerance}
+            min={0}
+            max={180}
+            unit="menit"
+            disabled={!isSupervisor}
+            onChange={setLateTolerance}
+          />
+          <PolicyNumberField
+            label="Minimum lembur"
+            value={minimumOvertimeHours}
+            min={0.5}
+            max={24}
+            step={0.5}
+            unit="jam"
+            disabled={!isSupervisor}
+            onChange={setMinimumOvertimeHours}
+          />
+          <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <p className="text-xs font-bold text-slate-200">
+              Selfie saat masuk
+            </p>
+            <p className="mb-3 text-[10px] text-slate-400">
+              Clock-out tidak memerlukan selfie.
+            </p>
+            <button
+              type="button"
+              disabled={!isSupervisor}
+              onClick={() => setRequireSelfie((value) => !value)}
+              className={`h-7 w-14 rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                requireSelfie ? "bg-amber-500" : "bg-slate-700"
+              }`}
+              aria-label="Wajibkan selfie saat presensi masuk"
+              aria-pressed={requireSelfie}
+            >
+              <span
+                className={`block h-5 w-5 rounded-full bg-slate-950 transition-transform ${
+                  requireSelfie ? "translate-x-7" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {isSupervisor && (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={policyReason}
+              onChange={(event) => setPolicyReason(event.target.value)}
+              placeholder="Alasan penerbitan versi baru"
+              className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+            <button
+              type="submit"
+              disabled={publishMutation.isPending}
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
+            >
+              {publishMutation.isPending && (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              )}
+              Terbitkan Versi
+            </button>
+          </div>
+        )}
+      </form>
+
+      <form
+        onSubmit={handleShiftSubmit}
+        className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-md sm:p-5"
+      >
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+            Template Shift per Outlet
+          </h3>
+          <p className="text-[11px] text-slate-400">
+            Perubahan membuat template baru; jadwal historis tetap memakai
+            template lama.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="text-xs font-medium text-slate-300">
+            Outlet
+            <select
+              value={selectedOutletId}
+              onChange={(event) => setSelectedOutletId(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            >
+              {outletQuery.data?.map((outlet) => (
+                <option key={outlet.id} value={outlet.id}>
+                  {outlet.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-medium text-slate-300">
+            Jenis shift
+            <select
+              value={shiftType}
+              onChange={(event) =>
+                setShiftType(
+                  event.target.value as "morning" | "middle" | "night"
+                )
+              }
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            >
+              <option value="morning">Pagi</option>
+              <option value="middle">Middle</option>
+              <option value="night">Malam</option>
+            </select>
+          </label>
+          <TimeField
+            label="Jam mulai"
+            value={startsAt}
+            disabled={!isSupervisor}
+            onChange={setStartsAt}
+          />
+          <TimeField
+            label="Jam selesai"
+            value={endsAt}
+            disabled={!isSupervisor}
+            onChange={setEndsAt}
+          />
+          <PolicyNumberField
+            label="Toleransi terlambat"
+            value={shiftLateTolerance}
+            min={0}
+            max={180}
+            unit="menit"
+            disabled={!isSupervisor}
+            onChange={setShiftLateTolerance}
+          />
+          <PolicyNumberField
+            label="Toleransi pulang awal"
+            value={earlyCheckoutTolerance}
+            min={0}
+            max={180}
+            unit="menit"
+            disabled={!isSupervisor}
+            onChange={setEarlyCheckoutTolerance}
+          />
+        </div>
+        {isSupervisor && (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={shiftReason}
+              onChange={(event) => setShiftReason(event.target.value)}
+              placeholder="Alasan perubahan template shift"
+              className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              required
+            />
+            <button
+              type="submit"
+              disabled={shiftMutation.isPending || !selectedOutletId}
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
+            >
+              {shiftMutation.isPending && (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              )}
+              Simpan Template
+            </button>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+}
+
+function LiveLeavePolicyManager() {
+  const { showToast } = useHR();
+  const roleQuery = useCurrentAccessRole();
+  const policyQuery = useCurrentPolicies();
+  const publishMutation = usePublishPolicyVersion();
+  const leavePolicy = policyQuery.data?.find(
+    (policy) => policy.policy_type === "leave"
+  );
+  const configuration = jsonObject(leavePolicy?.configuration);
+  const [annualEntitlement, setAnnualEntitlement] = useState(12);
+  const [annualNotice, setAnnualNotice] = useState(3);
+  const [reason, setReason] = useState("");
+  const [formError, setFormError] = useState("");
+  const isSupervisor = roleQuery.data === "supervisor";
+
+  useEffect(() => {
+    setAnnualEntitlement(
+      policyNumber(configuration, "annual_entitlement_days", 12)
+    );
+    setAnnualNotice(policyNumber(configuration, "annual_notice_days", 3));
+  }, [
+    configuration.annual_entitlement_days,
+    configuration.annual_notice_days,
+  ]);
+
+  if (roleQuery.isLoading || policyQuery.isLoading) {
+    return (
+      <div className="flex min-h-40 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900">
+        <LoaderCircle className="h-5 w-5 animate-spin text-amber-400" />
+      </div>
+    );
+  }
+
+  const queryError = roleQuery.error ?? policyQuery.error;
+  if (queryError) {
+    return (
+      <div
+        role="alert"
+        className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300"
+      >
+        {queryError.message}
+      </div>
+    );
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!reason.trim()) {
+      setFormError("Alasan perubahan kebijakan wajib diisi.");
+      return;
+    }
+
+    try {
+      await publishMutation.mutateAsync({
+        policyType: "leave",
+        configuration: {
+          annual_entitlement_days: annualEntitlement,
+          annual_notice_days: annualNotice,
+        },
+        reason: reason.trim(),
+      });
+      setReason("");
+      playSuccessHaptic();
+      showToast("Versi kebijakan cuti berhasil diterbitkan.", "success");
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Kebijakan cuti belum dapat disimpan."
+      );
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-md sm:p-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+            Aturan Hak Cuti
+          </h3>
+          <p className="text-[11px] text-slate-400">
+            Setiap perubahan diterbitkan sebagai versi baru untuk audit.
+          </p>
+        </div>
+        <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
+          Versi {leavePolicy?.version_number ?? "—"}
+        </span>
+      </div>
+      {!isSupervisor && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
+          Kebijakan tersedia dalam mode baca. Hanya supervisor yang dapat
+          menerbitkan perubahan.
+        </div>
+      )}
+      {formError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"
+        >
+          {formError}
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <PolicyNumberField
+          label="Hak cuti tahunan"
+          value={annualEntitlement}
+          min={0}
+          max={365}
+          unit="hari"
+          disabled={!isSupervisor}
+          onChange={setAnnualEntitlement}
+        />
+        <PolicyNumberField
+          label="Pengajuan minimum sebelum cuti"
+          value={annualNotice}
+          min={0}
+          max={90}
+          unit="hari"
+          disabled={!isSupervisor}
+          onChange={setAnnualNotice}
+        />
+      </div>
+      <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[10px] leading-relaxed text-slate-400">
+        Cuti tahunan tidak dibawa ke tahun berikutnya. Sakit dan keadaan
+        darurat tetap dapat diajukan pada hari yang sama sesuai jenis cuti.
+      </p>
+      {isSupervisor && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Alasan penerbitan versi baru"
+            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            required
+          />
+          <button
+            type="submit"
+            disabled={publishMutation.isPending}
+            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
+          >
+            {publishMutation.isPending && (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            )}
+            Terbitkan Versi
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+function PolicyNumberField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit: string;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs font-bold text-slate-200">
+      {label}
+      <span className="mt-2 flex items-center gap-2">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange(
+              Math.min(
+                max,
+                Math.max(min, Number(event.target.value) || min)
+              )
+            )
+          }
+          className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-center text-base font-bold text-amber-400 outline-none focus:border-amber-500 disabled:opacity-60 sm:text-xs"
+        />
+        <span className="font-normal text-slate-400">{unit}</span>
+      </span>
+    </label>
+  );
+}
+
+function TimeField({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="text-xs font-medium text-slate-300">
+      {label}
+      <input
+        type="time"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 disabled:opacity-60 sm:text-xs"
+        required
+      />
+    </label>
   );
 }
