@@ -86,5 +86,14 @@ Jangan menjalankan reset terhadap production.
 - Client tidak memiliki hak tulis langsung ke tabel cuti, saldo, attachment,
   atau lembur. Semua keputusan memakai expected version, first-write-wins,
   larangan self-approval, notifikasi, dan audit.
+- Presensi live wajib melalui RPC `clock_in_attendance` dan
+  `clock_out_attendance`; jarak Haversine, accuracy GPS, jadwal terbit,
+  geofence, dan status waktu dihitung ulang di database.
+- Selfie clock-in kasir disimpan pada bucket private `attendance-selfies`
+  dengan path `<employee>/<YYYY>/<MM>/<DD>/<client-event>.jpg`. Upload yang
+  belum terdaftar boleh dibersihkan pemilik, tetapi bukti yang sudah terhubung
+  ke presensi tidak dapat dihapus client.
+- Supervisor dapat presensi pada outlet aktif mana pun tanpa jadwal dan tanpa
+  selfie; durasi dibandingkan dengan target delapan jam.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

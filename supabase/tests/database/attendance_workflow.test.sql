@@ -1,0 +1,284 @@
+begin;
+
+set local search_path = extensions, public, pg_catalog;
+
+select extensions.plan(17);
+
+select extensions.ok(
+  not has_function_privilege('anon', 'public.get_attendance_workspace()', 'execute'),
+  'anonymous cannot load attendance workspace'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.clock_in_attendance(uuid,uuid,numeric,numeric,numeric,timestamptz,boolean,jsonb,text)',
+    'execute'
+  ),
+  'anonymous cannot clock in'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.clock_out_attendance(uuid,numeric,numeric,numeric,timestamptz,boolean)',
+    'execute'
+  ),
+  'anonymous cannot clock out'
+);
+select extensions.ok(
+  not has_table_privilege('authenticated', 'public.attendance_records', 'insert'),
+  'clients cannot insert attendance records directly'
+);
+select extensions.ok(
+  not has_table_privilege('authenticated', 'public.attendance_records', 'update'),
+  'clients cannot update attendance records directly'
+);
+select has_table_privilege(current_user, 'public.job_positions', 'insert')
+  as can_seed_attendance_fixtures
+\gset
+
+\if :can_seed_attendance_fixtures
+
+insert into public.job_positions (id, code, name, auto_roster_eligible)
+values
+  ('71000000-0000-0000-0000-000000000001', 'ATT-CASHIER', 'Kasir Attendance Test', true),
+  ('71000000-0000-0000-0000-000000000002', 'ATT-SUP', 'Supervisor Attendance Test', false);
+
+insert into public.employment_statuses (id, code, name)
+values ('72000000-0000-0000-0000-000000000001', 'ATT-ACTIVE', 'Attendance Active');
+
+insert into public.outlets (
+  id, code, name, address, latitude, longitude, geofence_radius_m
+)
+values (
+  '73000000-0000-0000-0000-000000000001',
+  'ATT-A',
+  'Attendance Outlet A',
+  'Alamat Attendance',
+  -6.200000,
+  106.800000,
+  100
+);
+
+insert into public.employees (
+  id, nik, full_name, joined_at, employment_status_id, job_position_id
+)
+values
+  (
+    '74000000-0000-0000-0000-000000000001',
+    'RK-2096-901',
+    'Attendance Cashier',
+    current_date,
+    '72000000-0000-0000-0000-000000000001',
+    '71000000-0000-0000-0000-000000000001'
+  ),
+  (
+    '74000000-0000-0000-0000-000000000002',
+    'RK-2096-902',
+    'Attendance Supervisor',
+    current_date,
+    '72000000-0000-0000-0000-000000000001',
+    '71000000-0000-0000-0000-000000000002'
+  ),
+  (
+    '74000000-0000-0000-0000-000000000003',
+    'RK-2096-903',
+    'Attendance Management',
+    current_date,
+    '72000000-0000-0000-0000-000000000001',
+    '71000000-0000-0000-0000-000000000002'
+  );
+
+insert into public.employee_placements (
+  employee_id, outlet_id, start_date, is_primary, change_reason
+)
+values
+  ('74000000-0000-0000-0000-000000000001', '73000000-0000-0000-0000-000000000001', current_date, true, 'Test'),
+  ('74000000-0000-0000-0000-000000000002', '73000000-0000-0000-0000-000000000001', current_date, true, 'Test'),
+  ('74000000-0000-0000-0000-000000000003', '73000000-0000-0000-0000-000000000001', current_date, true, 'Test');
+
+insert into auth.users (
+  id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+)
+values
+  ('75000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'att-cashier@example.invalid', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('75000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'att-supervisor@example.invalid', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('75000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'att-management@example.invalid', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+
+insert into public.user_accounts (
+  user_id, employee_id, access_role, account_status, must_change_password
+)
+values
+  ('75000000-0000-0000-0000-000000000001', '74000000-0000-0000-0000-000000000001', 'employee', 'active', false),
+  ('75000000-0000-0000-0000-000000000002', '74000000-0000-0000-0000-000000000002', 'supervisor', 'active', false),
+  ('75000000-0000-0000-0000-000000000003', '74000000-0000-0000-0000-000000000003', 'management', 'active', false);
+
+insert into public.outlet_shift_templates (
+  id, outlet_id, shift_type, starts_at, ends_at
+)
+values (
+  '76000000-0000-0000-0000-000000000001',
+  '73000000-0000-0000-0000-000000000001',
+  'morning',
+  ((now() at time zone 'Asia/Jakarta') - interval '1 hour')::time,
+  ((now() at time zone 'Asia/Jakarta') + interval '7 hours')::time
+);
+
+insert into public.roster_periods (
+  id, month_start, status, publish_deadline
+)
+values (
+  '77000000-0000-0000-0000-000000000001',
+  date_trunc('month', current_date)::date,
+  'published',
+  current_date
+);
+
+insert into public.roster_versions (
+  id, roster_period_id, version_number, status, created_by, published_at, published_by
+)
+values (
+  '78000000-0000-0000-0000-000000000001',
+  '77000000-0000-0000-0000-000000000001',
+  1,
+  'draft',
+  '75000000-0000-0000-0000-000000000002',
+  null,
+  null
+);
+
+insert into public.schedule_assignments (
+  id, roster_version_id, employee_id, outlet_id, shift_template_id,
+  work_date, planned_start, planned_end, planned_duration_min
+)
+values (
+  '79000000-0000-0000-0000-000000000001',
+  '78000000-0000-0000-0000-000000000001',
+  '74000000-0000-0000-0000-000000000001',
+  '73000000-0000-0000-0000-000000000001',
+  '76000000-0000-0000-0000-000000000001',
+  (now() at time zone 'Asia/Jakarta')::date,
+  ((now() at time zone 'Asia/Jakarta') - interval '1 hour')::time,
+  ((now() at time zone 'Asia/Jakarta') + interval '7 hours')::time,
+  480
+);
+
+update public.roster_versions
+set
+  status = 'published',
+  published_at = now(),
+  published_by = '75000000-0000-0000-0000-000000000002'
+where id = '78000000-0000-0000-0000-000000000001';
+
+update public.roster_periods
+set active_version_id = '78000000-0000-0000-0000-000000000001'
+where id = '77000000-0000-0000-0000-000000000001';
+
+select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000003', true);
+set local role authenticated;
+select extensions.throws_ok(
+  $$select public.clock_in_attendance(
+    '7a000000-0000-0000-0000-000000000003',
+    '73000000-0000-0000-0000-000000000001',
+    -6.2, 106.8, 10, now(), false, null, null
+  )$$,
+  '42501',
+  'Akun ini tidak dapat melakukan presensi.',
+  'management cannot clock in'
+);
+
+reset role;
+select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000001', true);
+set local role authenticated;
+select extensions.throws_ok(
+  $$select public.clock_in_attendance(
+    '7a000000-0000-0000-0000-000000000001',
+    '73000000-0000-0000-0000-000000000001',
+    -6.2, 106.8, 10, now(), false, null, null
+  )$$,
+  '23514',
+  'Selfie dari kamera wajib tersedia saat clock-in.',
+  'cashier clock-in requires a live selfie'
+);
+select extensions.is(
+  count(*)::integer,
+  0,
+  'rejected cashier clock-in creates no record'
+) from public.attendance_records
+where employee_id = '74000000-0000-0000-0000-000000000001';
+
+reset role;
+select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000002', true);
+set local role authenticated;
+select extensions.throws_ok(
+  $$select public.clock_in_attendance(
+    '7a000000-0000-0000-0000-000000000002',
+    '73000000-0000-0000-0000-000000000001',
+    -6.21, 106.81, 10, now(), false, null, null
+  )$$,
+  '22023',
+  null,
+  'clock-in outside the outlet geofence is rejected'
+);
+select extensions.throws_ok(
+  $$select public.clock_in_attendance(
+    '7a000000-0000-0000-0000-000000000002',
+    '73000000-0000-0000-0000-000000000001',
+    -6.2, 106.8, 150, now(), false, null, null
+  )$$,
+  '22023',
+  null,
+  'clock-in with poor GPS accuracy is rejected'
+);
+select extensions.lives_ok(
+  $$select public.clock_in_attendance(
+    '7a000000-0000-0000-0000-000000000002',
+    '73000000-0000-0000-0000-000000000001',
+    -6.2, 106.8, 10, now(), true, null, 'Supervisor test'
+  )$$,
+  'supervisor can clock in at an active outlet without schedule or selfie'
+);
+select extensions.is(
+  (select clock_in_state from public.attendance_records where id = '7a000000-0000-0000-0000-000000000002'),
+  'flexible',
+  'supervisor clock-in is marked flexible'
+);
+select extensions.lives_ok(
+  $$select public.clock_in_attendance(
+    '7a000000-0000-0000-0000-000000000002',
+    '73000000-0000-0000-0000-000000000001',
+    -6.2, 106.8, 10, now(), true, null, 'Retry'
+  )$$,
+  'retry with the same event id is idempotent'
+);
+select extensions.is(
+  count(*)::integer,
+  1,
+  'idempotent retry creates one open session'
+) from public.attendance_records
+where employee_id = '74000000-0000-0000-0000-000000000002';
+select extensions.lives_ok(
+  $$select public.clock_out_attendance(
+    '7a000000-0000-0000-0000-000000000002',
+    -6.2, 106.8, 10, now(), false
+  )$$,
+  'clock-out closes the session without selfie'
+);
+select extensions.is(
+  (select attendance_status::text from public.attendance_records where id = '7a000000-0000-0000-0000-000000000002'),
+  'completed',
+  'clock-out marks attendance completed'
+);
+select extensions.ok(
+  (select worked_duration_min is not null from public.attendance_records where id = '7a000000-0000-0000-0000-000000000002'),
+  'clock-out calculates worked duration'
+);
+
+\else
+
+select extensions.skip(12, 'database role cannot seed attendance fixtures');
+
+\endif
+
+select * from extensions.finish();
+rollback;

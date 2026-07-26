@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 26 Juli 2026                                                    |
-| Fase saat ini         | M4 selesai — M5 presensi GPS dan selfie menjadi pekerjaan berikutnya |
+| Fase saat ini         | M5 presensi GPS dan selfie sedang dikerjakan                         |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan empat belas migration berikut identik antara
+- Project hosted sudah terhubung dan enam belas migration berikut identik antara
   lokal dan remote:
 
 | Migration                                               | Fungsi                                    |
@@ -91,7 +91,9 @@ Sudah tersedia:
 | `20260727130000_employee_import_workflow.sql`           | Dry-run dan commit atomik impor XLSX       |
 | `20260727210000_manual_roster_workflow.sql`             | Roster manual, off, publish, dan tukar     |
 | `20260727223000_harden_roster_function_privileges.sql`  | Hardening hak eksekusi RPC roster          |
-| `20260728003000_leave_overtime_workflow.sql`             | Cuti, dokumen privat, saldo, dan lembur    |
+| `20260728003000_leave_overtime_workflow.sql`            | Cuti, dokumen privat, saldo, dan lembur     |
+| `20260728150000_attendance_clock_workflow.sql`          | Clock-in/out, geofence server, dan selfie   |
+| `20260728153000_harden_attendance_function_privileges.sql` | Hardening hak RPC presensi               |
 
 Verifikasi terakhir terhadap hosted project:
 
@@ -543,7 +545,7 @@ Selesai:
 
 ---
 
-## M5 — Presensi GPS, Geofence, dan Selfie (`NEXT`)
+## M5 — Presensi GPS, Geofence, dan Selfie (`IN PROGRESS`)
 
 ### Tujuan
 
@@ -575,6 +577,24 @@ mobile-first.
 - Selfie tidak public dan tidak memiliki URL permanen.
 - Retry tidak membuat record atau file ganda.
 - Uji perangkat nyata dilakukan pada Android dan iOS/Safari bila tersedia.
+
+### Status implementasi 26 Juli 2026
+
+- Migration lokal/hosted menambahkan RPC workspace, clock-in idempotent, clock-out,
+  Haversine server-side, batas accuracy, status jam kerja, audit, dan menutup
+  jalur tulis langsung tabel presensi.
+- UI live sudah dipisahkan dari mode demo; memakai Geolocation API, kamera
+  portrait 480x640, selfie mirror, upload private, cleanup upload parsial, dan
+  TanStack Query.
+- Supervisor dapat memilih outlet aktif mana pun tanpa jadwal/selfie. Kasir
+  wajib memiliki jadwal terbit, berada dalam satu jam sebelum shift, berada
+  dalam geofence, dan mengambil selfie langsung dari kamera.
+- pgTAP lokal dan hosted `209/209` mencakup hak akses, accuracy buruk, luar
+  geofence, selfie wajib, fleksibilitas supervisor, idempotensi, satu sesi,
+  dan clock-out. Schema lint lokal/hosted, ESLint, TypeScript, production
+  build, serta 14/14 E2E juga lulus.
+- Tersisa sebelum status `DONE`: smoke test kamera/GPS pada Android serta
+  iOS/Safari bila perangkat tersedia.
 
 ---
 

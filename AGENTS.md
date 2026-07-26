@@ -17,8 +17,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Empat belas migration sudah diterapkan dan cocok antara lokal/remote.
-- Hosted lint schema `public` bersih dan pgTAP lulus 192/192 pada 26 Juli 2026.
+- Enam belas migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 209/209 pada
+  26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
@@ -47,15 +48,16 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Cuti/Izin live sudah mendukung saldo tahunan, reservasi, dokumen privat,
   pembatalan, jenis cuti dinamis, serta keputusan atomik. Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
-- Upload selfie, worker retensi, dan optimizer roster otomatis belum
-  diimplementasikan.
+- Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan
+  pada M5 dan menunggu smoke test perangkat nyata; worker retensi dan
+  optimizer roster otomatis belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
 - Milestone **M3 — Penjadwalan Manual, Off Day, dan Versi Roster** sudah
   selesai.
 - Milestone **M4 — Cuti, Izin, dan Lembur** sudah selesai.
-- Milestone aktif berikutnya adalah **M5 — Presensi GPS, Geofence, dan
+- Milestone aktif adalah **M5 — Presensi GPS, Geofence, dan
   Selfie** pada
   `IMPLEMENTATION_ROADMAP.md`.
 - Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
@@ -138,6 +140,10 @@ src/
 │   ├── query-keys.ts     # Query key factory data master
 │   ├── queries.ts        # TanStack Query hooks data master
 │   └── repository.ts     # Repository Supabase bertipe dan dibatasi RLS
+├── lib/attendance/
+│   ├── query-keys.ts     # Query key factory workspace presensi
+│   ├── queries.ts        # TanStack Query hooks clock-in dan clock-out
+│   └── repository.ts     # RPC presensi dan upload selfie private
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift

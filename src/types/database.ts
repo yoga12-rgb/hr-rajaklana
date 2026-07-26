@@ -270,17 +270,23 @@ export type Database = {
       attendance_records: {
         Row: {
           attendance_status: Database["public"]["Enums"]["attendance_status"]
+          client_event_id: string | null
           clock_in_accuracy_m: number
           clock_in_at: string
+          clock_in_distance_m: number | null
           clock_in_latitude: number
           clock_in_longitude: number
+          clock_in_state: string
           clock_out_accuracy_m: number | null
           clock_out_at: string | null
+          clock_out_distance_m: number | null
           clock_out_latitude: number | null
           clock_out_longitude: number | null
+          clock_out_state: string | null
           created_at: string
           employee_id: string
           id: string
+          notes: string | null
           outlet_id: string
           record_version: number
           schedule_assignment_id: string | null
@@ -292,17 +298,23 @@ export type Database = {
         }
         Insert: {
           attendance_status?: Database["public"]["Enums"]["attendance_status"]
+          client_event_id?: string | null
           clock_in_accuracy_m: number
           clock_in_at: string
+          clock_in_distance_m?: number | null
           clock_in_latitude: number
           clock_in_longitude: number
+          clock_in_state?: string
           clock_out_accuracy_m?: number | null
           clock_out_at?: string | null
+          clock_out_distance_m?: number | null
           clock_out_latitude?: number | null
           clock_out_longitude?: number | null
+          clock_out_state?: string | null
           created_at?: string
           employee_id: string
           id?: string
+          notes?: string | null
           outlet_id: string
           record_version?: number
           schedule_assignment_id?: string | null
@@ -314,17 +326,23 @@ export type Database = {
         }
         Update: {
           attendance_status?: Database["public"]["Enums"]["attendance_status"]
+          client_event_id?: string | null
           clock_in_accuracy_m?: number
           clock_in_at?: string
+          clock_in_distance_m?: number | null
           clock_in_latitude?: number
           clock_in_longitude?: number
+          clock_in_state?: string
           clock_out_accuracy_m?: number | null
           clock_out_at?: string | null
+          clock_out_distance_m?: number | null
           clock_out_latitude?: number | null
           clock_out_longitude?: number | null
+          clock_out_state?: string | null
           created_at?: string
           employee_id?: string
           id?: string
+          notes?: string | null
           outlet_id?: string
           record_version?: number
           schedule_assignment_id?: string | null
@@ -2161,6 +2179,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      attendance_distance_m: {
+        Args: {
+          p_latitude_a: number
+          p_latitude_b: number
+          p_longitude_a: number
+          p_longitude_b: number
+        }
+        Returns: number
+      }
       can_view_announcement: {
         Args: { target_announcement_id: string }
         Returns: boolean
@@ -2225,6 +2252,97 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "overtime_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      clock_in_attendance: {
+        Args: {
+          p_accuracy_m: number
+          p_captured_at: string
+          p_client_event_id: string
+          p_evidence?: Json
+          p_latitude: number
+          p_location_mocked?: boolean
+          p_longitude: number
+          p_notes?: string
+          p_outlet_id: string
+        }
+        Returns: {
+          attendance_status: Database["public"]["Enums"]["attendance_status"]
+          client_event_id: string | null
+          clock_in_accuracy_m: number
+          clock_in_at: string
+          clock_in_distance_m: number | null
+          clock_in_latitude: number
+          clock_in_longitude: number
+          clock_in_state: string
+          clock_out_accuracy_m: number | null
+          clock_out_at: string | null
+          clock_out_distance_m: number | null
+          clock_out_latitude: number | null
+          clock_out_longitude: number | null
+          clock_out_state: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          record_version: number
+          schedule_assignment_id: string | null
+          updated_at: string
+          validation_due_at: string | null
+          validation_status: Database["public"]["Enums"]["validation_status"]
+          work_date: string
+          worked_duration_min: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      clock_out_attendance: {
+        Args: {
+          p_accuracy_m: number
+          p_attendance_id: string
+          p_captured_at: string
+          p_latitude: number
+          p_location_mocked?: boolean
+          p_longitude: number
+        }
+        Returns: {
+          attendance_status: Database["public"]["Enums"]["attendance_status"]
+          client_event_id: string | null
+          clock_in_accuracy_m: number
+          clock_in_at: string
+          clock_in_distance_m: number | null
+          clock_in_latitude: number
+          clock_in_longitude: number
+          clock_in_state: string
+          clock_out_accuracy_m: number | null
+          clock_out_at: string | null
+          clock_out_distance_m: number | null
+          clock_out_latitude: number | null
+          clock_out_longitude: number | null
+          clock_out_state: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          record_version: number
+          schedule_assignment_id: string | null
+          updated_at: string
+          validation_due_at: string | null
+          validation_status: Database["public"]["Enums"]["validation_status"]
+          work_date: string
+          worked_duration_min: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_records"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2416,6 +2534,7 @@ export type Database = {
         Args: { p_month_start: string; p_reason: string }
         Returns: string
       }
+      get_attendance_workspace: { Args: never; Returns: Json }
       get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
       get_overtime_workspace: { Args: never; Returns: Json }
@@ -2646,17 +2765,23 @@ export type Database = {
         }
         Returns: {
           attendance_status: Database["public"]["Enums"]["attendance_status"]
+          client_event_id: string | null
           clock_in_accuracy_m: number
           clock_in_at: string
+          clock_in_distance_m: number | null
           clock_in_latitude: number
           clock_in_longitude: number
+          clock_in_state: string
           clock_out_accuracy_m: number | null
           clock_out_at: string | null
+          clock_out_distance_m: number | null
           clock_out_latitude: number | null
           clock_out_longitude: number | null
+          clock_out_state: string | null
           created_at: string
           employee_id: string
           id: string
+          notes: string | null
           outlet_id: string
           record_version: number
           schedule_assignment_id: string | null

@@ -15,8 +15,16 @@ import {
   Video
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { useDataSource } from "@/context/DataSourceContext";
+import { LiveAttendancePage } from "@/components/attendance/LiveAttendancePage";
 
 export default function AttendancePage() {
+  const { mode } = useDataSource();
+
+  return mode === "supabase" ? <LiveAttendancePage /> : <DemoAttendancePage />;
+}
+
+function DemoAttendancePage() {
   const {
     userClockedIn,
     currentUserClockInTime,
