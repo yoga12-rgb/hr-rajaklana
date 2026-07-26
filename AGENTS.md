@@ -18,7 +18,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
 - Empat migration fondasi sudah diterapkan dan cocok antara lokal/remote.
-- Hosted lint schema `public` bersih dan pgTAP lulus 12/12 pada 26 Juli 2026.
+- Hosted lint schema `public` bersih dan pgTAP lulus 26/26 pada 26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - **UI belum memakai data Supabase**: seluruh modul bisnis masih memakai
   `HRContext` dan `localStorage`.
@@ -26,6 +26,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   server-only, dan script bootstrap supervisor sudah diimplementasikan.
 - Supervisor pertama sudah dibuat; login pertama, wajib ganti password,
   logout, dan login ulang telah berhasil diuji secara lokal.
+- Otorisasi anonymous, employee, supervisor, dan management telah diuji;
+  management wajib read-only dan tidak boleh menjalankan aksi supervisor.
 - Data bisnis nyata, upload selfie, worker retensi, dan roster otomatis belum
   diimplementasikan.
 - Milestone aktif adalah **M1 — Environment, Authentication, dan Supervisor

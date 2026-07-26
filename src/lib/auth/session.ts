@@ -99,8 +99,8 @@ export async function requireCurrentAccount() {
 export async function requireSupervisorAccount() {
   const account = await requireCurrentAccount();
 
-  if (account.accessRole !== "supervisor" && account.accessRole !== "management") {
-    throw new Error("Aksi ini hanya dapat dilakukan supervisor atau management.");
+  if (account.accessRole !== "supervisor") {
+    throw new Error("Aksi ini hanya dapat dilakukan supervisor.");
   }
 
   return account;

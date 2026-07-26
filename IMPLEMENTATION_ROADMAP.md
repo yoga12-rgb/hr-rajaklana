@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya             |
 | Terakhir diverifikasi | 26 Juli 2026                                                                |
-| Fase saat ini         | M1 berjalan; login supervisor lulus, pengujian role dan deploy masih tertunda |
+| Fase saat ini         | M1 berjalan; auth dan role lulus, smoke test deployment masih tertunda        |
 | Branch utama          | `main`                                                                      |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                                  |
 | Supabase project ref  | `ttbogurultjbporryylb`                                                      |
@@ -72,7 +72,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan lima migration berikut identik antara
+- Project hosted sudah terhubung dan enam migration berikut identik antara
   lokal dan remote:
 
 | Migration                                              | Fungsi                                  |
@@ -82,12 +82,13 @@ Sudah tersedia:
 | `20260724183617_enable_database_testing.sql`           | Mengaktifkan pgTAP                      |
 | `20260724183900_grant_cli_database_testing_access.sql` | Akses minimum role CLI untuk tes        |
 | `20260726153000_complete_password_change.sql`          | Aktivasi akun dan audit password atomik |
+| `20260726193000_harden_auth_role_helper_privileges.sql` | Hardening hak eksekusi helper role     |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `12/12`.
+- pgTAP lulus `26/26`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -295,14 +296,14 @@ Selesai:
   `must_change_password=true`.
 - Supervisor pertama berhasil login, dipaksa mengganti password, masuk ke
   dashboard, logout, dan login ulang pada pengujian lokal.
-- Migration lokal/hosted identik; reset lokal, lint lokal/hosted, pgTAP 12/12,
+- Role anonymous, employee, supervisor, dan management sudah diuji. Management
+  dipastikan read-only dan hanya supervisor yang memperoleh otoritas mutasi.
+- Migration lokal/hosted identik; reset lokal, lint lokal/hosted, pgTAP 26/26,
   lint aplikasi, typecheck, build, serta 14 E2E desktop/mobile lulus. E2E auth
   mencakup pemeriksaan posisi form tepat di tengah viewport.
 
 Tertunda sebelum status dapat menjadi `DONE`:
 
-- Tambahkan dan jalankan pengujian alur nyata untuk anonymous, employee,
-  management, serta pembatasan aksi supervisor.
 - Redeploy Vercel lalu lakukan smoke test pada domain Production.
 
 ### Input pemilik produk
