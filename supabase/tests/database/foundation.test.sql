@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(10);
+select extensions.plan(12);
 
 select extensions.ok(
   exists (
@@ -151,6 +151,32 @@ select extensions.ok(
         like '%attendance_record_id, record_version%'
   ),
   'attendance validation history is unique per record version'
+);
+
+select extensions.ok(
+  exists (
+    select 1
+    from pg_proc procedure
+    join pg_namespace namespace on namespace.oid = procedure.pronamespace
+    where namespace.nspname = 'public'
+      and procedure.proname = 'complete_password_change'
+      and procedure.prosecdef
+  ),
+  'password completion RPC is a security definer function'
+);
+
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.complete_password_change()',
+    'execute'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.complete_password_change()',
+    'execute'
+  ),
+  'password completion RPC is authenticated-only'
 );
 
 select * from extensions.finish();

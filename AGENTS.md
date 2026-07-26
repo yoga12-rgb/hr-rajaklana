@@ -18,12 +18,16 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
 - Empat migration fondasi sudah diterapkan dan cocok antara lokal/remote.
-- Hosted lint schema `public` bersih dan pgTAP lulus 10/10 pada 24 Juli 2026.
+- Hosted lint schema `public` bersih dan pgTAP lulus 12/12 pada 26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - **UI belum memakai data Supabase**: seluruh modul bisnis masih memakai
   `HRContext` dan `localStorage`.
-- Login, route protection, supervisor pertama, data nyata, upload selfie,
-  worker retensi, dan roster otomatis belum diimplementasikan.
+- Login, logout, route protection, wajib ganti password, operasi akun
+  server-only, dan script bootstrap supervisor sudah diimplementasikan.
+- Supervisor pertama sudah dibuat; login pertama, wajib ganti password,
+  logout, dan login ulang telah berhasil diuji secara lokal.
+- Data bisnis nyata, upload selfie, worker retensi, dan roster otomatis belum
+  diimplementasikan.
 - Milestone aktif adalah **M1 — Environment, Authentication, dan Supervisor
   Pertama** pada `IMPLEMENTATION_ROADMAP.md`.
 - Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
@@ -67,6 +71,8 @@ src/
 │   ├── layout.tsx        # App layout with Header, Sidebar & BottomNav
 │   ├── page.tsx          # Mobile HR Dashboard (Home)
 │   ├── attendance/       # Presensi & Kehadiran Page
+│   ├── login/            # Login email/password Supabase
+│   ├── change-password/  # Wajib ganti password pada login pertama
 │   ├── employees/        # Data Karyawan Page
 │   ├── leaves/           # Pengajuan Cuti & Izin Page
 │   ├── overtime/         # Pengajuan Lembur & Overtime Page
@@ -92,7 +98,9 @@ src/
 ├── lib/supabase/
 │   ├── client.ts         # Supabase client untuk Client Components
 │   ├── server.ts         # Supabase client berbasis cookies untuk server
-│   └── proxy.ts          # Refresh sesi Supabase melalui Next.js Proxy
+│   ├── admin.ts          # Admin client server-only
+│   └── proxy.ts          # Refresh sesi dan proteksi route
+├── lib/auth/             # Session DAL, Server Actions, dan validasi password
 ├── proxy.ts              # Entry point Next.js 16 Proxy; tetap pasif tanpa env Supabase
 ├── types/
 │   └── database.ts       # Tipe database; regenerasi melalui npm run supabase:types

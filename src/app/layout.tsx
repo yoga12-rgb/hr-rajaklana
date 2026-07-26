@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
-import BottomNav from "@/components/BottomNav";
+import { AppShell } from "@/components/AppShell";
 import { HRProvider } from "@/context/HRContext";
 
 const geistSans = Geist({
@@ -48,16 +46,9 @@ export default function RootLayout({
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-950 text-slate-100 flex flex-row font-sans">
+      <body className="flex min-h-full w-full flex-row bg-slate-950 font-sans text-slate-100">
         <HRProvider>
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-16 md:pb-0 bg-slate-950">
-            <Header />
-            <main className="flex-1 p-4 sm:p-6 max-w-lg md:max-w-7xl mx-auto w-full">
-              {children}
-            </main>
-            <BottomNav />
-          </div>
+          <AppShell>{children}</AppShell>
         </HRProvider>
       </body>
     </html>

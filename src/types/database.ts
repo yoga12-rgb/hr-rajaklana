@@ -2102,6 +2102,26 @@ export type Database = {
         Returns: boolean
       }
       can_view_sensitive_operations: { Args: never; Returns: boolean }
+      complete_password_change: {
+        Args: never
+        Returns: {
+          access_role: Database["public"]["Enums"]["access_role"]
+          account_status: Database["public"]["Enums"]["account_status"]
+          created_at: string
+          deactivated_at: string | null
+          employee_id: string | null
+          last_login_at: string | null
+          must_change_password: boolean
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_access_role: {
         Args: never
         Returns: Database["public"]["Enums"]["access_role"]

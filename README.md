@@ -13,9 +13,10 @@ Sistem Informasi HRD & Operasional Karyawan modern yang dirancang dengan pendeka
 ## Status Pengembangan
 
 Fondasi Supabase PostgreSQL, Auth SSR, private Storage, RLS, migration, dan
-pengujian database sudah tersedia. Antarmuka saat ini masih berjalan sebagai
-prototype menggunakan `HRContext` dan `localStorage`; login dan data multi-user
-nyata belum diaktifkan.
+pengujian database sudah tersedia. Login, logout, proteksi route, dan wajib
+ganti password pada login pertama sudah diimplementasikan. Modul bisnis masih
+berjalan sebagai prototype menggunakan `HRContext` dan `localStorage` sampai
+dimigrasikan per milestone.
 
 Dokumen pengembangan:
 
@@ -25,8 +26,8 @@ Dokumen pengembangan:
 - [Panduan Supabase](supabase/README.md)
 - [Aturan Agent](AGENTS.md)
 
-Milestone aktif berikutnya adalah autentikasi, proteksi route, dan bootstrap
-supervisor pertama. Detail acceptance criteria dan quality gate berada pada
+Milestone aktif adalah penyelesaian autentikasi dan bootstrap supervisor
+pertama. Detail progres, acceptance criteria, serta quality gate berada pada
 `IMPLEMENTATION_ROADMAP.md`.
 
 ---
@@ -91,6 +92,19 @@ npm install
 npm run dev
 ```
 Buka [http://localhost:3000](http://localhost:3000) pada browser Anda (gunakan mode responsif mobile di Developer Tools untuk pengalaman terbaik).
+
+### 3.1 Environment dan supervisor pertama
+
+Salin `.env.example` menjadi `.env.local`, isi tiga environment Supabase, lalu
+jalankan bootstrap hanya dari terminal lokal:
+
+```bash
+npm run auth:bootstrap-supervisor
+```
+
+Script meminta identitas dan password awal secara interaktif. Password tidak
+ditulis ke repository dan input password disembunyikan pada terminal TTY.
+Supervisor akan dipaksa mengganti password saat login pertama.
 
 ### 4. Build untuk Produksi (Production Build)
 ```bash

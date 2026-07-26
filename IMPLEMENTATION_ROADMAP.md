@@ -2,17 +2,17 @@
 
 ## Informasi dokumen
 
-| Atribut | Nilai |
-|---|---|
-| Tujuan | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
-| Terakhir diverifikasi | 24 Juli 2026 |
-| Fase saat ini | Fondasi backend selesai; integrasi autentikasi dan data nyata belum dimulai |
-| Branch utama | `main` |
-| Supabase hosted | `https://ttbogurultjbporryylb.supabase.co` |
-| Supabase project ref | `ttbogurultjbporryylb` |
-| Dokumen produk | `PRD.md` |
-| Model data | `ERD.md` |
-| Aturan agent | `AGENTS.md` |
+| Atribut               | Nilai                                                                       |
+| --------------------- | --------------------------------------------------------------------------- |
+| Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya             |
+| Terakhir diverifikasi | 26 Juli 2026                                                                |
+| Fase saat ini         | M1 berjalan; login supervisor lulus, pengujian role dan deploy masih tertunda |
+| Branch utama          | `main`                                                                      |
+| Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                                  |
+| Supabase project ref  | `ttbogurultjbporryylb`                                                      |
+| Dokumen produk        | `PRD.md`                                                                    |
+| Model data            | `ERD.md`                                                                    |
+| Aturan agent          | `AGENTS.md`                                                                 |
 
 Dokumen ini adalah backlog teknis kanonis. Agent yang melanjutkan pekerjaan
 wajib membaca `AGENTS.md`, `PRD.md`, `ERD.md`, dokumen ini, dan
@@ -72,31 +72,32 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan empat migration berikut identik antara
+- Project hosted sudah terhubung dan lima migration berikut identik antara
   lokal dan remote:
 
-| Migration | Fungsi |
-|---|---|
-| `20260724104032_initial_workforce_schema.sql` | Schema inti workforce |
-| `20260724104038_secure_storage_and_rls.sql` | RLS, private Storage, RPC, dan keamanan |
-| `20260724183617_enable_database_testing.sql` | Mengaktifkan pgTAP |
-| `20260724183900_grant_cli_database_testing_access.sql` | Akses minimum role CLI untuk tes |
+| Migration                                              | Fungsi                                  |
+| ------------------------------------------------------ | --------------------------------------- |
+| `20260724104032_initial_workforce_schema.sql`          | Schema inti workforce                   |
+| `20260724104038_secure_storage_and_rls.sql`            | RLS, private Storage, RPC, dan keamanan |
+| `20260724183617_enable_database_testing.sql`           | Mengaktifkan pgTAP                      |
+| `20260724183900_grant_cli_database_testing_access.sql` | Akses minimum role CLI untuk tes        |
+| `20260726153000_complete_password_change.sql`          | Aktivasi akun dan audit password atomik |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `10/10`.
+- pgTAP lulus `12/12`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
-Fondasi backend sudah aktif, tetapi aplikasi belum menjadi aplikasi
-multi-user:
+Fondasi backend dan autentikasi sudah aktif, tetapi aplikasi belum sepenuhnya
+menjadi aplikasi multi-user:
 
 - Seluruh halaman bisnis masih membaca dan memutasi `HRContext`.
-- Belum ada halaman login, logout, perubahan kata sandi pertama, atau route
-  protection.
-- Belum ada akun supervisor bootstrap yang dikelola dari source code.
+- Halaman login, logout, perubahan kata sandi pertama, proteksi route, dan
+  operasi akun server-only sudah tersedia.
+- Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
 - Belum ada data karyawan/outlet nyata yang diimpor.
 - Belum ada upload selfie nyata, worker penghapusan file, atau roster engine.
 - Konfigurasi environment Vercel tidak dapat dianggap selesai hanya karena
@@ -111,18 +112,18 @@ client Supabase telah tersedia.
 
 ### 2.1 Stack dan lokasi penting
 
-| Area | Lokasi |
-|---|---|
-| Halaman | `src/app/` |
-| Komponen reusable | `src/components/ui/` |
-| State prototype | `src/context/HRContext.tsx` |
-| Supabase clients | `src/lib/supabase/` |
-| Next.js session proxy | `src/proxy.ts` |
-| Generated database types | `src/types/database.ts` |
-| Migrations | `supabase/migrations/` |
-| Database tests | `supabase/tests/database/` |
-| E2E tests | `e2e/` |
-| CI | `.github/workflows/quality.yml` |
+| Area                     | Lokasi                          |
+| ------------------------ | ------------------------------- |
+| Halaman                  | `src/app/`                      |
+| Komponen reusable        | `src/components/ui/`            |
+| State prototype          | `src/context/HRContext.tsx`     |
+| Supabase clients         | `src/lib/supabase/`             |
+| Next.js session proxy    | `src/proxy.ts`                  |
+| Generated database types | `src/types/database.ts`         |
+| Migrations               | `supabase/migrations/`          |
+| Database tests           | `supabase/tests/database/`      |
+| E2E tests                | `e2e/`                          |
+| CI                       | `.github/workflows/quality.yml` |
 
 Local Supabase memakai port `55320`–`55329` agar tidak berbenturan dengan
 project lain. Jangan menghentikan container Supabase milik project lain.
@@ -274,6 +275,35 @@ pertama, serta satu supervisor bootstrap yang aman.
 - Pastikan akun `locked` atau `deactivated` tidak dapat memakai aplikasi.
 - Tambahkan pengujian untuk employee, supervisor, management, anonymous,
   force-change-password, dan larangan self-approval.
+
+### Progres terverifikasi 26 Juli 2026
+
+Selesai:
+
+- Environment lokal terdeteksi lengkap; pemilik produk mengonfirmasi
+  environment Vercel serta Auth URL/redirect URL sudah ditambahkan.
+- Admin client `server-only`, login, logout, proteksi route, status akun, dan
+  halaman wajib ganti password sudah diimplementasikan.
+- Aktivasi akun dan audit setelah perubahan password memakai RPC
+  transaksional `complete_password_change`.
+- Operasi server-only untuk membuat akun dan reset password manual tersedia
+  dengan pemeriksaan role.
+- Script idempotent `npm run auth:bootstrap-supervisor` tersedia, membaca
+  environment lokal, dan tidak menyimpan password.
+- Supervisor pertama `RK-2026-001` sudah terverifikasi di hosted Auth dan
+  `user_accounts` sebagai role `supervisor`, status `invited`, serta
+  `must_change_password=true`.
+- Supervisor pertama berhasil login, dipaksa mengganti password, masuk ke
+  dashboard, logout, dan login ulang pada pengujian lokal.
+- Migration lokal/hosted identik; reset lokal, lint lokal/hosted, pgTAP 12/12,
+  lint aplikasi, typecheck, build, serta 14 E2E desktop/mobile lulus. E2E auth
+  mencakup pemeriksaan posisi form tepat di tengah viewport.
+
+Tertunda sebelum status dapat menjadi `DONE`:
+
+- Tambahkan dan jalankan pengujian alur nyata untuk anonymous, employee,
+  management, serta pembatasan aksi supervisor.
+- Redeploy Vercel lalu lakukan smoke test pada domain Production.
 
 ### Input pemilik produk
 
@@ -603,16 +633,16 @@ Untuk perubahan hosted:
 
 Input berikut diminta hanya ketika milestone terkait dimulai:
 
-| Milestone | Input |
-|---|---|
-| M1 | Domain Vercel, identitas supervisor pertama, penempatan, password awal melalui kanal aman |
-| M2 | Data karyawan, jabatan, status kerja, outlet, koordinat, radius, jam buka/tutup |
-| M3 | Template shift per outlet, pengecualian outlet, off day awal, aturan perubahan/publish |
-| M4 | Daftar final jenis cuti dan dokumen wajib |
-| M5 | Hasil uji accuracy GPS perangkat nyata dan toleransi pilot |
-| M6 | Retensi final untuk bukti reject/correction dan frekuensi worker |
-| M7 | Dataset satu bulan untuk mengukur fairness dan kasus outlet kekurangan staf |
-| M8 | Pengguna pilot, SOP dukungan, kebutuhan laporan/export final |
+| Milestone | Input                                                                                     |
+| --------- | ----------------------------------------------------------------------------------------- |
+| M1        | Domain Vercel, identitas supervisor pertama, penempatan, password awal melalui kanal aman |
+| M2        | Data karyawan, jabatan, status kerja, outlet, koordinat, radius, jam buka/tutup           |
+| M3        | Template shift per outlet, pengecualian outlet, off day awal, aturan perubahan/publish    |
+| M4        | Daftar final jenis cuti dan dokumen wajib                                                 |
+| M5        | Hasil uji accuracy GPS perangkat nyata dan toleransi pilot                                |
+| M6        | Retensi final untuk bukti reject/correction dan frekuensi worker                          |
+| M7        | Dataset satu bulan untuk mengukur fairness dan kasus outlet kekurangan staf               |
+| M8        | Pengguna pilot, SOP dukungan, kebutuhan laporan/export final                              |
 
 Jangan mengarang data perusahaan nyata. Gunakan fixture sintetis sampai data
 diberikan atau impor disetujui.

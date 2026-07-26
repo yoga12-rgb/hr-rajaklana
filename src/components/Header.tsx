@@ -11,10 +11,12 @@ import {
   CheckCircle2, 
   ChevronRight, 
   CheckCheck,
-  Database
+  Database,
+  LogOut
 } from "lucide-react";
 import { useHR } from "@/context/HRContext";
 import { Modal } from "@/components/ui/Modal";
+import { signOutAction } from "@/lib/auth/actions";
 
 export default function Header() {
   const {
@@ -147,6 +149,17 @@ export default function Header() {
         <Link href="/profile" className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold text-xs hover:border-amber-400 transition-colors">
           HR
         </Link>
+
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="hidden rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white sm:inline-flex"
+            title="Keluar"
+            aria-label="Keluar"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </form>
       </div>
 
       {/* Notification Center Modal / Bottom Sheet */}
