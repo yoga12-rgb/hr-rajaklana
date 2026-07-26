@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(12);
+select extensions.plan(14);
 
 select extensions.ok(
   exists (
@@ -177,6 +177,39 @@ select extensions.ok(
     'execute'
   ),
   'password completion RPC is authenticated-only'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_trigger trigger_definition
+    join pg_class relation on relation.oid = trigger_definition.tgrelid
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname in ('leave_requests', 'overtime_requests')
+      and trigger_definition.tgname in (
+        'leave_requests_prevent_self_approval',
+        'overtime_requests_prevent_self_approval'
+      )
+      and not trigger_definition.tgisinternal
+  ),
+  2,
+  'leave and overtime self-approval triggers exist'
+);
+
+select extensions.ok(
+  exists (
+    select 1
+    from pg_trigger trigger_definition
+    join pg_class relation on relation.oid = trigger_definition.tgrelid
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname = 'attendance_validations'
+      and trigger_definition.tgname =
+        'attendance_validations_prevent_self_approval'
+      and not trigger_definition.tgisinternal
+  ),
+  'attendance self-validation trigger exists'
 );
 
 select * from extensions.finish();

@@ -26,9 +26,9 @@ Dokumen pengembangan:
 - [Panduan Supabase](supabase/README.md)
 - [Aturan Agent](AGENTS.md)
 
-Milestone aktif adalah penyelesaian autentikasi dan bootstrap supervisor
-pertama. Detail progres, acceptance criteria, serta quality gate berada pada
-`IMPLEMENTATION_ROADMAP.md`.
+Milestone autentikasi dan supervisor pertama sudah selesai. Milestone aktif
+berikutnya adalah Data Access Layer dan master data. Detail progres, acceptance
+criteria, serta quality gate berada pada `IMPLEMENTATION_ROADMAP.md`.
 
 ---
 

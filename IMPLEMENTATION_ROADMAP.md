@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya             |
 | Terakhir diverifikasi | 26 Juli 2026                                                                |
-| Fase saat ini         | M1 berjalan; auth dan role lulus, smoke test deployment masih tertunda        |
+| Fase saat ini         | M1 selesai; milestone aktif berikutnya M2 — DAL dan master data               |
 | Branch utama          | `main`                                                                      |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                                  |
 | Supabase project ref  | `ttbogurultjbporryylb`                                                      |
@@ -88,7 +88,7 @@ Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `26/26`.
+- pgTAP lulus `28/28`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -249,7 +249,7 @@ sekaligus.
 
 ## 4. Milestone implementasi
 
-## M1 — Environment, Authentication, dan Supervisor Pertama (`NEXT`)
+## M1 — Environment, Authentication, dan Supervisor Pertama (`DONE`)
 
 ### Tujuan
 
@@ -298,13 +298,13 @@ Selesai:
   dashboard, logout, dan login ulang pada pengujian lokal.
 - Role anonymous, employee, supervisor, dan management sudah diuji. Management
   dipastikan read-only dan hanya supervisor yang memperoleh otoritas mutasi.
-- Migration lokal/hosted identik; reset lokal, lint lokal/hosted, pgTAP 26/26,
+- Migration lokal/hosted identik; reset lokal, lint lokal/hosted, pgTAP 28/28,
   lint aplikasi, typecheck, build, serta 14 E2E desktop/mobile lulus. E2E auth
   mencakup pemeriksaan posisi form tepat di tengah viewport.
+- Deployment Vercel untuk commit `d4c834d` berstatus sukses. Production
+  `/login` merespons 200 dan akses anonymous ke `/` merespons 307 menuju login.
 
-Tertunda sebelum status dapat menjadi `DONE`:
-
-- Redeploy Vercel lalu lakukan smoke test pada domain Production.
+Seluruh exit criteria M1 selesai pada 26 Juli 2026.
 
 ### Input pemilik produk
 
@@ -325,7 +325,7 @@ Tertunda sebelum status dapat menjadi `DONE`:
 
 ---
 
-## M2 — Data Access Layer dan Master Data (`BACKLOG`)
+## M2 — Data Access Layer dan Master Data (`NEXT`)
 
 ### Tujuan
 
