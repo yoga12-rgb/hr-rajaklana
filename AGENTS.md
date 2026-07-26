@@ -17,8 +17,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Sepuluh migration sudah diterapkan dan cocok antara lokal/remote.
-- Hosted lint schema `public` bersih dan pgTAP lulus 74/74 pada 26 Juli 2026.
+- Sebelas migration sudah diterapkan dan cocok antara lokal/remote.
+- Hosted lint schema `public` bersih dan pgTAP lulus 93/93 pada 26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
@@ -39,11 +39,15 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   logout, dan login ulang telah berhasil diuji secara lokal.
 - Otorisasi anonymous, employee, supervisor, dan management telah diuji;
   management wajib read-only dan tidak boleh menjalankan aksi supervisor.
-- Impor dry-run, upload selfie, worker retensi, dan roster otomatis belum
-  diimplementasikan.
+- Impor XLSX karyawan sudah memiliki template, validasi dry-run per baris,
+  checksum payload, dan commit atomik. File diproses di browser, tidak
+  diunggah ke Storage, dan akun pengguna tetap dibuat terpisah.
+- Upload selfie, worker retensi, dan roster otomatis belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
-- Milestone aktif adalah **M2 — Data Access Layer dan Master Data** pada
+- Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
+- Milestone aktif berikutnya adalah **M3 — Penjadwalan Manual, Off Day, dan
+  Versi Roster** pada
   `IMPLEMENTATION_ROADMAP.md`.
 - Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
   selesai. Setelah menyelesaikan milestone, perbarui status roadmap dan
@@ -94,6 +98,8 @@ src/
 │   ├── reports/          # Laporan & Analytics HR Page
 │   └── schedule/         # Jadwal Shift Staf Page
 ├── components/
+│   ├── employees/
+│   │   └── EmployeeImportModal.tsx # Template, parsing lokal, dry-run, dan commit impor XLSX
 │   ├── providers/
 │   │   └── AppProviders.tsx # Query, data-source, dan provider prototype
 │   ├── Header.tsx        # Header navigasi desktop/mobile dengan Pusat Notifikasi HR (Bell Icon)

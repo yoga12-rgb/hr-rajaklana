@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useHR } from "@/context/HRContext";
 import { useDataSource } from "@/context/DataSourceContext";
 import {
@@ -1216,74 +1216,82 @@ function LiveWorkPolicyManager() {
   const attendanceConfig = jsonObject(attendancePolicy?.configuration);
   const overtimeConfig = jsonObject(overtimePolicy?.configuration);
 
-  const [lateTolerance, setLateTolerance] = useState(15);
-  const [requireSelfie, setRequireSelfie] = useState(true);
-  const [minimumOvertimeHours, setMinimumOvertimeHours] = useState(1);
+  const policyDefaults = {
+    lateTolerance: policyNumber(
+      attendanceConfig,
+      "late_tolerance_minutes",
+      15
+    ),
+    requireSelfie:
+      typeof attendanceConfig.clock_in_selfie_required === "boolean"
+        ? attendanceConfig.clock_in_selfie_required
+        : true,
+    minimumOvertimeHours:
+      policyNumber(overtimeConfig, "minimum_minutes", 60) / 60,
+  };
+  const [policyDraft, setPolicyDraft] = useState<typeof policyDefaults | null>(
+    null
+  );
+  const activePolicyDraft = policyDraft ?? policyDefaults;
+  const { lateTolerance, requireSelfie, minimumOvertimeHours } =
+    activePolicyDraft;
+  const updatePolicyDraft = (updates: Partial<typeof policyDefaults>) =>
+    setPolicyDraft((current) => ({
+      ...(current ?? policyDefaults),
+      ...updates,
+    }));
   const [policyReason, setPolicyReason] = useState("");
-  const [selectedOutletId, setSelectedOutletId] = useState("");
+  const [selectedOutletOverride, setSelectedOutletOverride] = useState("");
+  const selectedOutletId =
+    selectedOutletOverride || outletQuery.data?.[0]?.id || "";
   const [shiftType, setShiftType] = useState<"morning" | "middle" | "night">(
     "morning"
   );
-  const [startsAt, setStartsAt] = useState("07:00");
-  const [endsAt, setEndsAt] = useState("15:00");
-  const [shiftLateTolerance, setShiftLateTolerance] = useState(15);
-  const [earlyCheckoutTolerance, setEarlyCheckoutTolerance] = useState(15);
+  const template = shiftQuery.data?.find(
+    (item) =>
+      item.outlet_id === selectedOutletId && item.shift_type === shiftType
+  );
+  const defaultShiftTimes = {
+    morning: ["07:00", "15:00"],
+    middle: ["12:00", "20:00"],
+    night: ["15:00", "23:00"],
+  } as const;
+  const shiftSelectionKey = `${selectedOutletId}:${shiftType}`;
+  const shiftDefaults = {
+    key: shiftSelectionKey,
+    startsAt:
+      template?.starts_at.slice(0, 5) ?? defaultShiftTimes[shiftType][0],
+    endsAt: template?.ends_at.slice(0, 5) ?? defaultShiftTimes[shiftType][1],
+    shiftLateTolerance: template?.late_tolerance_min ?? lateTolerance,
+    earlyCheckoutTolerance:
+      template?.early_checkout_tolerance_min ??
+      policyNumber(
+        attendanceConfig,
+        "early_checkout_tolerance_minutes",
+        15
+      ),
+  };
+  const [shiftDraft, setShiftDraft] = useState<typeof shiftDefaults | null>(
+    null
+  );
+  const activeShiftDraft =
+    shiftDraft?.key === shiftSelectionKey ? shiftDraft : shiftDefaults;
+  const {
+    startsAt,
+    endsAt,
+    shiftLateTolerance,
+    earlyCheckoutTolerance,
+  } = activeShiftDraft;
+  const updateShiftDraft = (
+    updates: Partial<Omit<typeof shiftDefaults, "key">>
+  ) =>
+    setShiftDraft({
+      ...activeShiftDraft,
+      ...updates,
+      key: shiftSelectionKey,
+    });
   const [shiftReason, setShiftReason] = useState("");
   const [formError, setFormError] = useState("");
-
-  useEffect(() => {
-    setLateTolerance(
-      policyNumber(attendanceConfig, "late_tolerance_minutes", 15)
-    );
-    setRequireSelfie(
-      typeof attendanceConfig.clock_in_selfie_required === "boolean"
-        ? attendanceConfig.clock_in_selfie_required
-        : true
-    );
-    setMinimumOvertimeHours(
-      policyNumber(overtimeConfig, "minimum_minutes", 60) / 60
-    );
-  }, [
-    attendanceConfig.clock_in_selfie_required,
-    attendanceConfig.late_tolerance_minutes,
-    overtimeConfig.minimum_minutes,
-  ]);
-
-  useEffect(() => {
-    if (!selectedOutletId && outletQuery.data?.[0]) {
-      setSelectedOutletId(outletQuery.data[0].id);
-    }
-  }, [outletQuery.data, selectedOutletId]);
-
-  useEffect(() => {
-    const template = shiftQuery.data?.find(
-      (item) =>
-        item.outlet_id === selectedOutletId && item.shift_type === shiftType
-    );
-    const defaults = {
-      morning: ["07:00", "15:00"],
-      middle: ["12:00", "20:00"],
-      night: ["15:00", "23:00"],
-    } as const;
-
-    setStartsAt(template?.starts_at.slice(0, 5) ?? defaults[shiftType][0]);
-    setEndsAt(template?.ends_at.slice(0, 5) ?? defaults[shiftType][1]);
-    setShiftLateTolerance(template?.late_tolerance_min ?? lateTolerance);
-    setEarlyCheckoutTolerance(
-      template?.early_checkout_tolerance_min ??
-        policyNumber(
-          attendanceConfig,
-          "early_checkout_tolerance_minutes",
-          15
-        )
-    );
-  }, [
-    attendanceConfig.early_checkout_tolerance_minutes,
-    lateTolerance,
-    selectedOutletId,
-    shiftQuery.data,
-    shiftType,
-  ]);
 
   if (
     roleQuery.isLoading ||
@@ -1419,7 +1427,7 @@ function LiveWorkPolicyManager() {
             max={180}
             unit="menit"
             disabled={!isSupervisor}
-            onChange={setLateTolerance}
+            onChange={(value) => updatePolicyDraft({ lateTolerance: value })}
           />
           <PolicyNumberField
             label="Minimum lembur"
@@ -1429,7 +1437,9 @@ function LiveWorkPolicyManager() {
             step={0.5}
             unit="jam"
             disabled={!isSupervisor}
-            onChange={setMinimumOvertimeHours}
+            onChange={(value) =>
+              updatePolicyDraft({ minimumOvertimeHours: value })
+            }
           />
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
             <p className="text-xs font-bold text-slate-200">
@@ -1441,7 +1451,9 @@ function LiveWorkPolicyManager() {
             <button
               type="button"
               disabled={!isSupervisor}
-              onClick={() => setRequireSelfie((value) => !value)}
+              onClick={() =>
+                updatePolicyDraft({ requireSelfie: !requireSelfie })
+              }
               className={`h-7 w-14 rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 requireSelfie ? "bg-amber-500" : "bg-slate-700"
               }`}
@@ -1498,7 +1510,9 @@ function LiveWorkPolicyManager() {
             Outlet
             <select
               value={selectedOutletId}
-              onChange={(event) => setSelectedOutletId(event.target.value)}
+              onChange={(event) =>
+                setSelectedOutletOverride(event.target.value)
+              }
               className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
             >
               {outletQuery.data?.map((outlet) => (
@@ -1528,13 +1542,13 @@ function LiveWorkPolicyManager() {
             label="Jam mulai"
             value={startsAt}
             disabled={!isSupervisor}
-            onChange={setStartsAt}
+            onChange={(value) => updateShiftDraft({ startsAt: value })}
           />
           <TimeField
             label="Jam selesai"
             value={endsAt}
             disabled={!isSupervisor}
-            onChange={setEndsAt}
+            onChange={(value) => updateShiftDraft({ endsAt: value })}
           />
           <PolicyNumberField
             label="Toleransi terlambat"
@@ -1543,7 +1557,9 @@ function LiveWorkPolicyManager() {
             max={180}
             unit="menit"
             disabled={!isSupervisor}
-            onChange={setShiftLateTolerance}
+            onChange={(value) =>
+              updateShiftDraft({ shiftLateTolerance: value })
+            }
           />
           <PolicyNumberField
             label="Toleransi pulang awal"
@@ -1552,7 +1568,9 @@ function LiveWorkPolicyManager() {
             max={180}
             unit="menit"
             disabled={!isSupervisor}
-            onChange={setEarlyCheckoutTolerance}
+            onChange={(value) =>
+              updateShiftDraft({ earlyCheckoutTolerance: value })
+            }
           />
         </div>
         {isSupervisor && (
@@ -1590,21 +1608,26 @@ function LiveLeavePolicyManager() {
     (policy) => policy.policy_type === "leave"
   );
   const configuration = jsonObject(leavePolicy?.configuration);
-  const [annualEntitlement, setAnnualEntitlement] = useState(12);
-  const [annualNotice, setAnnualNotice] = useState(3);
+  const leaveDefaults = {
+    annualEntitlement: policyNumber(
+      configuration,
+      "annual_entitlement_days",
+      12
+    ),
+    annualNotice: policyNumber(configuration, "annual_notice_days", 3),
+  };
+  const [leaveDraft, setLeaveDraft] = useState<typeof leaveDefaults | null>(
+    null
+  );
+  const { annualEntitlement, annualNotice } = leaveDraft ?? leaveDefaults;
+  const updateLeaveDraft = (updates: Partial<typeof leaveDefaults>) =>
+    setLeaveDraft((current) => ({
+      ...(current ?? leaveDefaults),
+      ...updates,
+    }));
   const [reason, setReason] = useState("");
   const [formError, setFormError] = useState("");
   const isSupervisor = roleQuery.data === "supervisor";
-
-  useEffect(() => {
-    setAnnualEntitlement(
-      policyNumber(configuration, "annual_entitlement_days", 12)
-    );
-    setAnnualNotice(policyNumber(configuration, "annual_notice_days", 3));
-  }, [
-    configuration.annual_entitlement_days,
-    configuration.annual_notice_days,
-  ]);
 
   if (roleQuery.isLoading || policyQuery.isLoading) {
     return (
@@ -1696,7 +1719,9 @@ function LiveLeavePolicyManager() {
           max={365}
           unit="hari"
           disabled={!isSupervisor}
-          onChange={setAnnualEntitlement}
+          onChange={(value) =>
+            updateLeaveDraft({ annualEntitlement: value })
+          }
         />
         <PolicyNumberField
           label="Pengajuan minimum sebelum cuti"
@@ -1705,7 +1730,7 @@ function LiveLeavePolicyManager() {
           max={90}
           unit="hari"
           disabled={!isSupervisor}
-          onChange={setAnnualNotice}
+          onChange={(value) => updateLeaveDraft({ annualNotice: value })}
         />
       </div>
       <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[10px] leading-relaxed text-slate-400">

@@ -26,6 +26,7 @@ import {
   Calendar, 
   UserPlus,
   Archive,
+  FileSpreadsheet,
   LoaderCircle,
   Pencil,
   TriangleAlert,
@@ -33,6 +34,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { EmployeeImportModal } from "@/components/employees/EmployeeImportModal";
 import { playClickSound, playSuccessHaptic } from "@/utils/clickSound";
 
 const generalDepartments = [
@@ -75,6 +77,7 @@ function LiveEmployeesPage() {
   const { showToast } = useHR();
   const [formEmployee, setFormEmployee] = useState<LiveEmployee | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [archiveEmployee, setArchiveEmployee] = useState<LiveEmployee | null>(
     null
   );
@@ -124,6 +127,11 @@ function LiveEmployeesPage() {
     setShowForm(true);
   };
 
+  const openImportForm = () => {
+    playClickSound();
+    setShowImport(true);
+  };
+
   const openEditForm = (employee: LiveEmployee) => {
     playClickSound();
     setFormEmployee(employee);
@@ -165,14 +173,24 @@ function LiveEmployeesPage() {
         showLeaveBalance={false}
         headerAction={
           canManage ? (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition-all hover:bg-amber-400 active:scale-95"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span>Tambah</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openImportForm}
+                className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-400 transition-all hover:bg-amber-500/15 active:scale-95"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>Impor</span>
+              </button>
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition-all hover:bg-amber-400 active:scale-95"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Tambah</span>
+              </button>
+            </div>
           ) : (
             <span className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-slate-400">
               Akses Baca
@@ -231,6 +249,18 @@ function LiveEmployeesPage() {
           }}
         />
       )}
+
+      <EmployeeImportModal
+        isOpen={showImport}
+        outlets={liveOutlets}
+        jobPositions={livePositions}
+        employmentStatuses={liveStatuses}
+        onClose={() => setShowImport(false)}
+        onSuccess={(message) => {
+          setShowImport(false);
+          showToast(message, "success");
+        }}
+      />
 
       <Modal
         isOpen={archiveEmployee !== null}

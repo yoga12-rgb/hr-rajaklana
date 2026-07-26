@@ -17,10 +17,11 @@ pengujian database sudah tersedia. Login, logout, proteksi route, dan wajib
 ganti password pada login pertama sudah diimplementasikan. Fondasi M2 berupa
 mode data eksplisit, TanStack Query, dan repository master data juga tersedia.
 Halaman karyawan memiliki jalur Supabase untuk baca, tambah, ubah, arsip, dan
-riwayat penempatan berbasis role. Lokasi/geofence, kebijakan kerja/cuti
-berversi, serta template shift historis juga sudah memiliki jalur live.
-Modul lainnya tetap berjalan sebagai prototype sampai dimigrasikan per
-milestone.
+riwayat penempatan berbasis role. Supervisor juga dapat memakai impor XLSX
+dengan validasi dry-run per baris dan commit atomik tanpa mengunggah file
+mentah ke Storage. Lokasi/geofence, kebijakan kerja/cuti berversi, serta
+template shift historis juga sudah memiliki jalur live. Modul lainnya tetap
+berjalan sebagai prototype sampai dimigrasikan per milestone.
 
 Dokumen pengembangan:
 
@@ -30,9 +31,10 @@ Dokumen pengembangan:
 - [Panduan Supabase](supabase/README.md)
 - [Aturan Agent](AGENTS.md)
 
-Milestone autentikasi dan supervisor pertama sudah selesai. Milestone aktif
-berikutnya adalah Data Access Layer dan master data. Detail progres, acceptance
-criteria, serta quality gate berada pada `IMPLEMENTATION_ROADMAP.md`.
+Milestone autentikasi, supervisor pertama, Data Access Layer, dan master data
+sudah selesai. Milestone aktif berikutnya adalah penjadwalan manual, off day,
+dan versi roster. Detail progres, acceptance criteria, serta quality gate
+berada pada `IMPLEMENTATION_ROADMAP.md`.
 
 ---
 

@@ -20,8 +20,12 @@ import {
   publishPolicyVersion,
   publishWorkPolicy,
   replaceOutletShiftTemplate,
+  dryRunEmployeeImport,
+  commitEmployeeImport,
 } from "./repository";
 import type {
+  EmployeeImportCommitInput,
+  EmployeeImportDryRunInput,
   EmployeeMasterInput,
   OutletMasterInput,
   PolicyVersionInput,
@@ -198,5 +202,23 @@ export function useReplaceOutletShiftTemplate() {
       queryClient.invalidateQueries({
         queryKey: masterDataKeys.shiftTemplates(),
       }),
+  });
+}
+
+export function useDryRunEmployeeImport() {
+  return useMutation({
+    mutationFn: (input: EmployeeImportDryRunInput) =>
+      dryRunEmployeeImport(createClient(), input),
+  });
+}
+
+export function useCommitEmployeeImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: EmployeeImportCommitInput) =>
+      commitEmployeeImport(createClient(), input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: masterDataKeys.employees() }),
   });
 }

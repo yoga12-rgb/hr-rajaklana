@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 26 Juli 2026                                                    |
-| Fase saat ini         | M2 berjalan — master data live; impor dry-run berikutnya        |
+| Fase saat ini         | M2 selesai — M3 penjadwalan manual menjadi pekerjaan berikutnya |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan sepuluh migration berikut identik antara
+- Project hosted sudah terhubung dan sebelas migration berikut identik antara
   lokal dan remote:
 
 | Migration                                               | Fungsi                                    |
@@ -88,12 +88,13 @@ Sudah tersedia:
 | `20260726230000_outlet_master_data_rpcs.sql`            | CRUD/status outlet dan geofence atomik    |
 | `20260727003000_policy_and_shift_template_rpcs.sql`     | Kebijakan versioned dan template shift    |
 | `20260727013000_harden_policy_shift_write_paths.sql`    | Tutup jalur tulis langsung tabel historis |
+| `20260727130000_employee_import_workflow.sql`           | Dry-run dan commit atomik impor XLSX       |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `74/74`.
+- pgTAP lulus `93/93`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -332,7 +333,7 @@ Seluruh exit criteria M1 selesai pada 26 Juli 2026.
 
 ---
 
-## M2 — Data Access Layer dan Master Data (`IN PROGRESS`)
+## M2 — Data Access Layer dan Master Data (`DONE`)
 
 ### Tujuan
 
@@ -387,18 +388,23 @@ Selesai:
   toleransi terlambat, dan toleransi pulang awal dapat berbeda per outlet.
 - Hak tulis langsung client pada tabel kebijakan dan template shift dicabut;
   seluruh perubahan wajib melewati RPC versioned yang diaudit.
+- Supervisor dapat mengunduh template XLSX dua sheet, memilih file hingga
+  2 MB/500 baris, dan memperoleh laporan dry-run per baris sebelum commit.
+  File dibaca di browser dan tidak diunggah ke Storage.
+- PostgreSQL memvalidasi format NIK, duplikasi file/database, tanggal, serta
+  kode status kerja, jabatan, dan outlet aktif. Commit hanya menerima payload
+  dengan checksum yang sama, memvalidasi ulang, lalu membuat seluruh karyawan
+  dan penempatan secara atomik.
+- Akun dan kata sandi tidak diimpor dari XLSX. Pembuatan akun tetap memakai
+  alur supervisor server-only agar kredensial tidak masuk file atau log impor.
+- `data_import_jobs` hanya dapat ditulis melalui RPC supervisor; employee dan
+  management tidak dapat menjalankan dry-run/commit atau memutasi tabel job.
 - Migration lokal/hosted identik. Lint lokal/hosted, pgTAP lokal dan hosted
-  `74/74`, types generation, lint aplikasi, typecheck, production build, serta
-  14 E2E desktop/mobile lulus. Reset lokal sempat melaporkan Storage container
-  tidak sehat setelah schema selesai diterapkan; validasi PostgreSQL tetap
-  lulus penuh.
-- Lint, typecheck, production build, dan 14 skenario E2E desktop/mobile lulus
-  setelah fondasi ini ditambahkan.
-
-Berikutnya:
-
-- Tambahkan template impor dry-run beserta laporan validasi baris.
-- Lengkapi pengujian akses dan alur impor, lalu tutup exit criteria M2.
+  `93/93`, types generation, lint aplikasi, typecheck, production build, serta
+  14 E2E desktop/mobile lulus.
+- Audit dependensi production bersih (`0` vulnerability). Sembilan temuan
+  audit yang tersisa hanya berasal dari toolchain ESLint development dan
+  memerlukan upgrade mayor, sehingga tidak diperbaiki otomatis pada M2.
 
 ### Exit criteria
 
@@ -411,7 +417,7 @@ Berikutnya:
 
 ---
 
-## M3 — Penjadwalan Manual, Off Day, dan Versi Roster (`BACKLOG`)
+## M3 — Penjadwalan Manual, Off Day, dan Versi Roster (`NEXT`)
 
 ### Tujuan
 

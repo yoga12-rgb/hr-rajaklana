@@ -594,11 +594,13 @@ export type Database = {
       }
       data_import_jobs: {
         Row: {
+          committed_from: string | null
           completed_at: string | null
           created_at: string
           failed_rows: number
           id: string
           import_type: string
+          payload_checksum: string | null
           requested_by: string
           source_file_path: string
           status: Database["public"]["Enums"]["job_status"]
@@ -608,11 +610,13 @@ export type Database = {
           validation_errors: Json
         }
         Insert: {
+          committed_from?: string | null
           completed_at?: string | null
           created_at?: string
           failed_rows?: number
           id?: string
           import_type: string
+          payload_checksum?: string | null
           requested_by: string
           source_file_path: string
           status?: Database["public"]["Enums"]["job_status"]
@@ -622,11 +626,13 @@ export type Database = {
           validation_errors?: Json
         }
         Update: {
+          committed_from?: string | null
           completed_at?: string | null
           created_at?: string
           failed_rows?: number
           id?: string
           import_type?: string
+          payload_checksum?: string | null
           requested_by?: string
           source_file_path?: string
           status?: Database["public"]["Enums"]["job_status"]
@@ -635,7 +641,15 @@ export type Database = {
           updated_at?: string
           validation_errors?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "data_import_jobs_committed_from_fkey"
+            columns: ["committed_from"]
+            isOneToOne: false
+            referencedRelation: "data_import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emergency_contacts: {
         Row: {
@@ -2106,6 +2120,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_sensitive_operations: { Args: never; Returns: boolean }
+      commit_employee_import: {
+        Args: { p_dry_run_job_id: string; p_reason: string; p_rows: Json }
+        Returns: Json
+      }
       complete_password_change: {
         Args: never
         Returns: {
@@ -2250,6 +2268,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      dry_run_employee_import: {
+        Args: { p_rows: Json; p_source_file_name: string }
+        Returns: Json
+      }
       is_supervisor: { Args: never; Returns: boolean }
       publish_policy_version: {
         Args: { p_configuration: Json; p_policy_type: string; p_reason: string }
@@ -2342,6 +2364,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      validate_employee_import_rows: {
+        Args: { p_rows: Json }
+        Returns: {
+          normalized_row: Json
+          row_errors: Json
+          row_number: number
+        }[]
       }
     }
     Enums: {

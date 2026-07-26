@@ -57,6 +57,54 @@ export interface ShiftTemplateInput {
   reason: string;
 }
 
+export interface EmployeeImportRow {
+  nik: string;
+  full_name: string;
+  phone: string;
+  joined_at: string;
+  employment_status_code: string;
+  job_position_code: string;
+  outlet_code: string;
+  change_reason: string;
+}
+
+export interface EmployeeImportValidationIssue {
+  field: string;
+  code: string;
+  message: string;
+}
+
+export interface EmployeeImportRowError {
+  row_number: number;
+  errors: EmployeeImportValidationIssue[];
+}
+
+export interface EmployeeImportDryRunResult {
+  job_id: string;
+  total_rows: number;
+  success_rows: number;
+  failed_rows: number;
+  validation_errors: EmployeeImportRowError[];
+  payload_checksum: string;
+}
+
+export interface EmployeeImportCommitResult {
+  job_id: string;
+  dry_run_job_id: string;
+  imported_rows: number;
+}
+
+export interface EmployeeImportDryRunInput {
+  sourceFileName: string;
+  rows: EmployeeImportRow[];
+}
+
+export interface EmployeeImportCommitInput {
+  dryRunJobId: string;
+  rows: EmployeeImportRow[];
+  reason: string;
+}
+
 function toMasterDataError(
   action: string,
   error: { code?: string; message: string }
@@ -409,6 +457,76 @@ export async function replaceOutletShiftTemplate(
   }
 
   return data;
+}
+
+function parseEmployeeImportDryRun(
+  value: Json
+): EmployeeImportDryRunResult {
+  const result = value as unknown as EmployeeImportDryRunResult;
+
+  if (
+    !result ||
+    typeof result.job_id !== "string" ||
+    typeof result.total_rows !== "number" ||
+    typeof result.success_rows !== "number" ||
+    typeof result.failed_rows !== "number" ||
+    !Array.isArray(result.validation_errors) ||
+    typeof result.payload_checksum !== "string"
+  ) {
+    throw new Error("Respons validasi impor dari server tidak valid.");
+  }
+
+  return result;
+}
+
+function parseEmployeeImportCommit(
+  value: Json
+): EmployeeImportCommitResult {
+  const result = value as unknown as EmployeeImportCommitResult;
+
+  if (
+    !result ||
+    typeof result.job_id !== "string" ||
+    typeof result.dry_run_job_id !== "string" ||
+    typeof result.imported_rows !== "number"
+  ) {
+    throw new Error("Respons commit impor dari server tidak valid.");
+  }
+
+  return result;
+}
+
+export async function dryRunEmployeeImport(
+  client: MasterDataClient,
+  input: EmployeeImportDryRunInput
+) {
+  const { data, error } = await client.rpc("dry_run_employee_import", {
+    p_source_file_name: input.sourceFileName,
+    p_rows: input.rows as unknown as Json,
+  });
+
+  if (error) {
+    throw toMasterDataError("Gagal memvalidasi file impor", error);
+  }
+
+  return parseEmployeeImportDryRun(data);
+}
+
+export async function commitEmployeeImport(
+  client: MasterDataClient,
+  input: EmployeeImportCommitInput
+) {
+  const { data, error } = await client.rpc("commit_employee_import", {
+    p_dry_run_job_id: input.dryRunJobId,
+    p_rows: input.rows as unknown as Json,
+    p_reason: input.reason,
+  });
+
+  if (error) {
+    throw toMasterDataError("Gagal mengimpor data karyawan", error);
+  }
+
+  return parseEmployeeImportCommit(data);
 }
 
 export type LiveEmployee = Awaited<

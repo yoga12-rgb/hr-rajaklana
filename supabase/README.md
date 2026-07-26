@@ -56,5 +56,10 @@ Jangan menjalankan reset terhadap production.
   aktif lama dinonaktifkan, bukan ditimpa atau dihapus, agar jadwal historis
   tetap dapat diaudit. Client authenticated tidak memiliki hak tulis langsung
   pada kedua tabel historis tersebut.
+- Impor XLSX karyawan wajib melalui `dry_run_employee_import` lalu
+  `commit_employee_import`. File dibaca lokal di browser dan tidak disimpan;
+  server menyimpan ringkasan, checksum payload, dan kesalahan per baris.
+  Commit memvalidasi ulang payload yang sama dan berjalan atomik. Akun serta
+  kata sandi tidak boleh dimasukkan ke template impor.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

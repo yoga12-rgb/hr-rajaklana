@@ -643,6 +643,8 @@ erDiagram
         int success_rows
         int failed_rows
         jsonb validation_errors
+        text payload_checksum
+        uuid committed_from FK
         timestamptz completed_at
     }
 
@@ -742,7 +744,7 @@ erDiagram
 | `notification_receipts` | Status in-app dan push | Satu receipt per notifikasi |
 | `push_subscriptions` | Perangkat PWA | Endpoint dan key wajib dienkripsi |
 | `audit_logs` | Audit perubahan sensitif | Append-only; retensi minimal dua tahun |
-| `data_import_jobs` | Impor awal XLSX | Menyimpan validasi dan hasil per baris |
+| `data_import_jobs` | Impor awal XLSX | Dry-run/commit supervisor, checksum payload, hasil per baris, dan relasi commit ke dry-run |
 | `backup_exports` | Metadata backup/arsip | Backup mingguan dan arsip bulanan |
 
 ## 9. Status yang Direkomendasikan
@@ -877,7 +879,7 @@ Bucket privat yang direkomendasikan:
 |---|---|---|
 | `attendance-selfies` | Selfie saat clock-in | Hapus segera setelah disetujui; ditolak maksimal 30 hari |
 | `leave-documents` | Surat dokter dan dokumen cuti | Hapus setelah akhir tahun terkait |
-| `imports` | File XLSX impor | Hapus setelah proses dan periode troubleshooting selesai |
+| `imports` | Cadangan untuk impor server-side masa depan | Tidak dipakai oleh impor karyawan saat ini; file diproses lokal di browser |
 | `exports` | Arsip laporan/backup | Sesuai kebijakan backup perusahaan |
 
 Path objek sebaiknya tidak memakai nama asli pengguna:
@@ -885,7 +887,7 @@ Path objek sebaiknya tidak memakai nama asli pengguna:
 ```text
 attendance-selfies/{employee_uuid}/{year}/{month}/{evidence_uuid}.jpg
 leave-documents/{employee_uuid}/{year}/{attachment_uuid}.{ext}
-imports/{job_uuid}/{file_uuid}.xlsx
+# imports/ dicadangkan; workflow karyawan saat ini tidak mengunggah XLSX
 exports/{year}/{month}/{export_uuid}.{ext}
 ```
 
