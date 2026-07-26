@@ -17,8 +17,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tiga belas migration sudah diterapkan dan cocok antara lokal/remote.
-- Hosted lint schema `public` bersih dan pgTAP lulus 130/130 pada 26 Juli 2026.
+- Empat belas migration sudah diterapkan dan cocok antara lokal/remote.
+- Hosted lint schema `public` bersih dan pgTAP lulus 192/192 pada 26 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
@@ -31,8 +31,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Tab kebijakan kerja/cuti dan template shift outlet sudah memakai Supabase.
   Kebijakan diterbitkan sebagai versi baru; penggantian template shift
   mempertahankan record lama untuk referensi jadwal historis.
-- Modul selain data karyawan, Jadwal, dan Pengaturan master data masih memakai
-  `HRContext` dan `localStorage`.
+- Modul selain data karyawan, Jadwal, Cuti/Izin, Lembur, dan Pengaturan master
+  data masih memakai `HRContext` dan `localStorage`.
 - Login, logout, route protection, wajib ganti password, operasi akun
   server-only, dan script bootstrap supervisor sudah diimplementasikan.
 - Supervisor pertama sudah dibuat; login pertama, wajib ganti password,
@@ -44,6 +44,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   diunggah ke Storage, dan akun pengguna tetap dibuat terpisah.
 - Jadwal live sudah mendukung roster manual bulanan berversi, off day,
   backup outlet, publikasi, acknowledgement, dan tukar shift dua tahap.
+- Cuti/Izin live sudah mendukung saldo tahunan, reservasi, dokumen privat,
+  pembatalan, jenis cuti dinamis, serta keputusan atomik. Lembur live mendukung
+  pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
 - Upload selfie, worker retensi, dan optimizer roster otomatis belum
   diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
@@ -51,7 +54,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
 - Milestone **M3 — Penjadwalan Manual, Off Day, dan Versi Roster** sudah
   selesai.
-- Milestone aktif berikutnya adalah **M4 — Cuti, Izin, dan Lembur** pada
+- Milestone **M4 — Cuti, Izin, dan Lembur** sudah selesai.
+- Milestone aktif berikutnya adalah **M5 — Presensi GPS, Geofence, dan
+  Selfie** pada
   `IMPLEMENTATION_ROADMAP.md`.
 - Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
   selesai. Setelah menyelesaikan milestone, perbarui status roadmap dan
@@ -106,6 +111,10 @@ src/
 │   │   └── EmployeeImportModal.tsx # Template, parsing lokal, dry-run, dan commit impor XLSX
 │   ├── schedule/
 │   │   └── LiveSchedulePage.tsx # Roster live, publish, acknowledgement, dan tukar shift
+│   ├── leaves/
+│   │   └── LiveLeavesPage.tsx # Saldo, dokumen privat, pengajuan, dan keputusan cuti
+│   ├── overtime/
+│   │   └── LiveOvertimePage.tsx # Pengajuan, penugasan, durasi, dan keputusan lembur
 │   ├── providers/
 │   │   └── AppProviders.tsx # Query, data-source, dan provider prototype
 │   ├── Header.tsx        # Header navigasi desktop/mobile dengan Pusat Notifikasi HR (Bell Icon)
@@ -133,6 +142,10 @@ src/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
 │   └── repository.ts     # Repository RPC roster bertipe dan role-aware
+├── lib/workforce-requests/
+│   ├── query-keys.ts     # Query key factory cuti dan lembur
+│   ├── queries.ts        # Query/mutation hooks dengan optimistic rollback
+│   └── repository.ts     # Repository RPC cuti, dokumen privat, dan lembur
 ├── lib/supabase/
 │   ├── client.ts         # Supabase client untuk Client Components
 │   ├── server.ts         # Supabase client berbasis cookies untuk server

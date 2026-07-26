@@ -1386,6 +1386,8 @@ export type Database = {
           id: string
           overtime_date: string
           planned_duration_min: number
+          planned_end_time: string | null
+          planned_start_time: string | null
           reason: string
           request_version: number
           source_type: string
@@ -1405,6 +1407,8 @@ export type Database = {
           id?: string
           overtime_date: string
           planned_duration_min: number
+          planned_end_time?: string | null
+          planned_start_time?: string | null
           reason: string
           request_version?: number
           source_type: string
@@ -1424,6 +1428,8 @@ export type Database = {
           id?: string
           overtime_date?: string
           planned_duration_min?: number
+          planned_end_time?: string | null
+          planned_start_time?: string | null
           reason?: string
           request_version?: number
           source_type?: string
@@ -2119,11 +2125,110 @@ export type Database = {
         Args: { p_employee_id: string; p_reason: string }
         Returns: boolean
       }
+      assign_overtime_request: {
+        Args: {
+          p_employee_id: string
+          p_end_time: string
+          p_overtime_date: string
+          p_reason: string
+          p_start_time: string
+        }
+        Returns: {
+          actual_duration_min: number | null
+          approved_duration_min: number | null
+          assigned_by: string | null
+          attendance_record_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          overtime_date: string
+          planned_duration_min: number
+          planned_end_time: string | null
+          planned_start_time: string | null
+          reason: string
+          request_version: number
+          source_type: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "overtime_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_view_announcement: {
         Args: { target_announcement_id: string }
         Returns: boolean
       }
       can_view_sensitive_operations: { Args: never; Returns: boolean }
+      cancel_leave_request: {
+        Args: {
+          p_expected_version: number
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          ends_on: string
+          id: string
+          leave_type_id: string
+          reason: string
+          request_version: number
+          requested_days: number
+          starts_on: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cancel_overtime_request: {
+        Args: {
+          p_expected_version: number
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: {
+          actual_duration_min: number | null
+          approved_duration_min: number | null
+          assigned_by: string | null
+          attendance_record_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          overtime_date: string
+          planned_duration_min: number
+          planned_end_time: string | null
+          planned_start_time: string | null
+          reason: string
+          request_version: number
+          source_type: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "overtime_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       commit_employee_import: {
         Args: { p_dry_run_job_id: string; p_reason: string; p_rows: Json }
         Returns: Json
@@ -2259,6 +2364,8 @@ export type Database = {
           id: string
           overtime_date: string
           planned_duration_min: number
+          planned_end_time: string | null
+          planned_start_time: string | null
           reason: string
           request_version: number
           source_type: string
@@ -2284,11 +2391,34 @@ export type Database = {
         Args: { p_rows: Json; p_source_file_name: string }
         Returns: Json
       }
+      ensure_annual_leave_entitlement: {
+        Args: { p_employee_id: string; p_year: number }
+        Returns: {
+          created_at: string
+          employee_id: string
+          expired_days: number
+          granted_days: number
+          id: string
+          leave_type_id: string
+          reserved_days: number
+          updated_at: string
+          used_days: number
+          year: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_entitlements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       ensure_manual_roster_draft: {
         Args: { p_month_start: string; p_reason: string }
         Returns: string
       }
+      get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
+      get_overtime_workspace: { Args: never; Returns: Json }
       get_shift_swap_options: {
         Args: { p_requester_schedule_id: string }
         Returns: Json
@@ -2310,6 +2440,36 @@ export type Database = {
         }
         Returns: Json
       }
+      refresh_overtime_actual: {
+        Args: { p_request_id: string }
+        Returns: {
+          actual_duration_min: number | null
+          approved_duration_min: number | null
+          assigned_by: string | null
+          attendance_record_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          overtime_date: string
+          planned_duration_min: number
+          planned_end_time: string | null
+          planned_start_time: string | null
+          reason: string
+          request_version: number
+          source_type: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "overtime_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       replace_outlet_shift_template: {
         Args: {
           p_early_checkout_tolerance_min: number
@@ -2330,6 +2490,39 @@ export type Database = {
         }
         Returns: Json
       }
+      save_leave_type: {
+        Args: {
+          p_code: string
+          p_deducts_annual_balance: boolean
+          p_document_required_after_days: number
+          p_is_active: boolean
+          p_leave_type_id: string
+          p_minimum_notice_days: number
+          p_name: string
+          p_reason: string
+          p_requires_document: boolean
+          p_same_day_allowed: boolean
+        }
+        Returns: {
+          code: string
+          created_at: string
+          deducts_annual_balance: boolean
+          document_required_after_days: number | null
+          id: string
+          is_active: boolean
+          minimum_notice_days: number
+          name: string
+          requires_document: boolean
+          same_day_allowed: boolean
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_types"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       save_manual_roster_assignment: {
         Args: {
           p_assignment_type: string
@@ -2348,6 +2541,73 @@ export type Database = {
       set_outlet_active: {
         Args: { p_is_active: boolean; p_outlet_id: string; p_reason: string }
         Returns: undefined
+      }
+      submit_leave_request: {
+        Args: {
+          p_attachment: Json
+          p_ends_on: string
+          p_leave_type_id: string
+          p_reason: string
+          p_request_id: string
+          p_starts_on: string
+        }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          ends_on: string
+          id: string
+          leave_type_id: string
+          reason: string
+          request_version: number
+          requested_days: number
+          starts_on: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_overtime_request: {
+        Args: {
+          p_end_time: string
+          p_overtime_date: string
+          p_reason: string
+          p_start_time: string
+        }
+        Returns: {
+          actual_duration_min: number | null
+          approved_duration_min: number | null
+          assigned_by: string | null
+          attendance_record_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          overtime_date: string
+          planned_duration_min: number
+          planned_end_time: string | null
+          planned_start_time: string | null
+          reason: string
+          request_version: number
+          source_type: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "overtime_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       update_employee_master: {
         Args: {
@@ -2420,6 +2680,34 @@ export type Database = {
           row_errors: Json
           row_number: number
         }[]
+      }
+      workforce_notify_employee: {
+        Args: {
+          p_body: string
+          p_employee_id: string
+          p_notification_type: string
+          p_payload?: Json
+          p_subject_id: string
+          p_subject_type: string
+          p_title: string
+        }
+        Returns: string
+      }
+      workforce_notify_supervisors: {
+        Args: {
+          p_body: string
+          p_excluded_employee_id?: string
+          p_notification_type: string
+          p_payload?: Json
+          p_subject_id: string
+          p_subject_type: string
+          p_title: string
+        }
+        Returns: undefined
+      }
+      workforce_planned_overtime_minutes: {
+        Args: { p_end_time: string; p_start_time: string }
+        Returns: number
       }
     }
     Enums: {

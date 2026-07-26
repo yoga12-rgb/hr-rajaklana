@@ -74,5 +74,17 @@ Jangan menjalankan reset terhadap production.
 - Tukar shift dibatasi untuk kasir pada outlet dan versi roster yang sama.
   Persetujuan rekan harus selesai sebelum keputusan supervisor, dan keputusan
   pertama pada setiap tahap mengunci.
+- Pengajuan cuti wajib melalui RPC. Cuti Tahunan otomatis memperoleh saldo
+  sesuai kebijakan aktif, submission mereservasi saldo, dan approve/reject/
+  cancel memindahkan atau melepaskan reservasi secara atomik.
+- Dokumen cuti diunggah ke bucket private `leave-documents` dengan path UUID.
+  Metadata hanya didaftarkan bersama pengajuan setelah objek diverifikasi;
+  signed URL berlaku singkat dan file dijadwalkan retensi sampai akhir tahun.
+- Pengajuan serta penugasan lembur menyimpan waktu dan durasi rencana.
+  Durasi aktual dihitung dari clock-out terhadap akhir jadwal, minimal satu
+  jam dan dibulatkan ke bawah dalam kelipatan 30 menit.
+- Client tidak memiliki hak tulis langsung ke tabel cuti, saldo, attachment,
+  atau lembur. Semua keputusan memakai expected version, first-write-wins,
+  larangan self-approval, notifikasi, dan audit.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

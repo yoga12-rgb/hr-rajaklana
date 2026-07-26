@@ -18,8 +18,16 @@ import { Combobox } from "@/components/ui/Combobox";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { SwipeableCard } from "@/components/ui/SwipeableCard";
+import { useDataSource } from "@/context/DataSourceContext";
+import { LiveOvertimePage } from "@/components/overtime/LiveOvertimePage";
 
 export default function OvertimePage() {
+  const { mode } = useDataSource();
+
+  return mode === "supabase" ? <LiveOvertimePage /> : <DemoOvertimePage />;
+}
+
+function DemoOvertimePage() {
   const { 
     overtimeRequests, 
     employees, 

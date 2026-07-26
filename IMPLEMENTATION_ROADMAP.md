@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 26 Juli 2026                                                    |
-| Fase saat ini         | M3 selesai — M4 cuti, izin, dan lembur menjadi pekerjaan berikutnya |
+| Fase saat ini         | M4 selesai — M5 presensi GPS dan selfie menjadi pekerjaan berikutnya |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga belas migration berikut identik antara
+- Project hosted sudah terhubung dan empat belas migration berikut identik antara
   lokal dan remote:
 
 | Migration                                               | Fungsi                                    |
@@ -91,20 +91,22 @@ Sudah tersedia:
 | `20260727130000_employee_import_workflow.sql`           | Dry-run dan commit atomik impor XLSX       |
 | `20260727210000_manual_roster_workflow.sql`             | Roster manual, off, publish, dan tukar     |
 | `20260727223000_harden_roster_function_privileges.sql`  | Hardening hak eksekusi RPC roster          |
+| `20260728003000_leave_overtime_workflow.sql`             | Cuti, dokumen privat, saldo, dan lembur    |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `130/130`.
+- pgTAP lulus `192/192`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
 Fondasi backend dan autentikasi sudah aktif, tetapi aplikasi belum sepenuhnya
 menjadi aplikasi multi-user:
 
-- Halaman karyawan dan Jadwal pada mode live tidak membaca atau memutasi data
-  bisnis `HRContext`; modul bisnis lain masih memakai data prototype.
+- Halaman karyawan, Jadwal, Cuti/Izin, dan Lembur pada mode live tidak membaca
+  atau memutasi data bisnis `HRContext`; modul bisnis lain masih memakai data
+  prototype.
 - Halaman login, logout, perubahan kata sandi pertama, proteksi route, dan
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
@@ -481,7 +483,7 @@ Selesai:
 
 ---
 
-## M4 — Cuti, Izin, dan Lembur (`NEXT`)
+## M4 — Cuti, Izin, dan Lembur (`DONE`)
 
 ### Tujuan
 
@@ -499,6 +501,39 @@ larangan self-approval.
 - Tambahkan optimistic UI dengan rollback dan invalidation.
 - Tambahkan notifikasi in-app minimum untuk status pengajuan.
 
+### Progres terverifikasi 26 Juli 2026
+
+Selesai:
+
+- Halaman Cuti/Izin dan Lembur memisahkan jalur demo serta live. Mode live
+  memakai repository RPC bertipe, TanStack Query, invalidation, optimistic
+  decision/cancel, dan rollback ketika server menolak.
+- Saldo Cuti Tahunan dibuat otomatis per karyawan/tahun dari kebijakan aktif
+  (12 hari pada konfigurasi saat ini). Submission mereservasi saldo; approve
+  memindahkan reservasi ke saldo terpakai, sedangkan reject/cancel
+  melepaskannya secara atomik.
+- Pengajuan memvalidasi tanggal, notice period, benturan pengajuan, saldo,
+  lampiran wajib, format/ukuran dokumen, dan keberadaan objek Storage.
+- Dokumen cuti disimpan pada bucket private `leave-documents`, memakai path
+  UUID, signed URL singkat, metadata retensi sampai akhir tahun, serta cleanup
+  objek bila transaksi pengajuan gagal.
+- Supervisor dapat membuat/mengubah/menonaktifkan jenis cuti melalui RPC
+  diaudit. Cuti Tahunan dilindungi sebagai jenis sistem dan tidak dapat
+  dinonaktifkan atau diubah menjadi non-deducting.
+- Persetujuan cuti memakai expected version, first-write-wins, dan larangan
+  self-approval. Keputusan membuat audit/notifikasi; jadwal published yang
+  terdampak menghasilkan notifikasi peninjauan roster dengan daftar assignment.
+- Lembur mendukung pengajuan karyawan, penugasan supervisor, pembatalan,
+  durasi rencana, aktual, dan disetujui. Tidak ada perhitungan pembayaran.
+- Durasi aktual dihitung dari presensi selesai terhadap waktu akhir jadwal,
+  mendukung zona waktu Jakarta/shift lintas tengah malam, minimal satu jam,
+  dan dibulatkan ke bawah dalam kelipatan 30 menit.
+- Jalur tulis langsung tabel jenis/saldo/pengajuan/dokumen/lembur dicabut dari
+  client. Anonymous tidak dapat menjalankan RPC dan management tetap read-only.
+- Migration lokal/hosted identik. Lint schema lokal/hosted bersih, pgTAP
+  lokal/hosted lulus `192/192`, lint aplikasi, typecheck, production build,
+  serta 14 E2E desktop/mobile lulus.
+
 ### Exit criteria
 
 - AC-08, AC-09, AC-19, dan AC-20 lulus.
@@ -508,7 +543,7 @@ larangan self-approval.
 
 ---
 
-## M5 — Presensi GPS, Geofence, dan Selfie (`BACKLOG`)
+## M5 — Presensi GPS, Geofence, dan Selfie (`NEXT`)
 
 ### Tujuan
 

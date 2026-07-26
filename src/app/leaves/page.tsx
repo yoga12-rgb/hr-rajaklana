@@ -12,8 +12,16 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import { useDataSource } from "@/context/DataSourceContext";
+import { LiveLeavesPage } from "@/components/leaves/LiveLeavesPage";
 
 export default function LeavesPage() {
+  const { mode } = useDataSource();
+
+  return mode === "supabase" ? <LiveLeavesPage /> : <DemoLeavesPage />;
+}
+
+function DemoLeavesPage() {
   const {
     leaveRequests,
     preferences,

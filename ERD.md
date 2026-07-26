@@ -551,6 +551,8 @@ erDiagram
         text source_type
         uuid attendance_record_id FK
         date overtime_date
+        time planned_start_time
+        time planned_end_time
         int planned_duration_min
         int actual_duration_min
         int approved_duration_min
@@ -735,6 +737,15 @@ erDiagram
 | `leave_requests` | Transaksi pengajuan cuti | Rentang tanggal valid; keputusan pertama mengunci |
 | `request_attachments` | Metadata surat dokter/dokumen | Bucket privat; retensi sampai akhir tahun |
 | `overtime_requests` | Permintaan/penugasan/realisasi lembur | Durasi rencana, aktual, dan disetujui dipisahkan |
+
+Implementasi transaksi cuti/lembur juga menetapkan:
+
+- Cuti Tahunan dibuat otomatis per karyawan/tahun dari kebijakan aktif.
+- Pengajuan Cuti Tahunan mereservasi saldo sebelum diputuskan; approve
+  memindahkannya ke `used_days`, sedangkan reject/cancel melepaskannya.
+- Metadata dokumen hanya dibuat setelah objek private Storage diverifikasi.
+- Lembur menyimpan waktu mulai/selesai rencana. Durasi aktual dihitung dari
+  presensi terhadap akhir jadwal dan dibulatkan ke bawah per 30 menit.
 
 ### 8.5 Komunikasi dan operasional
 

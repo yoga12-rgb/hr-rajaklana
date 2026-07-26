@@ -22,8 +22,10 @@ dengan validasi dry-run per baris dan commit atomik tanpa mengunggah file
 mentah ke Storage. Lokasi/geofence, kebijakan kerja/cuti berversi, serta
 template shift historis juga sudah memiliki jalur live. Jadwal live mendukung
 roster manual bulanan berversi, off day, backup outlet, publikasi,
-acknowledgement, dan tukar shift dua tahap. Modul lainnya tetap berjalan
-sebagai prototype sampai dimigrasikan per milestone.
+acknowledgement, dan tukar shift dua tahap. Cuti/Izin dan Lembur juga sudah
+memiliki jalur live dengan saldo, dokumen privat, pembatalan, penugasan,
+durasi aktual, dan keputusan atomik. Modul lainnya tetap berjalan sebagai
+prototype sampai dimigrasikan per milestone.
 
 Dokumen pengembangan:
 
@@ -33,10 +35,11 @@ Dokumen pengembangan:
 - [Panduan Supabase](supabase/README.md)
 - [Aturan Agent](AGENTS.md)
 
-Milestone autentikasi, supervisor pertama, Data Access Layer, master data, dan
-penjadwalan manual sudah selesai. Milestone aktif berikutnya adalah cuti, izin,
-dan lembur. Detail progres, acceptance criteria, serta quality gate berada
-pada `IMPLEMENTATION_ROADMAP.md`.
+Milestone autentikasi, supervisor pertama, Data Access Layer, master data,
+penjadwalan manual, cuti/izin, dan lembur sudah selesai. Milestone aktif
+berikutnya adalah presensi GPS, geofence, dan selfie. Detail progres,
+acceptance criteria, serta quality gate berada pada
+`IMPLEMENTATION_ROADMAP.md`.
 
 ---
 
