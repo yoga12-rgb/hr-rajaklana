@@ -2,6 +2,8 @@
 
 import React, { useState, Fragment } from "react";
 import { useHR, WorkShift } from "@/context/HRContext";
+import { useDataSource } from "@/context/DataSourceContext";
+import { LiveSchedulePage } from "@/components/schedule/LiveSchedulePage";
 import { 
   CalendarDays, 
   Building2, 
@@ -27,6 +29,12 @@ const daysOfWeek = [
 ];
 
 export default function SchedulePage() {
+  const { mode } = useDataSource();
+
+  return mode === "supabase" ? <LiveSchedulePage /> : <DemoSchedulePage />;
+}
+
+function DemoSchedulePage() {
   const {
     employees,
     schedules,

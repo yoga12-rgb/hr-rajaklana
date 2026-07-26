@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 26 Juli 2026                                                    |
-| Fase saat ini         | M2 selesai — M3 penjadwalan manual menjadi pekerjaan berikutnya |
+| Fase saat ini         | M3 selesai — M4 cuti, izin, dan lembur menjadi pekerjaan berikutnya |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan sebelas migration berikut identik antara
+- Project hosted sudah terhubung dan tiga belas migration berikut identik antara
   lokal dan remote:
 
 | Migration                                               | Fungsi                                    |
@@ -89,25 +89,28 @@ Sudah tersedia:
 | `20260727003000_policy_and_shift_template_rpcs.sql`     | Kebijakan versioned dan template shift    |
 | `20260727013000_harden_policy_shift_write_paths.sql`    | Tutup jalur tulis langsung tabel historis |
 | `20260727130000_employee_import_workflow.sql`           | Dry-run dan commit atomik impor XLSX       |
+| `20260727210000_manual_roster_workflow.sql`             | Roster manual, off, publish, dan tukar     |
+| `20260727223000_harden_roster_function_privileges.sql`  | Hardening hak eksekusi RPC roster          |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `93/93`.
+- pgTAP lulus `130/130`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
 Fondasi backend dan autentikasi sudah aktif, tetapi aplikasi belum sepenuhnya
 menjadi aplikasi multi-user:
 
-- Halaman karyawan pada mode live tidak membaca atau memutasi data bisnis
-  `HRContext`; modul bisnis lain masih memakai data prototype.
+- Halaman karyawan dan Jadwal pada mode live tidak membaca atau memutasi data
+  bisnis `HRContext`; modul bisnis lain masih memakai data prototype.
 - Halaman login, logout, perubahan kata sandi pertama, proteksi route, dan
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
 - Belum ada data karyawan/outlet nyata yang diimpor.
-- Belum ada upload selfie nyata, worker penghapusan file, atau roster engine.
+- Belum ada upload selfie nyata, worker penghapusan file, atau optimizer
+  roster otomatis.
 - Konfigurasi environment Vercel tidak dapat dianggap selesai hanya karena
   tersedia secara lokal; wajib diverifikasi dari deployment.
 
@@ -417,7 +420,7 @@ Selesai:
 
 ---
 
-## M3 — Penjadwalan Manual, Off Day, dan Versi Roster (`NEXT`)
+## M3 — Penjadwalan Manual, Off Day, dan Versi Roster (`DONE`)
 
 ### Tujuan
 
@@ -437,6 +440,37 @@ otomatis dibuat.
   aturan tersebut berlaku.
 - Belum membuat optimizer roster otomatis pada milestone ini.
 
+### Progres terverifikasi 26 Juli 2026
+
+Selesai:
+
+- Halaman Jadwal memisahkan jalur demo dan live. Mode live memakai repository
+  RPC bertipe, TanStack Query, dan tidak fallback atau dual-write ke
+  `HRContext`.
+- Supervisor dapat menyusun matrix roster bulanan secara manual memakai
+  template shift aktif per outlet, termasuk template outlet yang tutup lebih
+  awal, serta memilih assignment utama, off day, atau backup outlet.
+- Jatah off memiliki ledger sumber pekan yang unik. Peminjaman dibatasi ke
+  pekan bersebelahan; pelanggaran total jatah ditolak saat publikasi.
+- Perubahan terhadap roster aktif membuat draft versi baru dengan menyalin
+  assignment dan data backup. Versi `published` bersifat immutable dan jalur
+  tulis langsung ke tabel historis dicabut dari client authenticated.
+- Publikasi memvalidasi kelengkapan satu bulan, jatah off, batas Middle, pola
+  pagi sebelum off/malam setelah off, dan minimum staffing outlet. Override
+  yang diizinkan wajib menyimpan alasan.
+- Publikasi mengganti versi aktif secara atomik, menyimpan audit, serta
+  membuat notifikasi dan acknowledgement. Employee hanya menerima kolom roster
+  publik yang diizinkan; management tetap read-only.
+- Tukar shift dibatasi untuk kasir pada outlet dan versi roster yang sama.
+  Persetujuan rekan mendahului keputusan supervisor, kedua tahap memakai
+  first-write-wins, dan persetujuan akhir menerbitkan versi roster baru.
+- Hak eksekusi fungsi internal dan RPC roster telah di-hardening. Anonymous
+  tidak dapat menjalankan fungsi roster; hanya RPC publik yang diperlukan
+  diberikan kepada role authenticated.
+- Migration lokal dan hosted identik. Lint schema lokal/hosted bersih, pgTAP
+  lokal/hosted lulus `130/130`, types generation, lint aplikasi, typecheck,
+  production build, serta 14 E2E desktop/mobile lulus.
+
 ### Exit criteria
 
 - Supervisor dapat menyusun, mengubah, dan mempublikasikan jadwal satu bulan.
@@ -447,7 +481,7 @@ otomatis dibuat.
 
 ---
 
-## M4 — Cuti, Izin, dan Lembur (`BACKLOG`)
+## M4 — Cuti, Izin, dan Lembur (`NEXT`)
 
 ### Tujuan
 

@@ -2111,6 +2111,10 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_monthly_roster: {
+        Args: { p_month_start: string }
+        Returns: Json
+      }
       archive_employee_master: {
         Args: { p_employee_id: string; p_reason: string }
         Returns: boolean
@@ -2268,11 +2272,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decide_shift_swap_colleague: {
+        Args: { p_decision: string; p_note?: string; p_request_id: string }
+        Returns: Json
+      }
+      decide_shift_swap_supervisor: {
+        Args: { p_decision: string; p_note: string; p_request_id: string }
+        Returns: Json
+      }
       dry_run_employee_import: {
         Args: { p_rows: Json; p_source_file_name: string }
         Returns: Json
       }
+      ensure_manual_roster_draft: {
+        Args: { p_month_start: string; p_reason: string }
+        Returns: string
+      }
+      get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
+      get_shift_swap_options: {
+        Args: { p_requester_schedule_id: string }
+        Returns: Json
+      }
       is_supervisor: { Args: never; Returns: boolean }
+      publish_manual_roster: {
+        Args: { p_reason: string; p_roster_version_id: string }
+        Returns: Json
+      }
       publish_policy_version: {
         Args: { p_configuration: Json; p_policy_type: string; p_reason: string }
         Returns: string
@@ -2296,6 +2321,29 @@ export type Database = {
           p_starts_at: string
         }
         Returns: string
+      }
+      request_shift_swap: {
+        Args: {
+          p_colleague_schedule_id: string
+          p_reason: string
+          p_requester_schedule_id: string
+        }
+        Returns: Json
+      }
+      save_manual_roster_assignment: {
+        Args: {
+          p_assignment_type: string
+          p_borrowed_from_adjacent_week?: boolean
+          p_employee_id: string
+          p_month_start: string
+          p_outlet_id: string
+          p_reason: string
+          p_shift_type: Database["public"]["Enums"]["shift_type"]
+          p_source_week_start?: string
+          p_status: Database["public"]["Enums"]["schedule_status"]
+          p_work_date: string
+        }
+        Returns: Json
       }
       set_outlet_active: {
         Args: { p_is_active: boolean; p_outlet_id: string; p_reason: string }

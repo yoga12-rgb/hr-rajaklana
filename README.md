@@ -20,8 +20,10 @@ Halaman karyawan memiliki jalur Supabase untuk baca, tambah, ubah, arsip, dan
 riwayat penempatan berbasis role. Supervisor juga dapat memakai impor XLSX
 dengan validasi dry-run per baris dan commit atomik tanpa mengunggah file
 mentah ke Storage. Lokasi/geofence, kebijakan kerja/cuti berversi, serta
-template shift historis juga sudah memiliki jalur live. Modul lainnya tetap
-berjalan sebagai prototype sampai dimigrasikan per milestone.
+template shift historis juga sudah memiliki jalur live. Jadwal live mendukung
+roster manual bulanan berversi, off day, backup outlet, publikasi,
+acknowledgement, dan tukar shift dua tahap. Modul lainnya tetap berjalan
+sebagai prototype sampai dimigrasikan per milestone.
 
 Dokumen pengembangan:
 
@@ -31,10 +33,10 @@ Dokumen pengembangan:
 - [Panduan Supabase](supabase/README.md)
 - [Aturan Agent](AGENTS.md)
 
-Milestone autentikasi, supervisor pertama, Data Access Layer, dan master data
-sudah selesai. Milestone aktif berikutnya adalah penjadwalan manual, off day,
-dan versi roster. Detail progres, acceptance criteria, serta quality gate
-berada pada `IMPLEMENTATION_ROADMAP.md`.
+Milestone autentikasi, supervisor pertama, Data Access Layer, master data, dan
+penjadwalan manual sudah selesai. Milestone aktif berikutnya adalah cuti, izin,
+dan lembur. Detail progres, acceptance criteria, serta quality gate berada
+pada `IMPLEMENTATION_ROADMAP.md`.
 
 ---
 

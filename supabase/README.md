@@ -61,5 +61,18 @@ Jangan menjalankan reset terhadap production.
   server menyimpan ringkasan, checksum payload, dan kesalahan per baris.
   Commit memvalidasi ulang payload yang sama dan berjalan atomik. Akun serta
   kata sandi tidak boleh dimasukkan ke template impor.
+- Tabel historis roster tidak dapat ditulis langsung oleh client
+  authenticated. Penyusunan manual, publikasi, acknowledgement, dan tukar
+  shift wajib melalui RPC role-aware yang telah di-hardening dari akses
+  anonymous.
+- Versi roster `published` bersifat immutable. Perubahan berikutnya membuat
+  draft baru dari versi aktif; publikasi mengganti versi aktif secara atomik,
+  menulis audit, dan membuat notifikasi/receipt baru.
+- Off day yang dipinjam hanya boleh berasal dari pekan bersebelahan dan satu
+  sumber pekan hanya dapat dialokasikan sekali per karyawan. Backup outlet
+  serta minimum staffing divalidasi sebelum publikasi.
+- Tukar shift dibatasi untuk kasir pada outlet dan versi roster yang sama.
+  Persetujuan rekan harus selesai sebelum keputusan supervisor, dan keputusan
+  pertama pada setiap tahap mengunci.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

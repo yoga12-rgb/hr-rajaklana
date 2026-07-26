@@ -342,6 +342,9 @@ erDiagram
 10. Pertukaran shift hanya boleh antara dua jadwal pada outlet yang sama.
 11. Perubahan roster setelah publikasi membuat notifikasi dan acknowledgement baru.
 12. Validasi aturan lintas baris dijalankan oleh fungsi transaksi database sebelum publikasi.
+13. Client authenticated tidak memperoleh hak tulis langsung ke tabel historis roster; seluruh perubahan melalui RPC role-aware.
+14. Satu sumber jatah off pekanan hanya dapat digunakan sekali per karyawan, termasuk saat dipinjam dari pekan bersebelahan.
+15. Permintaan tukar shift yang masih terbuka hanya boleh satu untuk satu assignment asal.
 
 ## 6. ERD Presensi
 
@@ -776,6 +779,15 @@ where is_primary = true and end_date is null;
 create unique index schedule_one_assignment_per_day
 on schedule_assignments (roster_version_id, employee_id, work_date);
 
+-- Satu sumber jatah off pekanan hanya boleh dialokasikan sekali.
+create unique index employee_off_days_one_source_week
+on employee_off_day_allocations (employee_id, source_week_start);
+
+-- Satu assignment tidak boleh memiliki dua permintaan tukar yang masih terbuka.
+create unique index shift_swap_one_open_request_per_assignment
+on shift_swap_requests (requester_assignment_id)
+where status in ('pending_colleague', 'pending_supervisor');
+
 -- Satu sesi presensi yang belum clock-out.
 create unique index attendance_one_open_session
 on attendance_records (employee_id)
@@ -834,14 +846,29 @@ Jika dua supervisor memutuskan bersamaan, hanya transaksi pertama yang memenuhi 
 
 Publikasi roster dilakukan secara atomik:
 
-1. validasi seluruh aturan blocking;
+1. validasi kelengkapan satu bulan, jatah off, pola sebelum/setelah off,
+   batas Middle, dan minimum staffing outlet;
 2. tandai versi sebelumnya sebagai `superseded`;
 3. tandai versi baru sebagai `published`;
 4. perbarui `roster_periods.active_version_id`;
 5. buat notifikasi dan acknowledgement untuk jadwal baru/berubah;
 6. tulis audit.
 
-### 11.3 Validasi presensi dan penghapusan selfie
+Versi `published` tidak dapat diubah. Penyuntingan berikutnya membuat draft
+baru dengan menyalin assignment dan data backup dari versi aktif.
+
+### 11.3 Tukar shift
+
+Pertukaran shift menggunakan dua keputusan berurutan:
+
+1. karyawan memilih assignment rekan kasir pada outlet dan versi yang sama;
+2. rekan menerima atau menolak dengan keputusan pertama mengunci;
+3. supervisor menerima atau menolak dengan keputusan pertama mengunci;
+4. persetujuan membuat versi roster baru, menukar atribut shift, memvalidasi
+   kembali batas Middle, mempublikasikan versi baru, lalu menulis notifikasi
+   dan audit secara atomik.
+
+### 11.4 Validasi presensi dan penghapusan selfie
 
 Setelah presensi disetujui:
 
