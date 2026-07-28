@@ -61,7 +61,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   keputusan tetap menunggu clock-out. Selfie dijadwalkan terhapus tujuh hari
   setelah upload. Signed URL singkat, deletion worker idempotent, pemulihan
   lease, finalisasi metadata/audit atomik, retry cron, dan monitoring job gagal
-  sudah tersedia. Optimizer roster otomatis belum diimplementasikan.
+  sudah tersedia. Monitoring retensi membedakan job terjadwal, retry, jatuh
+  tempo, lease tertahan, dan percobaan yang habis. Optimizer roster otomatis
+  belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.

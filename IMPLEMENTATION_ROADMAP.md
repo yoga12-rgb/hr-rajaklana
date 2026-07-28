@@ -666,7 +666,9 @@ tier melalui penghapusan bukti yang dapat diaudit.
   maksimal 24 jam, dan batas enam percobaan.
 - Worker menandai metadata evidence sebagai deleted tanpa menghapus histori
   presensi, mencatat audit penghapusan, menganggap objek yang sudah tidak ada
-  sebagai sukses idempotent, dan UI menampilkan jumlah job gagal.
+  sebagai sukses idempotent. Monitoring supervisor membedakan job terjadwal,
+  retry normal, jatuh tempo, lease worker tertahan, dan job yang berhenti
+  setelah enam percobaan; status diperbarui setiap menit.
 - Route cron dikecualikan secara spesifik dari redirect cookie aplikasi dan
   tetap menolak request tanpa bearer secret. Worker memulihkan job processing
   yang lease-nya kedaluwarsa; perubahan evidence, job, dan audit diselesaikan

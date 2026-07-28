@@ -231,11 +231,39 @@ function AttendanceValidationQueue() {
           {errorMessage(queue.error)}
         </p>
       )}
-      {(retentionHealth.data?.failedJobs ?? 0) > 0 && (
+      {retentionHealth.isError && (
+        <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {errorMessage(retentionHealth.error)}
+        </p>
+      )}
+      {retentionHealth.data && (
+        <p className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-[10px] leading-relaxed text-slate-400">
+          Retensi foto: {retentionHealth.data.scheduledJobs} terjadwal
+          {" · "}
+          {retentionHealth.data.retryingJobs} menunggu retry. Status diperbarui
+          otomatis setiap menit.
+        </p>
+      )}
+      {(retentionHealth.data?.overdueJobs ?? 0) > 0 && (
+        <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {retentionHealth.data?.overdueJobs} penghapusan sudah jatuh tempo dan
+          menunggu proses cron.
+        </p>
+      )}
+      {(retentionHealth.data?.staleProcessingJobs ?? 0) > 0 && (
+        <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {retentionHealth.data?.staleProcessingJobs} proses worker tertahan dan
+          akan dipulihkan otomatis.
+        </p>
+      )}
+      {(retentionHealth.data?.exhaustedJobs ?? 0) > 0 && (
         <p className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          {retentionHealth.data?.failedJobs} penghapusan selfie perlu retry
-          worker.
+          {retentionHealth.data?.exhaustedJobs} penghapusan selfie berhenti
+          setelah enam percobaan dan perlu diperiksa.
         </p>
       )}
       {queue.data?.length === 0 && (

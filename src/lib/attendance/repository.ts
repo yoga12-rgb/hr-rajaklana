@@ -112,6 +112,14 @@ export interface AttendanceValidationItem {
   } | null;
 }
 
+export interface AttendanceRetentionHealth {
+  scheduledJobs: number;
+  retryingJobs: number;
+  overdueJobs: number;
+  staleProcessingJobs: number;
+  exhaustedJobs: number;
+}
+
 export interface ClockInInput {
   currentEmployeeId: string;
   clientEventId: string;
@@ -342,13 +350,47 @@ export async function createAttendanceSelfieSignedUrl(
 }
 
 export async function getAttendanceRetentionHealth(client: AttendanceClient) {
-  const { count, error } = await client
-    .from("file_deletion_jobs")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "failed")
-    .not("evidence_id", "is", null);
-  if (error) {
-    throw attendanceError("Status retensi belum dapat dimuat", error);
+  const now = new Date().toISOString();
+  const staleBefore = new Date(Date.now() - 15 * 60_000).toISOString();
+  const evidenceJobs = () =>
+    client
+      .from("file_deletion_jobs")
+      .select("id", { count: "exact", head: true })
+      .not("evidence_id", "is", null);
+
+  const [scheduled, retrying, overdue, staleProcessing, exhausted] =
+    await Promise.all([
+      evidenceJobs().eq("status", "scheduled"),
+      evidenceJobs().eq("status", "failed").lt("attempt_count", 6),
+      evidenceJobs()
+        .in("status", ["scheduled", "failed"])
+        .lte("scheduled_for", now)
+        .lt("attempt_count", 6),
+      evidenceJobs()
+        .eq("status", "processing")
+        .lt("updated_at", staleBefore),
+      evidenceJobs().eq("status", "failed").gte("attempt_count", 6),
+    ]);
+
+  const failedQuery = [
+    scheduled,
+    retrying,
+    overdue,
+    staleProcessing,
+    exhausted,
+  ].find((result) => result.error);
+  if (failedQuery?.error) {
+    throw attendanceError(
+      "Status retensi belum dapat dimuat",
+      failedQuery.error
+    );
   }
-  return { failedJobs: count ?? 0 };
+
+  return {
+    scheduledJobs: scheduled.count ?? 0,
+    retryingJobs: retrying.count ?? 0,
+    overdueJobs: overdue.count ?? 0,
+    staleProcessingJobs: staleProcessing.count ?? 0,
+    exhaustedJobs: exhausted.count ?? 0,
+  } satisfies AttendanceRetentionHealth;
 }

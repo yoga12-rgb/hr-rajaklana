@@ -38,6 +38,7 @@ export function useAttendanceRetentionHealth(enabled: boolean) {
     queryKey: attendanceKeys.retentionHealth(),
     queryFn: () => getAttendanceRetentionHealth(createClient()),
     enabled,
+    refetchInterval: enabled ? 60_000 : false,
   });
 }
 
