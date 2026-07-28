@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   CalendarCheck2,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   MapPin,
   RefreshCw,
   Send,
+  TriangleAlert,
 } from "lucide-react";
 import { useHR } from "@/context/HRContext";
 import {
@@ -190,6 +192,34 @@ export function LiveSchedulePage() {
       ),
     [roster]
   );
+  const availableShiftTemplates = useMemo(
+    () =>
+      (templatesQuery.data ?? []).filter(
+        (template) => template.outlet_id === outletId
+      ),
+    [outletId, templatesQuery.data]
+  );
+  const hasSelectedShiftTemplate = availableShiftTemplates.some(
+    (template) => template.shift_type === shiftType
+  );
+
+  const selectAvailableShift = (
+    nextOutletId: string,
+    preferredShift: Exclude<RosterShiftType, "off"> = shiftType
+  ) => {
+    const outletTemplates = (templatesQuery.data ?? []).filter(
+      (template) => template.outlet_id === nextOutletId
+    );
+    const nextShift = outletTemplates.some(
+      (template) => template.shift_type === preferredShift
+    )
+      ? preferredShift
+      : outletTemplates[0]?.shift_type;
+
+    if (nextShift) {
+      setShiftType(nextShift as Exclude<RosterShiftType, "off">);
+    }
+  };
 
   const ownAssignments = (roster?.assignments ?? []).filter(
     (assignment) => assignment.is_own && assignment.id
@@ -208,10 +238,13 @@ export function LiveSchedulePage() {
     setSelectedEmployeeId(employeeId);
     setWorkDate(date);
     setScheduleStatus(assignment?.status === "off" ? "off" : "scheduled");
-    setShiftType(
+    const preferredShift =
       assignment?.shift_type && assignment.shift_type !== "off"
         ? assignment.shift_type
-        : "morning"
+        : "morning";
+    selectAvailableShift(
+      assignment?.outlet_id ?? primaryOutletId,
+      preferredShift
     );
     setAssignmentType(assignment?.assignment_type ?? "primary");
     setOutletId(assignment?.outlet_id ?? primaryOutletId);
@@ -230,8 +263,23 @@ export function LiveSchedulePage() {
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selectedEmployeeId || !changeReason.trim()) {
-      showToast("Pilih karyawan dan isi alasan perubahan.", "warning");
+    if (!selectedEmployeeId) {
+      showToast("Pilih karyawan yang akan dijadwalkan.", "warning");
+      return;
+    }
+    if (changeReason.trim().length < 3) {
+      showToast("Alasan perubahan minimal 3 karakter.", "warning");
+      return;
+    }
+    if (scheduleStatus === "scheduled" && !outletId) {
+      showToast("Pilih outlet untuk jadwal kerja.", "warning");
+      return;
+    }
+    if (scheduleStatus === "scheduled" && !hasSelectedShiftTemplate) {
+      showToast(
+        "Buat template shift aktif untuk outlet ini melalui Pengaturan.",
+        "warning"
+      );
       return;
     }
 
@@ -717,6 +765,7 @@ export function LiveSchedulePage() {
               const employee = rows.find((row) => row.id === value);
               if (employee?.primaryOutletId) {
                 setOutletId(employee.primaryOutletId);
+                selectAvailableShift(employee.primaryOutletId);
               }
             }}
           />
@@ -740,9 +789,13 @@ export function LiveSchedulePage() {
               },
             ]}
             value={scheduleStatus}
-            onChange={(value) =>
-              setScheduleStatus(value as RosterScheduleStatus)
-            }
+            onChange={(value) => {
+              const nextStatus = value as RosterScheduleStatus;
+              setScheduleStatus(nextStatus);
+              if (nextStatus === "scheduled") {
+                selectAvailableShift(outletId);
+              }
+            }}
           />
 
           {scheduleStatus === "scheduled" ? (
@@ -774,13 +827,15 @@ export function LiveSchedulePage() {
                   subtext: outlet.code,
                 }))}
                 value={outletId}
-                onChange={setOutletId}
+                onChange={(value) => {
+                  setOutletId(value);
+                  selectAvailableShift(value);
+                }}
               />
-              <Combobox
-                label="Template shift"
-                options={(templatesQuery.data ?? [])
-                  .filter((template) => template.outlet_id === outletId)
-                  .map((template) => ({
+              {availableShiftTemplates.length > 0 ? (
+                <Combobox
+                  label="Template shift"
+                  options={availableShiftTemplates.map((template) => ({
                     value: template.shift_type,
                     label: shiftLabels[template.shift_type],
                     subtext: `${template.starts_at.slice(
@@ -788,13 +843,38 @@ export function LiveSchedulePage() {
                       5
                     )}–${template.ends_at.slice(0, 5)}`,
                   }))}
-                value={shiftType}
-                onChange={(value) =>
-                  setShiftType(
-                    value as Exclude<RosterShiftType, "off">
-                  )
-                }
-              />
+                  value={shiftType}
+                  onChange={(value) =>
+                    setShiftType(
+                      value as Exclude<RosterShiftType, "off">
+                    )
+                  }
+                />
+              ) : (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100"
+                >
+                  <div className="flex items-start gap-2">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                    <div className="space-y-1.5">
+                      <p className="font-bold">
+                        Outlet ini belum memiliki template shift aktif.
+                      </p>
+                      <p className="leading-relaxed text-amber-100/80">
+                        Buat template Pagi, Middle, dan Malam melalui Pengaturan
+                        → Jam Kerja & Presensi.
+                      </p>
+                      <Link
+                        href="/settings"
+                        className="inline-flex font-bold text-amber-300 underline underline-offset-2"
+                      >
+                        Buka Pengaturan
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
@@ -829,6 +909,9 @@ export function LiveSchedulePage() {
           </label>
           <SubmitActions
             pending={saveMutation.isPending}
+            disabled={
+              scheduleStatus === "scheduled" && !hasSelectedShiftTemplate
+            }
             onCancel={() => setShowEdit(false)}
             submitLabel="Simpan Draft"
           />
@@ -987,10 +1070,12 @@ function DecisionButton({
 
 function SubmitActions({
   pending,
+  disabled = false,
   onCancel,
   submitLabel,
 }: {
   pending: boolean;
+  disabled?: boolean;
   onCancel: () => void;
   submitLabel: string;
 }) {
@@ -1006,7 +1091,7 @@ function SubmitActions({
       </button>
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || disabled}
         className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
       >
         {pending && <LoaderCircle className="h-4 w-4 animate-spin" />}
