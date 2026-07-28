@@ -19,15 +19,16 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh satu migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 230/230 pada
+- Dua puluh dua migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 233/233 pada
   28 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
 - Halaman karyawan sudah memiliki jalur baca serta create/update/archive
   Supabase terpisah. Perubahan outlet mempertahankan riwayat penempatan dan
-  arsip menutup penempatan serta menonaktifkan akun terkait.
+  koreksi tanggal efektif menyesuaikan batas riwayat sebelumnya. Arsip
+  menutup penempatan serta menonaktifkan akun terkait.
 - Tab Lokasi & Geofencing pada Pengaturan sudah memakai Supabase untuk
   read/create/update/activate/deactivate. Outlet dengan penempatan aktif tidak
   dapat dinonaktifkan.

@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(46);
+select extensions.plan(49);
 
 select extensions.ok(
   not has_function_privilege(
@@ -427,6 +427,46 @@ select extensions.is(
 
 select extensions.lives_ok(
   format(
+    $$select public.update_employee_master(
+      %L,
+      'RK-2098-010',
+      'Updated Employee',
+      '081211111111',
+      '2098-02-01',
+      '52000000-0000-0000-0000-000000000001',
+      '51000000-0000-0000-0000-000000000001',
+      '53000000-0000-0000-0000-000000000002',
+      '2098-03-05',
+      'Koreksi tanggal efektif'
+    )$$,
+    :'created_employee_id'
+  ),
+  'supervisor corrects the effective date without changing outlet'
+);
+select extensions.is(
+  (
+    select start_date
+    from public.employee_placements
+    where employee_id = :'created_employee_id'::uuid
+      and outlet_id = '53000000-0000-0000-0000-000000000002'
+      and end_date is null
+  ),
+  '2098-03-05'::date,
+  'same-outlet update changes the active placement start date'
+);
+select extensions.is(
+  (
+    select end_date
+    from public.employee_placements
+    where employee_id = :'created_employee_id'::uuid
+      and outlet_id = '53000000-0000-0000-0000-000000000001'
+  ),
+  '2098-03-04'::date,
+  'effective date correction keeps the previous placement boundary contiguous'
+);
+
+select extensions.lives_ok(
+  format(
     $$select public.archive_employee_master(%L, 'Karyawan tidak aktif')$$,
     :'created_employee_id'
   ),
@@ -720,7 +760,7 @@ select extensions.is(
 
 select * from extensions.skip(
   'hosted CLI role cannot seed transactional master data fixtures',
-  33
+  36
 );
 
 \endif

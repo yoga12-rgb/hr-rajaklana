@@ -48,6 +48,8 @@ Jangan menjalankan reset terhadap production.
   selalu berjalan bersama.
 - Create/update/archive karyawan dan perubahan penempatan utama wajib melalui
   RPC master data agar riwayat outlet, status akun, dan audit tetap atomik.
+  Koreksi tanggal efektif pada outlet yang sama memperbarui penempatan aktif
+  dan menjaga batas akhir penempatan sebelumnya tetap berurutan.
 - Create/update/status outlet wajib melalui RPC master data. Outlet dengan
   penempatan aktif tidak boleh dinonaktifkan dan tidak pernah di-hard-delete.
 - Kebijakan kerja/cuti wajib diterbitkan melalui RPC versioned. Penerbitan

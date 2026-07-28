@@ -777,7 +777,9 @@ function LiveEmployeeFormModal({
   const [outletId, setOutletId] = useState(
     activePlacement?.outlet?.id ?? outlets[0]?.id ?? ""
   );
-  const [effectiveDate, setEffectiveDate] = useState(today);
+  const [effectiveDate, setEffectiveDate] = useState(
+    activePlacement?.start_date ?? today
+  );
   const [changeReason, setChangeReason] = useState(
     employee ? "Pembaruan data karyawan" : "Penempatan awal"
   );
@@ -794,6 +796,7 @@ function LiveEmployeeFormModal({
       !jobPositionId ||
       !employmentStatusId ||
       !outletId ||
+      (employee && !effectiveDate) ||
       !changeReason.trim()
     ) {
       setFormError("Lengkapi seluruh bidang yang wajib.");
@@ -834,6 +837,17 @@ function LiveEmployeeFormModal({
           ? error.message
           : "Data karyawan belum dapat disimpan."
       );
+    }
+  };
+
+  const handleOutletChange = (nextOutletId: string) => {
+    setOutletId(nextOutletId);
+    if (
+      employee &&
+      nextOutletId !== activePlacement?.outlet?.id &&
+      effectiveDate === activePlacement?.start_date
+    ) {
+      setEffectiveDate(today);
     }
   };
 
@@ -925,7 +939,7 @@ function LiveEmployeeFormModal({
             label: `${outlet.code} · ${outlet.name}`,
           }))}
           value={outletId}
-          onChange={setOutletId}
+          onChange={handleOutletChange}
         />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -935,11 +949,17 @@ function LiveEmployeeFormModal({
             onChange={setJoinedAt}
           />
           {employee && (
-            <DatePicker
-              label="Efektif penempatan"
-              value={effectiveDate}
-              onChange={setEffectiveDate}
-            />
+            <div className="space-y-1">
+              <DatePicker
+                label="Efektif penempatan"
+                value={effectiveDate}
+                onChange={setEffectiveDate}
+              />
+              <p className="text-[10px] leading-relaxed text-slate-500">
+                Mengubah tanggal akan menyesuaikan batas riwayat penempatan
+                sebelumnya.
+              </p>
+            </div>
           )}
         </div>
 
