@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Enums } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export type AuthAccount = {
   userId: string;
@@ -27,6 +28,12 @@ function getInitials(name: string) {
 }
 
 export const getCurrentAccount = cache(async (): Promise<AuthAccount | null> => {
+  // Mode demo dan CI tanpa environment Supabase tetap harus dapat merender
+  // halaman publik. Mutasi autentikasi tetap gagal secara jujur di Server Action.
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } =
     await supabase.auth.getClaims();

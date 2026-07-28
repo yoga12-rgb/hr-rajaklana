@@ -21,6 +21,7 @@ jobs:
     env:
       CI: true
       NEXT_TELEMETRY_DISABLED: 1
+      APP_DATA_SOURCE: demo
 
     steps:
       - name: Checkout repository
