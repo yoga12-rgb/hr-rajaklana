@@ -58,8 +58,10 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   UI menampilkan preview jarak server, status proses, kondisi offline, serta
   retry upload idempotent. Inbox validasi supervisor, signed URL singkat,
   deletion worker idempotent, pemulihan lease, finalisasi metadata/audit
-  atomik, retry cron, dan monitoring job gagal sudah tersedia; optimizer
-  roster otomatis belum diimplementasikan.
+  atomik, retry cron, dan monitoring job gagal sudah tersedia. Invocation
+  worker production dengan bearer secret sudah lulus; uji approve selfie
+  nyata dan invalidasi signed URL masih tersisa. Optimizer roster otomatis
+  belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.

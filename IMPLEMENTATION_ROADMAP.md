@@ -673,8 +673,14 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - `CRON_SECRET` sudah dikonfigurasi dan deployment endpoint cron terverifikasi
   menolak request tanpa bearer dengan `401`. Isi roster massal ditambahkan
   untuk membuka jalur uji kasir tanpa mengisi seluruh bulan per sel.
-- Tersisa: uji approve terhadap selfie kasir nyata, verifikasi invocation cron,
-  dan pastikan signed URL lama tidak dapat mengambil objek setelah worker selesai.
+- Invocation berotorisasi terhadap alias production berhasil mencapai worker
+  dengan `200` dan hasil `scanned=0`, `completed=0`, `failed=0`. Hosted saat
+  verifikasi memiliki satu presensi pending, satu selfie aktif, dan belum
+  memiliki deletion job karena keputusan supervisor belum dilakukan.
+- Tersisa: supervisor menguji approve terhadap selfie kasir nyata, lalu
+  verifikasi objek terhapus dan signed URL lama tidak dapat mengambil objek.
+  Invocation otomatis Vercel pukul 03.17 WIB tetap perlu dikonfirmasi melalui
+  log dashboard setelah jadwal berikutnya berjalan.
 
 ---
 
