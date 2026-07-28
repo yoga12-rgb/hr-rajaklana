@@ -98,5 +98,10 @@ Jangan menjalankan reset terhadap production.
   ke presensi tidak dapat dihapus client.
 - Supervisor dapat presensi pada outlet aktif mana pun tanpa jadwal dan tanpa
   selfie; durasi dibandingkan dengan target delapan jam.
+- Validasi presensi supervisor memakai RPC first-write-wins. Selfie dibuka
+  melalui signed URL singkat; approve membuat deletion job atomik, lalu worker
+  server-only menghapus objek secara idempotent dan mempertahankan metadata.
+- Endpoint cron retensi memerlukan `CRON_SECRET`. Secret hanya disimpan di
+  environment Vercel dan tidak boleh memakai nilai publishable atau admin key.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

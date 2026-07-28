@@ -6,7 +6,9 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
+  Eye,
   Loader2,
   LocateFixed,
   MapPin,
@@ -14,6 +16,7 @@ import {
   ShieldCheck,
   Video,
   WifiOff,
+  XCircle,
 } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
@@ -21,10 +24,15 @@ import { useHR } from "@/context/HRContext";
 import {
   useAttendanceWorkspace,
   useAttendanceGeofencePreview,
+  useAttendanceRetentionHealth,
+  useAttendanceSelfieUrl,
   useClockInAttendance,
   useClockOutAttendance,
+  useDecideAttendanceValidation,
+  usePendingAttendanceValidations,
 } from "@/lib/attendance/queries";
 import type {
+  AttendanceValidationItem,
   ClockInPhase,
   DeviceLocation,
   GeofencePreview,
@@ -107,6 +115,204 @@ function getDeviceLocation() {
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 }
     );
   });
+}
+
+/** Inbox validasi supervisor dengan selfie privat berumur dua menit. */
+function AttendanceValidationQueue() {
+  const { showToast } = useHR();
+  const queue = usePendingAttendanceValidations(true);
+  const retentionHealth = useAttendanceRetentionHealth(true);
+  const decisionMutation = useDecideAttendanceValidation();
+  const selfieMutation = useAttendanceSelfieUrl();
+  const [selected, setSelected] = useState<AttendanceValidationItem | null>(
+    null
+  );
+  const [note, setNote] = useState("");
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
+
+  const close = () => {
+    if (decisionMutation.isPending) return;
+    setSelected(null);
+    setNote("");
+    setSelfieUrl(null);
+  };
+
+  const open = async (item: AttendanceValidationItem) => {
+    setSelected(item);
+    setNote("");
+    setSelfieUrl(null);
+    if (!item.evidence || item.evidence.deleted_at) return;
+    try {
+      setSelfieUrl(
+        await selfieMutation.mutateAsync(item.evidence.storage_path)
+      );
+    } catch (error) {
+      showToast(errorMessage(error), "warning");
+    }
+  };
+
+  const decide = async (
+    decision: "approved" | "rejected" | "needs_correction"
+  ) => {
+    if (!selected) return;
+    if (decision !== "approved" && note.trim().length < 3) {
+      showToast("Catatan minimal 3 karakter wajib untuk keputusan ini.", "warning");
+      return;
+    }
+    try {
+      await decisionMutation.mutateAsync({
+        attendanceId: selected.id,
+        decision,
+        note: note.trim(),
+        expectedVersion: selected.record_version,
+      });
+      playClickSound();
+      showToast("Keputusan presensi berhasil disimpan.", "success");
+      setSelected(null);
+      setNote("");
+      setSelfieUrl(null);
+    } catch (error) {
+      showToast(errorMessage(error), "warning");
+    }
+  };
+
+  return (
+    <section className="space-y-3 rounded-2xl border border-amber-500/20 bg-slate-900 p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-100">
+          <ClipboardCheck className="h-4 w-4 text-amber-400" />
+          Validasi Presensi
+        </h2>
+        <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
+          {queue.data?.length ?? 0} pending
+        </span>
+      </div>
+
+      {queue.isPending && (
+        <div className="flex justify-center py-5 text-amber-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      )}
+      {queue.isError && (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+          {errorMessage(queue.error)}
+        </p>
+      )}
+      {(retentionHealth.data?.failedJobs ?? 0) > 0 && (
+        <p className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {retentionHealth.data?.failedJobs} penghapusan selfie perlu retry
+          worker.
+        </p>
+      )}
+      {queue.data?.length === 0 && (
+        <p className="rounded-xl border border-dashed border-slate-700 p-5 text-center text-xs text-slate-500">
+          Tidak ada presensi yang menunggu validasi.
+        </p>
+      )}
+      {queue.data?.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => void open(item)}
+          className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3 text-left transition hover:border-amber-500/30"
+        >
+          <span>
+            <span className="block text-xs font-bold text-slate-100">
+              {item.employee_name}
+            </span>
+            <span className="mt-1 block text-[10px] text-slate-400">
+              {formatDate(item.work_date)} · {item.outlet_name} ·{" "}
+              {formatDuration(item.worked_duration_min)}
+            </span>
+          </span>
+          <Eye className="h-4 w-4 shrink-0 text-amber-400" />
+        </button>
+      ))}
+
+      <Modal
+        isOpen={selected !== null}
+        onClose={close}
+        title="Validasi Presensi"
+        icon={ClipboardCheck}
+      >
+        {selected && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <p className="text-sm font-bold text-slate-100">
+                {selected.employee_name}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                {formatDate(selected.work_date)} · {selected.outlet_name}
+              </p>
+              <p className="mt-2 text-xs text-slate-300">
+                {formatTime(selected.clock_in_at)}–{formatTime(selected.clock_out_at)}
+                {" · "}
+                {formatDuration(selected.worked_duration_min)}
+              </p>
+            </div>
+
+            <div className="flex aspect-[3/4] max-h-80 items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+              {selfieMutation.isPending ? (
+                <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
+              ) : selfieUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selfieUrl}
+                  alt={`Selfie clock-in ${selected.employee_name}`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <p className="px-4 text-center text-xs text-slate-500">
+                  Bukti selfie tidak tersedia atau sudah dihapus.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">
+                Catatan keputusan
+              </label>
+              <textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={3}
+                placeholder="Wajib untuk penolakan atau permintaan koreksi"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                disabled={decisionMutation.isPending}
+                onClick={() => void decide("needs_correction")}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-300 disabled:opacity-50"
+              >
+                Perlu Koreksi
+              </button>
+              <button
+                type="button"
+                disabled={decisionMutation.isPending}
+                onClick={() => void decide("rejected")}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-bold text-rose-300 disabled:opacity-50"
+              >
+                <XCircle className="h-4 w-4" /> Tolak
+              </button>
+              <button
+                type="button"
+                disabled={decisionMutation.isPending}
+                onClick={() => void decide("approved")}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-xs font-black text-slate-950 disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" /> Setujui
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </section>
+  );
 }
 
 /** Workspace presensi live dengan GPS perangkat, geofence server, dan selfie private. */
@@ -513,6 +719,8 @@ export function LiveAttendancePage() {
                 : "Clock In"}
         </button>
       </section>
+
+      {data.role === "supervisor" && <AttendanceValidationQueue />}
 
       <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4">
         <div className="flex items-center justify-between">

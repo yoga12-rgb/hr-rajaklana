@@ -91,6 +91,26 @@ export interface AttendanceWorkspace {
   history: AttendanceHistory[];
 }
 
+export interface AttendanceValidationItem {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  outlet_name: string;
+  work_date: string;
+  clock_in_at: string;
+  clock_out_at: string;
+  worked_duration_min: number | null;
+  clock_in_state: string;
+  clock_out_state: string | null;
+  record_version: number;
+  evidence: {
+    id: string;
+    storage_path: string;
+    retention_status: string;
+    deleted_at: string | null;
+  } | null;
+}
+
 export interface ClockInInput {
   currentEmployeeId: string;
   clientEventId: string;
@@ -233,4 +253,101 @@ export async function clockOutAttendance(
   const { data, error } = await client.rpc("clock_out_attendance", args);
   if (error) throw attendanceError("Clock-out belum berhasil", error);
   return data;
+}
+
+export async function listPendingAttendanceValidations(
+  client: AttendanceClient
+) {
+  const { data, error } = await client
+    .from("attendance_records")
+    .select(
+      `
+        id,
+        employee_id,
+        work_date,
+        clock_in_at,
+        clock_out_at,
+        worked_duration_min,
+        clock_in_state,
+        clock_out_state,
+        record_version,
+        employee:employees!attendance_records_employee_id_fkey (full_name),
+        outlet:outlets!attendance_records_outlet_id_fkey (name),
+        evidence:attendance_evidence (
+          id,
+          storage_path,
+          retention_status,
+          deleted_at
+        )
+      `
+    )
+    .eq("validation_status", "pending")
+    .not("clock_out_at", "is", null)
+    .order("validation_due_at")
+    .limit(50);
+
+  if (error) {
+    throw attendanceError("Antrean validasi belum dapat dimuat", error);
+  }
+
+  return (data ?? []).map((record) => ({
+    id: record.id,
+    employee_id: record.employee_id,
+    employee_name: record.employee?.full_name ?? "Karyawan",
+    outlet_name: record.outlet?.name ?? "Outlet",
+    work_date: record.work_date,
+    clock_in_at: record.clock_in_at,
+    clock_out_at: record.clock_out_at!,
+    worked_duration_min: record.worked_duration_min,
+    clock_in_state: record.clock_in_state,
+    clock_out_state: record.clock_out_state,
+    record_version: record.record_version,
+    evidence: record.evidence[0] ?? null,
+  })) satisfies AttendanceValidationItem[];
+}
+
+export async function decideAttendanceValidation(
+  client: AttendanceClient,
+  input: {
+    attendanceId: string;
+    decision: "approved" | "rejected" | "needs_correction";
+    note: string;
+    expectedVersion: number;
+  }
+) {
+  const { data, error } = await client.rpc("validate_attendance", {
+    attendance_id: input.attendanceId,
+    decision: input.decision,
+    note: input.note,
+    expected_version: input.expectedVersion,
+  });
+  if (error) {
+    throw attendanceError("Keputusan presensi belum dapat disimpan", error);
+  }
+  return data;
+}
+
+export async function createAttendanceSelfieSignedUrl(
+  client: AttendanceClient,
+  path: string
+) {
+  const { data, error } = await client.storage
+    .from("attendance-selfies")
+    .createSignedUrl(path, 120);
+  if (error) {
+    throw attendanceError("Selfie presensi belum dapat dibuka", error);
+  }
+  return data.signedUrl;
+}
+
+export async function getAttendanceRetentionHealth(client: AttendanceClient) {
+  const { count, error } = await client
+    .from("file_deletion_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "failed")
+    .not("evidence_id", "is", null);
+  if (error) {
+    throw attendanceError("Status retensi belum dapat dimuat", error);
+  }
+  return { failedJobs: count ?? 0 };
 }

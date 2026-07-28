@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(20);
+select extensions.plan(25);
 
 select extensions.ok(
   not has_function_privilege('anon', 'public.get_attendance_workspace()', 'execute'),
@@ -39,6 +39,10 @@ select extensions.ok(
 select extensions.ok(
   not has_table_privilege('authenticated', 'public.attendance_records', 'update'),
   'clients cannot update attendance records directly'
+);
+select extensions.ok(
+  not has_table_privilege('authenticated', 'public.file_deletion_jobs', 'update'),
+  'clients cannot update retention jobs directly'
 );
 select has_table_privilege(current_user, 'public.job_positions', 'insert')
   as can_seed_attendance_fixtures
@@ -301,9 +305,119 @@ select extensions.ok(
   'clock-out calculates worked duration'
 );
 
+reset role;
+insert into public.attendance_records (
+  id,
+  employee_id,
+  outlet_id,
+  work_date,
+  clock_in_at,
+  clock_out_at,
+  clock_in_latitude,
+  clock_in_longitude,
+  clock_in_accuracy_m,
+  clock_in_distance_m,
+  clock_in_state,
+  clock_out_latitude,
+  clock_out_longitude,
+  clock_out_accuracy_m,
+  clock_out_distance_m,
+  clock_out_state,
+  attendance_status,
+  worked_duration_min
+)
+values (
+  '7a000000-0000-0000-0000-000000000004',
+  '74000000-0000-0000-0000-000000000001',
+  '73000000-0000-0000-0000-000000000001',
+  current_date,
+  now() - interval '8 hours',
+  now(),
+  -6.2,
+  106.8,
+  10,
+  0,
+  'on_time',
+  -6.2,
+  106.8,
+  10,
+  0,
+  'complete',
+  'completed',
+  480
+);
+
+insert into public.attendance_evidence (
+  id,
+  attendance_record_id,
+  evidence_type,
+  storage_path,
+  mime_type,
+  size_bytes
+)
+values (
+  '7b000000-0000-0000-0000-000000000001',
+  '7a000000-0000-0000-0000-000000000004',
+  'clock_in_selfie',
+  '74000000-0000-0000-0000-000000000001/2096/01/01/evidence.jpg',
+  'image/jpeg',
+  1024
+);
+
+select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000001', true);
+set local role authenticated;
+select extensions.throws_ok(
+  $$select public.validate_attendance(
+    '7a000000-0000-0000-0000-000000000004',
+    'approved',
+    'Tidak berwenang',
+    1
+  )$$,
+  'P0001',
+  'Only supervisors can validate attendance',
+  'employee cannot validate attendance'
+);
+
+reset role;
+select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000002', true);
+set local role authenticated;
+select extensions.is(
+  (
+    public.validate_attendance(
+      '7a000000-0000-0000-0000-000000000004',
+      'approved',
+      'Data presensi sesuai',
+      1
+    )
+  ).validation_status::text,
+  'approved',
+  'supervisor validates completed employee attendance'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from public.file_deletion_jobs
+    where evidence_id = '7b000000-0000-0000-0000-000000000001'
+      and status = 'scheduled'
+      and deletion_reason = 'attendance_approved'
+  ),
+  'approval atomically schedules selfie deletion'
+);
+select extensions.throws_ok(
+  $$select public.validate_attendance(
+    '7a000000-0000-0000-0000-000000000004',
+    'rejected',
+    'Keputusan kedua',
+    1
+  )$$,
+  'P0001',
+  'Attendance record has already changed',
+  'attendance validation is first-write-wins'
+);
+
 \else
 
-select extensions.skip(14, 'database role cannot seed attendance fixtures');
+select extensions.skip(18, 'database role cannot seed attendance fixtures');
 
 \endif
 

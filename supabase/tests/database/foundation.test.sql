@@ -113,7 +113,7 @@ select extensions.is(
       and tablename = 'objects'
       and policyname in (
         'attendance_selfies_insert_own',
-        'attendance_selfies_read_authorized',
+        'attendance_selfies_read_supervisor',
         'leave_documents_insert_own',
         'leave_documents_read_authorized',
         'imports_manage_supervisor',

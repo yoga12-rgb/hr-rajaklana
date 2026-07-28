@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 28 Juli 2026                                                    |
-| Fase saat ini         | M6 validasi presensi dan retensi file menjadi pekerjaan berikut |
+| Fase saat ini         | M6 validasi presensi dan retensi file sedang dikerjakan          |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan delapan belas migration berikut identik antara
+- Project hosted sudah terhubung dan sembilan belas migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                  | Fungsi                                    |
@@ -96,12 +96,13 @@ Sudah tersedia:
 | `20260728153000_harden_attendance_function_privileges.sql` | Hardening hak RPC presensi                |
 | `20260728160000_attendance_geofence_preview.sql`           | Preview jarak geofence server untuk UI    |
 | `20260728170000_fix_get_monthly_roster_empty_period.sql`   | Karyawan tersedia sebelum periode roster  |
+| `20260728190000_harden_attendance_retention_access.sql`    | Hardening akses selfie dan retention job  |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `213/213`.
+- pgTAP lulus `218/218`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -153,6 +154,7 @@ Nama variabel yang diizinkan:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
+CRON_SECRET=
 APP_DATA_SOURCE=demo
 ```
 
@@ -607,7 +609,7 @@ mobile-first.
 
 ---
 
-## M6 — Validasi Presensi dan Retensi File (`NEXT`)
+## M6 — Validasi Presensi dan Retensi File (`IN PROGRESS`)
 
 ### Tujuan
 
@@ -635,6 +637,23 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - Worker aman dijalankan berulang.
 - File hilang dari Storage tetapi metadata keputusan tetap tersedia.
 - Pengguna tidak dapat mengambil signed URL setelah retensi selesai.
+
+### Status implementasi 28 Juli 2026
+
+- Halaman Presensi live supervisor memiliki inbox pending, detail durasi,
+  selfie private melalui signed URL dua menit, serta keputusan approve,
+  reject, dan needs correction melalui RPC first-write-wins.
+- Approve tetap membuat deletion job secara atomik di database. Server Action
+  mencoba penghapusan segera; Vercel Cron menjadi retry harian dengan claim
+  bersyarat, backoff maksimal 24 jam, dan batas enam percobaan.
+- Worker menandai metadata evidence sebagai deleted tanpa menghapus histori
+  presensi, mencatat audit penghapusan, menganggap objek yang sudah tidak ada
+  sebagai sukses idempotent, dan UI menampilkan jumlah job gagal.
+- pgTAP lokal/hosted `218/218`, lint, TypeScript, production build, serta
+  14/14 E2E desktop/mobile lulus.
+- Tersisa: isi `CRON_SECRET` di Vercel, verifikasi cron deployment, uji
+  approve terhadap selfie nyata, dan pastikan signed URL lama tidak dapat
+  mengambil objek setelah worker selesai.
 
 ---
 

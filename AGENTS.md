@@ -17,8 +17,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Delapan belas migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 213/213 pada
+- Sembilan belas migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 218/218 pada
   28 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -51,8 +51,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
   UI menampilkan preview jarak server, status proses, kondisi offline, serta
-  retry upload idempotent; worker retensi dan optimizer roster otomatis belum
-  diimplementasikan.
+  retry upload idempotent. Inbox validasi supervisor, signed URL singkat,
+  deletion worker idempotent, retry cron, dan monitoring job gagal sedang
+  dikerjakan; optimizer roster otomatis belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -144,7 +145,9 @@ src/
 ├── lib/attendance/
 │   ├── query-keys.ts     # Query key factory workspace presensi
 │   ├── queries.ts        # TanStack Query hooks clock-in dan clock-out
-│   └── repository.ts     # RPC presensi dan upload selfie private
+│   ├── repository.ts     # RPC presensi, validasi, dan selfie private
+│   ├── actions.ts        # Pemicu cleanup segera setelah keputusan
+│   └── retention-worker.ts # Worker idempotent penghapusan bukti
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift

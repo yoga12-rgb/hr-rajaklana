@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/attendance-retention",
+      "schedule": "17 20 * * *"
+    }
+  ]
+}
