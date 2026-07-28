@@ -106,6 +106,7 @@ export interface AttendanceValidationItem {
   evidence: {
     id: string;
     storage_path: string;
+    uploaded_at: string;
     retention_status: string;
     deleted_at: string | null;
   } | null;
@@ -276,6 +277,7 @@ export async function listPendingAttendanceValidations(
         evidence:attendance_evidence (
           id,
           storage_path,
+          uploaded_at,
           retention_status,
           deleted_at
         )

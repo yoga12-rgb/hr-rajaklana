@@ -66,6 +66,23 @@ function formatDate(value: string) {
   }).format(new Date(`${value}T12:00:00+07:00`));
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(value));
+}
+
+function selfieRetentionDeadline(uploadedAt: string) {
+  return new Date(
+    new Date(uploadedAt).getTime() + 7 * 24 * 60 * 60 * 1000
+  ).toISOString();
+}
+
 function validationLabel(status: string) {
   return (
     {
@@ -132,6 +149,10 @@ function AttendanceValidationQueue() {
   );
   const [note, setNote] = useState("");
   const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
+  const activeSessionCount =
+    queue.data?.filter((item) => !item.clock_out_at).length ?? 0;
+  const readyValidationCount =
+    queue.data?.filter((item) => item.clock_out_at).length ?? 0;
 
   const close = () => {
     if (decisionMutation.isPending) return;
@@ -185,14 +206,19 @@ function AttendanceValidationQueue() {
 
   return (
     <section className="space-y-3 rounded-2xl border border-amber-500/20 bg-slate-900 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-100">
           <ClipboardCheck className="h-4 w-4 text-amber-400" />
           Pantauan & Validasi Presensi
         </h2>
-        <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
-          {queue.data?.length ?? 0} pending
-        </span>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[10px] font-semibold text-sky-300">
+            {activeSessionCount} sedang bekerja
+          </span>
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
+            {readyValidationCount} siap validasi
+          </span>
+        </div>
       </div>
 
       {queue.isPending && (
@@ -214,7 +240,7 @@ function AttendanceValidationQueue() {
       )}
       {queue.data?.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-700 p-5 text-center text-xs text-slate-500">
-          Tidak ada presensi yang menunggu validasi.
+          Tidak ada sesi aktif atau presensi yang menunggu validasi.
         </p>
       )}
       {queue.data?.map((item) => (
@@ -235,7 +261,18 @@ function AttendanceValidationQueue() {
                 : `Masuk ${formatTime(item.clock_in_at)} · Sedang bekerja`}
             </span>
           </span>
-          <Eye className="h-4 w-4 shrink-0 text-amber-400" />
+          <span className="flex shrink-0 items-center gap-2">
+            <span
+              className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                item.clock_out_at
+                  ? "bg-amber-500/10 text-amber-300"
+                  : "bg-sky-500/10 text-sky-300"
+              }`}
+            >
+              {item.clock_out_at ? "Siap validasi" : "Sedang bekerja"}
+            </span>
+            <Eye className="h-4 w-4 text-amber-400" />
+          </span>
         </button>
       ))}
 
@@ -282,6 +319,18 @@ function AttendanceValidationQueue() {
                 </p>
               )}
             </div>
+
+            {selected.evidence && (
+              <p className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-[10px] leading-relaxed text-slate-400">
+                {selected.evidence.deleted_at
+                  ? `Foto telah dihapus otomatis pada ${formatDateTime(
+                      selected.evidence.deleted_at
+                    )}.`
+                  : `Foto tersimpan privat hingga ${formatDateTime(
+                      selfieRetentionDeadline(selected.evidence.uploaded_at)
+                    )}, lalu masuk proses penghapusan otomatis.`}
+              </p>
+            )}
 
             {selected.clock_out_at ? (
               <>

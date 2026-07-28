@@ -656,8 +656,10 @@ tier melalui penghapusan bukti yang dapat diaudit.
 
 - Halaman Presensi live supervisor menampilkan waktu dan selfie private
   melalui signed URL dua menit sejak clock-in. Daftar diperbarui setiap 30
-  detik; keputusan approve, reject, dan needs correction baru tersedia
-  setelah clock-out dan tetap memakai RPC first-write-wins.
+  detik, memisahkan jumlah sesi yang masih bekerja dan siap divalidasi, serta
+  menampilkan waktu penghapusan otomatis pada detail selfie. Keputusan
+  approve, reject, dan needs correction baru tersedia setelah clock-out dan
+  tetap memakai RPC first-write-wins.
 - Pembuatan metadata selfie otomatis membuat deletion job tepat tujuh hari
   setelah upload. Keputusan validasi tidak mempercepat jadwal tersebut.
   Vercel Cron memproses job jatuh tempo dengan claim bersyarat, backoff

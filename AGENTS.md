@@ -57,10 +57,11 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
   UI menampilkan preview jarak server, status proses, kondisi offline, serta
   retry upload idempotent. Supervisor dapat memantau waktu dan selfie sejak
-  clock-in; keputusan tetap menunggu clock-out. Selfie dijadwalkan terhapus
-  tujuh hari setelah upload. Signed URL singkat, deletion worker idempotent,
-  pemulihan lease, finalisasi metadata/audit atomik, retry cron, dan monitoring
-  job gagal sudah tersedia. Optimizer roster otomatis belum diimplementasikan.
+  clock-in, melihat jumlah sesi aktif/siap validasi dan batas waktu retensi;
+  keputusan tetap menunggu clock-out. Selfie dijadwalkan terhapus tujuh hari
+  setelah upload. Signed URL singkat, deletion worker idempotent, pemulihan
+  lease, finalisasi metadata/audit atomik, retry cron, dan monitoring job gagal
+  sudah tersedia. Optimizer roster otomatis belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
