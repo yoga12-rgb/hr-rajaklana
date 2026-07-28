@@ -11,6 +11,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "auth:bootstrap-supervisor": "node scripts/bootstrap-supervisor.mjs",
+    "attendance:verify-retention": "node scripts/verify-attendance-retention.mjs",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",

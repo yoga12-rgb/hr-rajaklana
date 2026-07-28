@@ -62,8 +62,10 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   setelah upload. Signed URL singkat, deletion worker idempotent, pemulihan
   lease, finalisasi metadata/audit atomik, retry cron, dan monitoring job gagal
   sudah tersedia. Monitoring retensi membedakan job terjadwal, retry, jatuh
-  tempo, lease tertahan, dan percobaan yang habis. Optimizer roster otomatis
-  belum diimplementasikan.
+  tempo, lease tertahan, dan percobaan yang habis. Script verifikasi read-only
+  tersedia di `scripts/verify-attendance-retention.mjs`; checklist berada di
+  `docs/ATTENDANCE_RETENTION_VERIFICATION.md`. Optimizer roster otomatis belum
+  diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -177,6 +179,10 @@ src/
 │   └── database.ts       # Tipe database; regenerasi melalui npm run supabase:types
 └── utils/
     └── clickSound.ts     # Audio feedback + Haptic Feedback (navigator.vibrate) utility
+scripts/
+└── verify-attendance-retention.mjs # Verifikasi read-only metadata, Storage, audit, dan signed URL
+docs/
+└── ATTENDANCE_RETENTION_VERIFICATION.md # Checklist penutupan exit criteria M6
 ```
 
 Roadmap teknis, milestone, quality gate, dan handoff agent berada di

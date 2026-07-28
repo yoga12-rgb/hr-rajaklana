@@ -471,8 +471,10 @@ erDiagram
 9. Presensi harus diputuskan supervisor paling lambat tiga hari setelah clock-out.
 10. Supervisor tidak boleh memvalidasi presensinya sendiri.
 11. Keputusan pertama yang sah mengunci status. Update harus atomik dengan syarat status masih `pending`.
-12. Selfie dari presensi yang disetujui dijadwalkan untuk segera dihapus.
-13. Selfie dari presensi yang ditolak disimpan sampai masalah selesai, maksimal 30 hari, dengan peringatan sebelum batas retensi.
+12. Setiap selfie disimpan selama tujuh hari sejak upload, terlepas dari status
+    validasi.
+13. Keputusan `approved`, `rejected`, atau `needs_correction` tidak
+    mempercepat maupun memperpanjang batas retensi selfie.
 14. Penghapusan objek Storage tidak menghapus metadata presensi dan audit.
 15. Koreksi yang disetujui memperbarui nilai efektif tetapi tetap menyimpan nilai sebelum dan sesudah.
 
@@ -886,13 +888,14 @@ Pertukaran shift menggunakan dua keputusan berurutan:
 
 ### 11.4 Validasi presensi dan penghapusan selfie
 
-Setelah presensi disetujui:
+Sejak metadata selfie dibuat:
 
-1. kunci status validasi;
-2. tulis keputusan dan audit;
-3. buat `file_deletion_jobs` dengan idempotency key berbasis evidence;
-4. worker menghapus objek dari bucket privat;
-5. worker mengisi `attendance_evidence.deleted_at`;
+1. buat `file_deletion_jobs` secara atomik dengan jadwal tujuh hari setelah
+   `uploaded_at`;
+2. keputusan validasi tetap berjalan dan diaudit secara terpisah;
+3. worker menghapus objek dari bucket privat setelah jatuh tempo;
+4. worker mengisi `attendance_evidence.deleted_at`;
+5. worker menyelesaikan job dan audit penghapusan secara atomik;
 6. kegagalan penghapusan dicoba ulang tanpa menggandakan pekerjaan.
 
 ## 12. Row Level Security
@@ -920,7 +923,7 @@ Bucket privat yang direkomendasikan:
 
 | Bucket | Isi | Retensi |
 |---|---|---|
-| `attendance-selfies` | Selfie saat clock-in | Hapus segera setelah disetujui; ditolak maksimal 30 hari |
+| `attendance-selfies` | Selfie saat clock-in | Tujuh hari sejak upload untuk semua keputusan |
 | `leave-documents` | Surat dokter dan dokumen cuti | Hapus setelah akhir tahun terkait |
 | `imports` | Cadangan untuk impor server-side masa depan | Tidak dipakai oleh impor karyawan saat ini; file diproses lokal di browser |
 | `exports` | Arsip laporan/backup | Sesuai kebijakan backup perusahaan |
@@ -928,7 +931,7 @@ Bucket privat yang direkomendasikan:
 Path objek sebaiknya tidak memakai nama asli pengguna:
 
 ```text
-attendance-selfies/{employee_uuid}/{year}/{month}/{evidence_uuid}.jpg
+attendance-selfies/{employee_uuid}/{year}/{month}/{day}/{client_event_uuid}.jpg
 leave-documents/{employee_uuid}/{year}/{attachment_uuid}.{ext}
 # imports/ dicadangkan; workflow karyawan saat ini tidak mengunggah XLSX
 exports/{year}/{month}/{export_uuid}.{ext}
@@ -939,8 +942,7 @@ exports/{year}/{month}/{export_uuid}.{ext}
 | Data | Retensi |
 |---|---|
 | Metadata presensi | Disimpan sebagai histori operasional |
-| Selfie presensi disetujui | Dihapus segera setelah keputusan |
-| Selfie presensi ditolak | Sampai selesai, maksimum 30 hari |
+| Selfie presensi clock-in | Tujuh hari sejak upload, lalu dihapus otomatis |
 | Lampiran cuti | Sampai akhir tahun terkait |
 | Audit log | Minimal dua tahun |
 | Riwayat roster dan penempatan | Dipertahankan untuk laporan dan KPI masa depan |
@@ -982,7 +984,7 @@ Nilai berikut tidak menghambat desain database, tetapi perlu ditetapkan berdasar
 
 - ambang akurasi GPS yang dianggap layak;
 - indikator mock GPS yang tersedia pada perangkat target;
-- waktu peringatan sebelum selfie ditolak mencapai batas 30 hari;
+- waktu pengingat operasional sebelum deletion job selfie melewati tenggat;
 - bobot skor pemerataan shift dan pasangan kerja;
 - kebijakan pembulatan ketika durasi aktual lembur tidak tepat pada kelipatan 30 menit;
 - lama retensi file impor dan hasil ekspor;

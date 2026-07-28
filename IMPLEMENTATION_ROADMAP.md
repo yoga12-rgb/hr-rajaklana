@@ -682,6 +682,9 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - Invocation berotorisasi terhadap alias production berhasil mencapai worker
   dengan `200`. Selfie nyata yang sudah ada telah memperoleh deletion job
   tujuh hari dengan `scheduled_for = uploaded_at + 7 days`.
+- Script verifikasi production read-only dan checklist operasional tersedia
+  untuk memeriksa jadwal job, metadata, keberadaan objek, audit penghapusan,
+  serta kegagalan akses signed URL tanpa mencetak secret atau path Storage.
 - Tersisa: setelah job selfie nyata jatuh tempo, verifikasi objek terhapus dan
   signed URL lama tidak dapat mengambil objek.
   Invocation otomatis Vercel pukul 03.17 WIB tetap perlu dikonfirmasi melalui

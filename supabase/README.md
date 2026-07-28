@@ -118,5 +118,9 @@ Jangan menjalankan reset terhadap production.
   Handler tetap menolak request tanpa bearer secret. Worker memulihkan lease
   processing yang macet dan memakai RPC service-role agar status job,
   metadata evidence, serta audit selesai atomik.
+- Verifikasi production read-only tersedia melalui
+  `npm run attendance:verify-retention -- --evidence-id <uuid>`. Tambahkan
+  `--expect-deleted` hanya setelah cron pascajatuh tempo; checklist lengkap
+  berada di `docs/ATTENDANCE_RETENTION_VERIFICATION.md`.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.
