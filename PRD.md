@@ -201,7 +201,9 @@ Kebutuhan outlet yang dikonfigurasi mempunyai prioritas lebih tinggi daripada ni
 
 ### 7.4 Off day
 
-1. Setiap kasir memperoleh satu off day per pekan.
+1. Setiap kasir memperoleh satu off day per pekan. Kepemilikan pekan mengikuti
+   tanggal Senin awal pekan; pekan parsial pada awal bulan tetap menjadi jatah
+   bulan sebelumnya dan tidak dihitung ulang.
 2. Supervisor menentukan off day sebelum roster dibuat.
 3. Off day dapat dipindahkan antara pekan berjalan dan pekan berikutnya dalam bulan yang sama.
 4. Pemindahan dapat menghasilkan dua off day pada satu pekan dan nol pada pekan berikutnya.

@@ -338,6 +338,8 @@ erDiagram
 6. Jadwal sebelum off diprioritaskan `morning`, sedangkan setelah off diprioritaskan `night`.
 7. Pelanggaran pola sebelum/setelah off atau kerja lebih dari enam hari berturut-turut membutuhkan alasan override.
 8. Peminjaman off hanya boleh antara dua pekan bersebelahan dalam bulan yang sama.
+   Kepemilikan pekan mengikuti tanggal Senin awal pekan; pekan parsial tidak
+   menjadi jatah baru ketika kalender memasuki bulan berikutnya.
 9. Backup outlet tidak pernah dibuat otomatis. Supervisor memilihnya secara manual dan sistem hanya memvalidasi konflik.
 10. Pertukaran shift hanya boleh antara dua jadwal pada outlet yang sama.
 11. Perubahan roster setelah publikasi membuat notifikasi dan acknowledgement baru.

@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan dua puluh dua migration berikut identik antara
+- Project hosted sudah terhubung dan dua puluh tiga migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                  | Fungsi                                    |
@@ -100,12 +100,13 @@ Sudah tersedia:
 | `20260728200000_atomic_attendance_deletion_completion.sql` | Finalisasi retensi dan audit atomik        |
 | `20260728210000_bulk_manual_roster_fill.sql`               | Isi rentang roster manual secara atomik    |
 | `20260728220000_update_active_placement_effective_date.sql` | Koreksi tanggal efektif penempatan aktif   |
+| `20260728230000_assign_partial_week_to_starting_month.sql`  | Kepemilikan pekan parsial untuk jatah off  |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `233/233`.
+- pgTAP lulus `234/234`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -468,6 +469,9 @@ Selesai:
   awal, serta memilih assignment utama, off day, atau backup outlet.
 - Jatah off memiliki ledger sumber pekan yang unik. Peminjaman dibatasi ke
   pekan bersebelahan; pelanggaran total jatah ditolak saat publikasi.
+- Pekan dimiliki oleh bulan tempat hari Senin awal pekan berada. Pekan
+  parsial pada awal bulan tidak dihitung ulang karena sudah menjadi jatah
+  bulan sebelumnya.
 - Perubahan terhadap roster aktif membuat draft versi baru dengan menyalin
   assignment dan data backup. Versi `published` bersifat immutable dan jalur
   tulis langsung ke tabel historis dicabut dari client authenticated.
@@ -663,7 +667,7 @@ tier melalui penghapusan bukti yang dapat diaudit.
   tetap menolak request tanpa bearer secret. Worker memulihkan job processing
   yang lease-nya kedaluwarsa; perubahan evidence, job, dan audit diselesaikan
   oleh RPC service-role dalam satu transaksi.
-- pgTAP lokal/hosted `233/233` mencakup finalisasi atomik, retry idempotent,
+- pgTAP lokal/hosted `234/234` mencakup finalisasi atomik, retry idempotent,
   hak akses isi roster massal, mode sel kosong idempotent, dan replace atomik.
   Lint, TypeScript, production build, serta 16/16 E2E desktop/mobile lulus.
 - `CRON_SECRET` sudah dikonfigurasi dan deployment endpoint cron terverifikasi

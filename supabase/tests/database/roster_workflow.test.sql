@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(46);
+select extensions.plan(47);
 
 select extensions.ok(
   not has_function_privilege(
@@ -769,6 +769,7 @@ cross join (
     '2097-02-28'::date,
     interval '1 day'
   ) day_value
+  where date_trunc('week', day_value)::date >= '2097-02-01'::date
 ) weeks
 where period.month_start = '2097-02-01'
 on conflict (roster_period_id, employee_id, source_week_start)
@@ -777,6 +778,18 @@ do update set
   borrowed_from_adjacent_week = false,
   override_reason = null,
   set_by = excluded.set_by;
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.employee_off_days off_day
+    join public.roster_periods period
+      on period.id = off_day.roster_period_id
+    where period.month_start = '2097-02-01'
+  ),
+  8,
+  'partial week owned by January is not required again in February'
+);
 
 update public.schedule_assignments assignment
 set
@@ -1019,7 +1032,7 @@ select extensions.throws_ok(
 
 select extensions.skip(
   'fixture creation requires local postgres privileges',
-  31
+  32
 );
 
 \endif
