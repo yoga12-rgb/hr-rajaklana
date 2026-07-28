@@ -2,7 +2,16 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(38);
+select extensions.plan(46);
+
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.bulk_fill_manual_roster(date,date,date,public.shift_type,text,text,uuid[])',
+    'execute'
+  ),
+  'anonymous cannot bulk fill manual roster assignments'
+);
 
 select extensions.ok(
   not has_function_privilege(
@@ -439,6 +448,20 @@ select extensions.throws_ok(
   'employee cannot save a roster assignment'
 );
 
+select extensions.throws_ok(
+  $$select public.bulk_fill_manual_roster(
+    '2097-03-01',
+    '2097-03-01',
+    '2097-03-02',
+    'morning',
+    'empty_only',
+    'Blocked employee bulk fill'
+  )$$,
+  'P0001',
+  'Hanya supervisor yang dapat mengisi roster secara massal',
+  'employee cannot bulk fill roster assignments'
+);
+
 reset role;
 select set_config(
   'request.jwt.claim.sub',
@@ -463,6 +486,20 @@ select extensions.throws_ok(
   'management remains read-only for roster changes'
 );
 
+select extensions.throws_ok(
+  $$select public.bulk_fill_manual_roster(
+    '2097-03-01',
+    '2097-03-01',
+    '2097-03-02',
+    'morning',
+    'empty_only',
+    'Blocked management bulk fill'
+  )$$,
+  'P0001',
+  'Hanya supervisor yang dapat mengisi roster secara massal',
+  'management cannot bulk fill roster assignments'
+);
+
 reset role;
 select set_config(
   'request.jwt.claim.sub',
@@ -470,6 +507,76 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.bulk_fill_manual_roster(
+    '2097-03-01',
+    '2097-03-01',
+    '2097-03-02',
+    'morning',
+    'empty_only',
+    'Mengisi jadwal dasar Maret'
+  )$$,
+  'supervisor can bulk fill a date range for schedulable employees'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from jsonb_array_elements(
+      public.get_monthly_roster('2097-03-01')->'assignments'
+    ) assignment
+    where assignment->>'work_date' between '2097-03-01' and '2097-03-02'
+      and assignment->>'shift_type' = 'morning'
+  ),
+  6,
+  'bulk fill schedules two days for two cashiers and one supervisor'
+);
+
+select public.bulk_fill_manual_roster(
+  '2097-03-01',
+  '2097-03-01',
+  '2097-03-02',
+  'morning',
+  'empty_only',
+  'Mengulangi isi sel kosong'
+) as repeated_bulk_result
+\gset
+
+select extensions.ok(
+  (:'repeated_bulk_result'::jsonb->>'created_count')::integer = 0
+    and (:'repeated_bulk_result'::jsonb->>'skipped_count')::integer = 6,
+  'empty-only bulk fill is idempotent and reports skipped assignments'
+);
+
+select public.bulk_fill_manual_roster(
+  '2097-03-01',
+  '2097-03-01',
+  '2097-03-02',
+  'night',
+  'replace',
+  'Mengganti rentang menjadi malam'
+) as replaced_bulk_result
+\gset
+
+select extensions.ok(
+  (:'replaced_bulk_result'::jsonb->>'updated_count')::integer = 6
+    and (:'replaced_bulk_result'::jsonb->>'created_count')::integer = 0,
+  'replace bulk fill reports updated assignments'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from jsonb_array_elements(
+      public.get_monthly_roster('2097-03-01')->'assignments'
+    ) assignment
+    where assignment->>'work_date' between '2097-03-01' and '2097-03-02'
+      and assignment->>'shift_type' = 'night'
+  ),
+  6,
+  'replace bulk fill changes the complete selected range atomically'
+);
 
 select extensions.lives_ok(
   $$select public.save_manual_roster_assignment(
@@ -912,7 +1019,7 @@ select extensions.throws_ok(
 
 select extensions.skip(
   'fixture creation requires local postgres privileges',
-  24
+  31
 );
 
 \endif

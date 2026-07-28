@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CalendarCheck2,
   CalendarDays,
+  CalendarRange,
   CheckCheck,
   ClipboardCheck,
   Edit3,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/master-data/queries";
 import {
   useAcknowledgeMonthlyRoster,
+  useBulkFillManualRoster,
   useDecideShiftSwapColleague,
   useDecideShiftSwapSupervisor,
   useMonthlyRoster,
@@ -31,6 +33,7 @@ import {
   useShiftSwapOptions,
 } from "@/lib/roster/queries";
 import type {
+  BulkRosterFillMode,
   RosterAssignment,
   RosterAssignmentType,
   RosterScheduleStatus,
@@ -39,6 +42,7 @@ import type {
 } from "@/lib/roster/repository";
 import { Combobox } from "@/components/ui/Combobox";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Modal } from "@/components/ui/Modal";
 import { playClickSound, playSuccessHaptic } from "@/utils/clickSound";
 
@@ -48,6 +52,15 @@ const monthStartFromDate = (date: Date) =>
 const dateFromInput = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
+};
+
+const monthEndFromStart = (monthStart: string) => {
+  const start = dateFromInput(monthStart);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(end.getDate()).padStart(2, "0")}`;
 };
 
 const monthDays = (monthStart: string) => {
@@ -101,6 +114,7 @@ export function LiveSchedulePage() {
     monthStartFromDate(new Date())
   );
   const [showEdit, setShowEdit] = useState(false);
+  const [showBulkFill, setShowBulkFill] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [decisionTarget, setDecisionTarget] =
@@ -117,6 +131,16 @@ export function LiveSchedulePage() {
   const [borrowedOff, setBorrowedOff] = useState(false);
   const [sourceWeekStart, setSourceWeekStart] = useState("");
   const [changeReason, setChangeReason] = useState("");
+  const [bulkEmployeeId, setBulkEmployeeId] = useState("all");
+  const [bulkStartDate, setBulkStartDate] = useState(monthStart);
+  const [bulkEndDate, setBulkEndDate] = useState(() =>
+    monthEndFromStart(monthStart)
+  );
+  const [bulkShiftType, setBulkShiftType] =
+    useState<Exclude<RosterShiftType, "off">>("morning");
+  const [bulkFillMode, setBulkFillMode] =
+    useState<BulkRosterFillMode>("empty_only");
+  const [bulkReason, setBulkReason] = useState("");
   const [publishReason, setPublishReason] = useState("");
   const [requesterScheduleId, setRequesterScheduleId] = useState("");
   const [colleagueScheduleId, setColleagueScheduleId] = useState("");
@@ -128,6 +152,7 @@ export function LiveSchedulePage() {
   const outletsQuery = useLiveOutlets();
   const templatesQuery = useActiveShiftTemplates();
   const saveMutation = useSaveManualRosterAssignment(monthStart);
+  const bulkFillMutation = useBulkFillManualRoster(monthStart);
   const publishMutation = usePublishManualRoster(monthStart);
   const acknowledgeMutation = useAcknowledgeMonthlyRoster(monthStart);
   const requestSwapMutation = useRequestShiftSwap(monthStart);
@@ -259,6 +284,8 @@ export function LiveSchedulePage() {
     const nextMonthStart = `${value}-01`;
     setMonthStart(nextMonthStart);
     setWorkDate(nextMonthStart);
+    setBulkStartDate(nextMonthStart);
+    setBulkEndDate(monthEndFromStart(nextMonthStart));
   };
 
   const handleSave = async (event: React.FormEvent) => {
@@ -337,6 +364,60 @@ export function LiveSchedulePage() {
         error instanceof Error
           ? error.message
           : "Roster belum dapat dipublikasikan.",
+        "warning"
+      );
+    }
+  };
+
+  const openBulkFill = () => {
+    playClickSound();
+    setBulkEmployeeId("all");
+    setBulkStartDate(monthStart);
+    setBulkEndDate(monthEndFromStart(monthStart));
+    setBulkShiftType("morning");
+    setBulkFillMode("empty_only");
+    setBulkReason("");
+    setShowBulkFill(true);
+  };
+
+  const handleBulkFill = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (
+      bulkStartDate < monthStart ||
+      bulkEndDate > monthEndFromStart(monthStart) ||
+      bulkStartDate > bulkEndDate
+    ) {
+      showToast("Rentang tanggal harus berada dalam bulan roster.", "warning");
+      return;
+    }
+    if (bulkReason.trim().length < 3) {
+      showToast("Alasan isi massal minimal 3 karakter.", "warning");
+      return;
+    }
+
+    try {
+      const result = await bulkFillMutation.mutateAsync({
+        monthStart,
+        startDate: bulkStartDate,
+        endDate: bulkEndDate,
+        shiftType: bulkShiftType,
+        fillMode: bulkFillMode,
+        reason: bulkReason.trim(),
+        employeeIds:
+          bulkEmployeeId === "all" ? null : [bulkEmployeeId],
+      });
+      playSuccessHaptic();
+      setShowBulkFill(false);
+      showToast(
+        `Isi massal selesai: ${result.created_count} dibuat, ${result.updated_count} diganti, ${result.skipped_count} dilewati.`,
+        "success"
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Jadwal massal belum dapat disimpan.",
         "warning"
       );
     }
@@ -491,6 +572,14 @@ export function LiveSchedulePage() {
               >
                 <Edit3 className="h-4 w-4" />
                 Atur Jadwal
+              </button>
+              <button
+                type="button"
+                onClick={openBulkFill}
+                className="flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300"
+              >
+                <CalendarRange className="h-4 w-4" />
+                Isi Massal
               </button>
               {roster?.version?.status === "draft" && (
                 <button
@@ -941,6 +1030,137 @@ export function LiveSchedulePage() {
             pending={publishMutation.isPending}
             onCancel={() => setShowPublish(false)}
             submitLabel="Publikasikan"
+          />
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showBulkFill}
+        onClose={() =>
+          !bulkFillMutation.isPending && setShowBulkFill(false)
+        }
+        title="Isi Jadwal Massal"
+        icon={CalendarRange}
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleBulkFill} className="space-y-4">
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-100">
+            Isi massal membuat jadwal kerja dasar di outlet utama. Off day,
+            backup outlet, serta pola Pagi sebelum off dan Malam setelah off
+            tetap diatur melalui matriks.
+          </div>
+
+          <Combobox
+            label="Cakupan karyawan"
+            options={[
+              {
+                value: "all",
+                label: "Semua kasir & supervisor aktif",
+                subtext: "Hanya akun yang memenuhi syarat roster",
+              },
+              ...rows
+                .filter((row): row is typeof row & { id: string } =>
+                  Boolean(row.id)
+                )
+                .map((row) => ({
+                  value: row.id,
+                  label: row.name,
+                  subtext: row.detail,
+                })),
+            ]}
+            value={bulkEmployeeId}
+            onChange={setBulkEmployeeId}
+          />
+
+          <DateRangePicker
+            label="Rentang tanggal"
+            startDate={bulkStartDate}
+            endDate={bulkEndDate}
+            onChange={(startDate, endDate) => {
+              setBulkStartDate(startDate);
+              setBulkEndDate(endDate);
+            }}
+          />
+
+          <Combobox
+            label="Shift dasar"
+            options={[
+              {
+                value: "morning",
+                label: "Pagi",
+                subtext: "Template Pagi outlet utama",
+              },
+              {
+                value: "middle",
+                label: "Middle",
+                subtext: "Template Middle outlet utama",
+              },
+              {
+                value: "night",
+                label: "Malam",
+                subtext: "Template Malam outlet utama",
+              },
+            ]}
+            value={bulkShiftType}
+            onChange={(value) =>
+              setBulkShiftType(
+                value as Exclude<RosterShiftType, "off">
+              )
+            }
+          />
+
+          <Combobox
+            label="Perlakuan jadwal lama"
+            options={[
+              {
+                value: "empty_only",
+                label: "Hanya isi sel kosong",
+                subtext: "Pilihan aman; jadwal yang sudah ada dipertahankan",
+              },
+              {
+                value: "replace",
+                label: "Ganti seluruh rentang",
+                subtext: "Menimpa jadwal kerja yang sudah ada",
+              },
+            ]}
+            value={bulkFillMode}
+            onChange={(value) =>
+              setBulkFillMode(value as BulkRosterFillMode)
+            }
+          />
+
+          {bulkFillMode === "replace" && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200"
+            >
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              Jadwal pada rentang ini akan diganti secara atomik. Off day yang
+              sudah ada juga akan berubah menjadi jadwal kerja.
+            </div>
+          )}
+
+          <label className="block space-y-1 text-xs text-slate-300">
+            <span>Alasan isi massal</span>
+            <textarea
+              rows={3}
+              value={bulkReason}
+              onChange={(event) => setBulkReason(event.target.value)}
+              placeholder="Contoh: Mengisi jadwal dasar bulan ini"
+              minLength={3}
+              required
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            />
+          </label>
+
+          <SubmitActions
+            pending={bulkFillMutation.isPending}
+            onCancel={() => setShowBulkFill(false)}
+            submitLabel={
+              bulkFillMode === "replace"
+                ? "Ganti Jadwal"
+                : "Isi Sel Kosong"
+            }
           />
         </form>
       </Modal>

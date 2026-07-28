@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { rosterKeys } from "./query-keys";
 import {
   acknowledgeMonthlyRoster,
+  bulkFillManualRoster,
   decideShiftSwapColleague,
   decideShiftSwapSupervisor,
   getMonthlyRoster,
@@ -12,6 +13,7 @@ import {
   publishManualRoster,
   requestShiftSwap,
   saveManualRosterAssignment,
+  type BulkFillRosterInput,
   type SaveRosterAssignmentInput,
 } from "./repository";
 
@@ -29,6 +31,17 @@ export function useSaveManualRosterAssignment(monthStart: string) {
   return useMutation({
     mutationFn: (input: SaveRosterAssignmentInput) =>
       saveManualRosterAssignment(createClient(), input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: rosterKeys.month(monthStart) }),
+  });
+}
+
+export function useBulkFillManualRoster(monthStart: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: BulkFillRosterInput) =>
+      bulkFillManualRoster(createClient(), input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: rosterKeys.month(monthStart) }),
   });

@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan dua puluh migration berikut identik antara
+- Project hosted sudah terhubung dan dua puluh satu migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                  | Fungsi                                    |
@@ -98,12 +98,13 @@ Sudah tersedia:
 | `20260728170000_fix_get_monthly_roster_empty_period.sql`   | Karyawan tersedia sebelum periode roster  |
 | `20260728190000_harden_attendance_retention_access.sql`    | Hardening akses selfie dan retention job  |
 | `20260728200000_atomic_attendance_deletion_completion.sql` | Finalisasi retensi dan audit atomik        |
+| `20260728210000_bulk_manual_roster_fill.sql`               | Isi rentang roster manual secara atomik    |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `222/222`.
+- pgTAP lulus `230/230`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -478,6 +479,10 @@ Selesai:
 - Hak eksekusi fungsi internal dan RPC roster telah di-hardening. Anonymous
   tidak dapat menjalankan fungsi roster; hanya RPC publik yang diperlukan
   diberikan kepada role authenticated.
+- Pengisian dasar dapat dilakukan sekaligus untuk semua kasir/supervisor atau
+  satu karyawan pada rentang tanggal. Mode aman hanya mengisi sel kosong;
+  mode replace diaudit dan seluruh proses rollback bila penempatan atau
+  template shift salah satu target tidak tersedia.
 - Migration lokal dan hosted identik. Lint schema lokal/hosted bersih, pgTAP
   lokal/hosted lulus `130/130`, types generation, lint aplikasi, typecheck,
   production build, serta 14 E2E desktop/mobile lulus.
@@ -654,11 +659,14 @@ tier melalui penghapusan bukti yang dapat diaudit.
   tetap menolak request tanpa bearer secret. Worker memulihkan job processing
   yang lease-nya kedaluwarsa; perubahan evidence, job, dan audit diselesaikan
   oleh RPC service-role dalam satu transaksi.
-- pgTAP lokal/hosted `222/222` mencakup finalisasi atomik dan retry idempotent.
+- pgTAP lokal/hosted `230/230` mencakup finalisasi atomik, retry idempotent,
+  hak akses isi roster massal, mode sel kosong idempotent, dan replace atomik.
   Lint, TypeScript, production build, serta 16/16 E2E desktop/mobile lulus.
-- Tersisa: isi `CRON_SECRET` di Vercel, verifikasi cron deployment, uji
-  approve terhadap selfie nyata, dan pastikan signed URL lama tidak dapat
-  mengambil objek setelah worker selesai.
+- `CRON_SECRET` sudah dikonfigurasi dan deployment endpoint cron terverifikasi
+  menolak request tanpa bearer dengan `401`. Isi roster massal ditambahkan
+  untuk membuka jalur uji kasir tanpa mengisi seluruh bulan per sel.
+- Tersisa: uji approve terhadap selfie kasir nyata, verifikasi invocation cron,
+  dan pastikan signed URL lama tidak dapat mengambil objek setelah worker selesai.
 
 ---
 

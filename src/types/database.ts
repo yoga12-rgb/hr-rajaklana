@@ -2188,6 +2188,18 @@ export type Database = {
         }
         Returns: number
       }
+      bulk_fill_manual_roster: {
+        Args: {
+          p_employee_ids?: string[]
+          p_end_date: string
+          p_fill_mode: string
+          p_month_start: string
+          p_reason: string
+          p_shift_type: Database["public"]["Enums"]["shift_type"]
+          p_start_date: string
+        }
+        Returns: Json
+      }
       can_view_announcement: {
         Args: { target_announcement_id: string }
         Returns: boolean

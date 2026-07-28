@@ -65,6 +65,10 @@ Jangan menjalankan reset terhadap production.
   authenticated. Penyusunan manual, publikasi, acknowledgement, dan tukar
   shift wajib melalui RPC role-aware yang telah di-hardening dari akses
   anonymous.
+- Isi jadwal massal wajib melalui `bulk_fill_manual_roster`. RPC hanya menerima
+  kasir eligible/supervisor aktif, memakai outlet utama per tanggal, mendukung
+  mode sel kosong atau replace, dan rollback seluruh rentang bila satu target
+  tidak memiliki penempatan atau template shift aktif.
 - Versi roster `published` bersifat immutable. Perubahan berikutnya membuat
   draft baru dari versi aktif; publikasi mengganti versi aktif secara atomik,
   menulis audit, dan membuat notifikasi/receipt baru.

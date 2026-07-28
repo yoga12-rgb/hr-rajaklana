@@ -104,6 +104,27 @@ export interface SaveRosterAssignmentResult {
   warnings: Array<{ code: string; message: string }>;
 }
 
+export type BulkRosterFillMode = "empty_only" | "replace";
+
+export interface BulkFillRosterInput {
+  monthStart: string;
+  startDate: string;
+  endDate: string;
+  shiftType: Exclude<RosterShiftType, "off">;
+  fillMode: BulkRosterFillMode;
+  reason: string;
+  employeeIds?: string[] | null;
+}
+
+export interface BulkFillRosterResult {
+  roster_version_id: string;
+  employee_count: number;
+  date_count: number;
+  created_count: number;
+  updated_count: number;
+  skipped_count: number;
+}
+
 export interface PublishRosterResult {
   roster_version_id: string;
   version_number: number;
@@ -166,6 +187,24 @@ export async function saveManualRosterAssignment(
 
   if (error) throw rosterError("Jadwal belum dapat disimpan", error);
   return parseObject(data) as unknown as SaveRosterAssignmentResult;
+}
+
+export async function bulkFillManualRoster(
+  client: RosterClient,
+  input: BulkFillRosterInput
+) {
+  const { data, error } = await client.rpc("bulk_fill_manual_roster", {
+    p_month_start: input.monthStart,
+    p_start_date: input.startDate,
+    p_end_date: input.endDate,
+    p_shift_type: input.shiftType,
+    p_fill_mode: input.fillMode,
+    p_reason: input.reason,
+    p_employee_ids: input.employeeIds ?? undefined,
+  });
+
+  if (error) throw rosterError("Jadwal massal belum dapat disimpan", error);
+  return parseObject(data) as unknown as BulkFillRosterResult;
 }
 
 export async function publishManualRoster(

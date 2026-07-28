@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 222/222 pada
+- Dua puluh satu migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 230/230 pada
   28 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -46,8 +46,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Impor XLSX karyawan sudah memiliki template, validasi dry-run per baris,
   checksum payload, dan commit atomik. File diproses di browser, tidak
   diunggah ke Storage, dan akun pengguna tetap dibuat terpisah.
-- Jadwal live sudah mendukung roster manual bulanan berversi, off day,
-  backup outlet, publikasi, acknowledgement, dan tukar shift dua tahap.
+- Jadwal live sudah mendukung roster manual bulanan berversi, isi jadwal
+  massal atomik, off day, backup outlet, publikasi, acknowledgement, dan
+  tukar shift dua tahap.
 - Cuti/Izin live sudah mendukung saldo tahunan, reservasi, dokumen privat,
   pembatalan, jenis cuti dinamis, serta keputusan atomik. Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
