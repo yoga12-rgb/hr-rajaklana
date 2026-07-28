@@ -346,17 +346,18 @@ Perubahan setelah publikasi:
 
 ### 7.10 Validasi presensi dan selfie
 
-1. Presensi harian siap divalidasi setelah clock-out.
+1. Waktu dan selfie clock-in dapat dipantau supervisor segera setelah
+   clock-in. Keputusan validasi baru tersedia setelah clock-out.
 2. Supervisor mempunyai waktu maksimal tiga hari untuk memvalidasi.
 3. Sistem mengirim pengingat sebelum tenggat.
 4. Supervisor pertama yang memutuskan mengunci proses.
 5. Supervisor tidak dapat memvalidasi presensinya sendiri.
 6. Selfie diperiksa secara visual tanpa face matching.
-7. Jika disetujui, selfie langsung dihapus dari Supabase Storage.
-8. Jika ditolak, selfie disimpan sampai kasus selesai dengan batas maksimal 30 hari.
-9. Sistem memberi peringatan sebelum penghapusan selfie yang belum selesai.
-10. Metadata, keputusan, dan audit trail tidak ikut terhapus.
-11. Kegagalan penghapusan file harus masuk antrean retry dan terlihat oleh supervisor.
+7. Setiap selfie disimpan selama tujuh hari sejak waktu upload, tanpa
+   dipercepat oleh keputusan approve, reject, atau needs correction.
+8. Setelah melewati tujuh hari, selfie otomatis masuk proses penghapusan.
+9. Metadata, keputusan, dan audit trail tidak ikut terhapus.
+10. Kegagalan penghapusan file harus masuk antrean retry dan terlihat oleh supervisor.
 
 ### 7.11 Koreksi presensi
 
@@ -508,8 +509,7 @@ Ekspor:
 
 | Data | Retensi |
 | --- | --- |
-| Selfie presensi disetujui | Hapus segera setelah validasi |
-| Selfie presensi ditolak | Sampai kasus selesai, maksimal 30 hari |
+| Selfie presensi clock-in | 7 hari sejak upload, lalu dihapus otomatis |
 | Surat dokter/dokumen izin | Sampai akhir tahun berjalan |
 | Audit trail | 2 tahun |
 | Riwayat karyawan nonaktif | Tetap disimpan selama diperlukan untuk laporan |
@@ -589,17 +589,19 @@ Ekspor:
 - **when** pengguna clock-out di geofence penugasan,
 - **then** sistem menutup presensi tanpa meminta selfie dan menghitung durasi kerja.
 
-### AC-06 — Validasi dan penghapusan selfie
+### AC-06 — Preview, validasi, dan retensi selfie
 
-- **Given** presensi sudah clock-out,
-- **when** supervisor lain menyetujui,
-- **then** status terkunci, metadata audit tersimpan, dan selfie masuk antrean penghapusan segera.
+- **Given** karyawan sudah clock-in dengan selfie,
+- **when** supervisor membuka pantauan presensi,
+- **then** waktu masuk dan selfie dapat dilihat, tetapi keputusan belum aktif
+  sebelum clock-out.
 
 ### AC-07 — Presensi ditolak
 
-- **Given** supervisor menolak presensi,
-- **when** kasus belum selesai,
-- **then** selfie tetap tersedia secara private hingga kasus selesai atau mencapai 30 hari.
+- **Given** selfie clock-in telah disimpan,
+- **when** keputusan apa pun telah diberikan atau belum diberikan,
+- **then** selfie tetap private selama tujuh hari sejak upload dan baru
+  dihapus otomatis setelah batas tersebut.
 
 ### AC-08 — Keputusan bersamaan
 

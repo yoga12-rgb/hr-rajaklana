@@ -117,7 +117,10 @@ function getDeviceLocation() {
   });
 }
 
-/** Inbox validasi supervisor dengan selfie privat berumur dua menit. */
+/**
+ * Pantauan clock-in dan inbox validasi supervisor dengan signed URL dua menit.
+ * Bukti dapat dipreview sejak clock-in, sedangkan keputusan menunggu clock-out.
+ */
 function AttendanceValidationQueue() {
   const { showToast } = useHR();
   const queue = usePendingAttendanceValidations(true);
@@ -155,6 +158,10 @@ function AttendanceValidationQueue() {
     decision: "approved" | "rejected" | "needs_correction"
   ) => {
     if (!selected) return;
+    if (!selected.clock_out_at) {
+      showToast("Keputusan tersedia setelah karyawan clock-out.", "warning");
+      return;
+    }
     if (decision !== "approved" && note.trim().length < 3) {
       showToast("Catatan minimal 3 karakter wajib untuk keputusan ini.", "warning");
       return;
@@ -181,7 +188,7 @@ function AttendanceValidationQueue() {
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-100">
           <ClipboardCheck className="h-4 w-4 text-amber-400" />
-          Validasi Presensi
+          Pantauan & Validasi Presensi
         </h2>
         <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
           {queue.data?.length ?? 0} pending
@@ -223,7 +230,9 @@ function AttendanceValidationQueue() {
             </span>
             <span className="mt-1 block text-[10px] text-slate-400">
               {formatDate(item.work_date)} · {item.outlet_name} ·{" "}
-              {formatDuration(item.worked_duration_min)}
+              {item.clock_out_at
+                ? formatDuration(item.worked_duration_min)
+                : `Masuk ${formatTime(item.clock_in_at)} · Sedang bekerja`}
             </span>
           </span>
           <Eye className="h-4 w-4 shrink-0 text-amber-400" />
@@ -246,9 +255,14 @@ function AttendanceValidationQueue() {
                 {formatDate(selected.work_date)} · {selected.outlet_name}
               </p>
               <p className="mt-2 text-xs text-slate-300">
-                {formatTime(selected.clock_in_at)}–{formatTime(selected.clock_out_at)}
-                {" · "}
-                {formatDuration(selected.worked_duration_min)}
+                Masuk {formatTime(selected.clock_in_at)}
+              </p>
+              <p className="mt-1 text-xs text-slate-300">
+                {selected.clock_out_at
+                  ? `Pulang ${formatTime(selected.clock_out_at)} · ${formatDuration(
+                      selected.worked_duration_min
+                    )}`
+                  : "Sedang bekerja · keputusan tersedia setelah clock-out"}
               </p>
             </div>
 
@@ -269,45 +283,54 @@ function AttendanceValidationQueue() {
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">
-                Catatan keputusan
-              </label>
-              <textarea
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                rows={3}
-                placeholder="Wajib untuk penolakan atau permintaan koreksi"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
-              />
-            </div>
+            {selected.clock_out_at ? (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Catatan keputusan
+                  </label>
+                  <textarea
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    rows={3}
+                    placeholder="Wajib untuk penolakan atau permintaan koreksi"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button
-                type="button"
-                disabled={decisionMutation.isPending}
-                onClick={() => void decide("needs_correction")}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-300 disabled:opacity-50"
-              >
-                Perlu Koreksi
-              </button>
-              <button
-                type="button"
-                disabled={decisionMutation.isPending}
-                onClick={() => void decide("rejected")}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-bold text-rose-300 disabled:opacity-50"
-              >
-                <XCircle className="h-4 w-4" /> Tolak
-              </button>
-              <button
-                type="button"
-                disabled={decisionMutation.isPending}
-                onClick={() => void decide("approved")}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-xs font-black text-slate-950 disabled:opacity-50"
-              >
-                <Check className="h-4 w-4" /> Setujui
-              </button>
-            </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    disabled={decisionMutation.isPending}
+                    onClick={() => void decide("needs_correction")}
+                    className="rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-300 disabled:opacity-50"
+                  >
+                    Perlu Koreksi
+                  </button>
+                  <button
+                    type="button"
+                    disabled={decisionMutation.isPending}
+                    onClick={() => void decide("rejected")}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-bold text-rose-300 disabled:opacity-50"
+                  >
+                    <XCircle className="h-4 w-4" /> Tolak
+                  </button>
+                  <button
+                    type="button"
+                    disabled={decisionMutation.isPending}
+                    onClick={() => void decide("approved")}
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-xs font-black text-slate-950 disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" /> Setujui
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+                Foto dan waktu clock-in sudah dapat dipantau. Validasi akhir
+                tersedia setelah karyawan melakukan clock-out.
+              </p>
+            )}
           </div>
         )}
       </Modal>

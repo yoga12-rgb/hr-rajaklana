@@ -98,7 +98,7 @@ export interface AttendanceValidationItem {
   outlet_name: string;
   work_date: string;
   clock_in_at: string;
-  clock_out_at: string;
+  clock_out_at: string | null;
   worked_duration_min: number | null;
   clock_in_state: string;
   clock_out_state: string | null;
@@ -282,7 +282,6 @@ export async function listPendingAttendanceValidations(
       `
     )
     .eq("validation_status", "pending")
-    .not("clock_out_at", "is", null)
     .order("validation_due_at")
     .limit(50);
 
@@ -297,7 +296,7 @@ export async function listPendingAttendanceValidations(
     outlet_name: record.outlet?.name ?? "Outlet",
     work_date: record.work_date,
     clock_in_at: record.clock_in_at,
-    clock_out_at: record.clock_out_at!,
+    clock_out_at: record.clock_out_at,
     worked_duration_min: record.worked_duration_min,
     clock_in_state: record.clock_in_state,
     clock_out_state: record.clock_out_state,

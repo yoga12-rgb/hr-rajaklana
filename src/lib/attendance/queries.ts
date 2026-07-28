@@ -29,6 +29,7 @@ export function usePendingAttendanceValidations(enabled: boolean) {
     queryKey: attendanceKeys.validations(),
     queryFn: () => listPendingAttendanceValidations(createClient()),
     enabled,
+    refetchInterval: enabled ? 30_000 : false,
   });
 }
 

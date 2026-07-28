@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(29);
+select extensions.plan(30);
 
 select extensions.ok(
   not has_function_privilege('anon', 'public.get_attendance_workspace()', 'execute'),
@@ -372,6 +372,20 @@ values (
   1024
 );
 
+select extensions.ok(
+  exists (
+    select 1
+    from public.attendance_evidence evidence
+    join public.file_deletion_jobs job on job.evidence_id = evidence.id
+    where evidence.id = '7b000000-0000-0000-0000-000000000001'
+      and evidence.retention_status = 'scheduled_for_deletion'
+      and job.status = 'scheduled'
+      and job.deletion_reason = 'attendance_selfie_seven_day_retention'
+      and job.scheduled_for = evidence.uploaded_at + interval '7 days'
+  ),
+  'clock-in selfie atomically receives a seven-day retention job'
+);
+
 select set_config('request.jwt.claim.sub', '75000000-0000-0000-0000-000000000001', true);
 set local role authenticated;
 select extensions.throws_ok(
@@ -407,9 +421,19 @@ select extensions.ok(
     from public.file_deletion_jobs
     where evidence_id = '7b000000-0000-0000-0000-000000000001'
       and status = 'scheduled'
-      and deletion_reason = 'attendance_approved'
+      and deletion_reason = 'attendance_selfie_seven_day_retention'
+      and not exists (
+        select 1
+        from public.file_deletion_jobs obsolete_job
+        where obsolete_job.evidence_id
+          = '7b000000-0000-0000-0000-000000000001'
+          and obsolete_job.deletion_reason in (
+            'attendance_approved',
+            'attendance_rejected_retention_limit'
+          )
+      )
   ),
-  'approval atomically schedules selfie deletion'
+  'approval preserves the original seven-day selfie retention schedule'
 );
 select extensions.throws_ok(
   $$select public.validate_attendance(
@@ -478,7 +502,7 @@ select extensions.lives_ok(
 
 \else
 
-select extensions.skip(21, 'database role cannot seed attendance fixtures');
+select extensions.skip(22, 'database role cannot seed attendance fixtures');
 
 \endif
 

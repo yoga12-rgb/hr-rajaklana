@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh tiga migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 234/234 pada
+- Dua puluh empat migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 235/235 pada
   28 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -56,12 +56,11 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
   UI menampilkan preview jarak server, status proses, kondisi offline, serta
-  retry upload idempotent. Inbox validasi supervisor, signed URL singkat,
-  deletion worker idempotent, pemulihan lease, finalisasi metadata/audit
-  atomik, retry cron, dan monitoring job gagal sudah tersedia. Invocation
-  worker production dengan bearer secret sudah lulus; uji approve selfie
-  nyata dan invalidasi signed URL masih tersisa. Optimizer roster otomatis
-  belum diimplementasikan.
+  retry upload idempotent. Supervisor dapat memantau waktu dan selfie sejak
+  clock-in; keputusan tetap menunggu clock-out. Selfie dijadwalkan terhapus
+  tujuh hari setelah upload. Signed URL singkat, deletion worker idempotent,
+  pemulihan lease, finalisasi metadata/audit atomik, retry cron, dan monitoring
+  job gagal sudah tersedia. Optimizer roster otomatis belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.

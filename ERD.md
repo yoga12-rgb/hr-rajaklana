@@ -346,6 +346,9 @@ erDiagram
 12. Validasi aturan lintas baris dijalankan oleh fungsi transaksi database sebelum publikasi.
 13. Client authenticated tidak memperoleh hak tulis langsung ke tabel historis roster; seluruh perubahan melalui RPC role-aware.
 14. Satu sumber jatah off pekanan hanya dapat digunakan sekali per karyawan, termasuk saat dipinjam dari pekan bersebelahan.
+15. Selfie clock-in dapat dipreview supervisor sejak clock-in, tetapi keputusan
+    validasi menunggu clock-out. Objek disimpan tujuh hari sejak upload lalu
+    dihapus otomatis tanpa menghapus metadata dan audit.
 15. Permintaan tukar shift yang masih terbuka hanya boleh satu untuk satu assignment asal.
 
 ## 6. ERD Presensi

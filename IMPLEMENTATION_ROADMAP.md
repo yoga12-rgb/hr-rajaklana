@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan dua puluh tiga migration berikut identik antara
+- Project hosted sudah terhubung dan dua puluh empat migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                  | Fungsi                                    |
@@ -101,12 +101,13 @@ Sudah tersedia:
 | `20260728210000_bulk_manual_roster_fill.sql`               | Isi rentang roster manual secara atomik    |
 | `20260728220000_update_active_placement_effective_date.sql` | Koreksi tanggal efektif penempatan aktif   |
 | `20260728230000_assign_partial_week_to_starting_month.sql`  | Kepemilikan pekan parsial untuk jatah off  |
+| `20260729003000_preview_clock_in_and_retain_selfie_seven_days.sql` | Preview clock-in dan retensi tujuh hari |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `234/234`.
+- pgTAP lulus `235/235`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -120,8 +121,8 @@ menjadi aplikasi multi-user:
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
 - Belum ada data karyawan/outlet nyata yang diimpor.
-- Belum ada upload selfie nyata, worker penghapusan file, atau optimizer
-  roster otomatis.
+- Upload selfie nyata dan worker penghapusan file sudah tersedia. Optimizer
+  roster otomatis belum diimplementasikan.
 - Konfigurasi environment Vercel tidak dapat dianggap selesai hanya karena
   tersedia secara lokal; wajib diverifikasi dari deployment.
 
@@ -632,12 +633,11 @@ tier melalui penghapusan bukti yang dapat diaudit.
 
 ### Pekerjaan
 
-- Buat inbox presensi pending validation.
+- Buat pantauan clock-in dan inbox presensi pending validation.
 - Tampilkan selfie melalui signed URL pendek hanya kepada pihak berwenang.
 - Gunakan RPC validasi; jangan update status langsung.
-- Saat approve, jadwalkan penghapusan selfie segera.
-- Saat reject/needs correction, pertahankan bukti sesuai retensi PRD, maksimal
-  30 hari untuk bukti yang ditolak.
+- Jadwalkan setiap selfie terhapus tujuh hari setelah upload, tanpa
+  mempercepatnya berdasarkan hasil validasi.
 - Implementasikan worker idempotent untuk `file_deletion_jobs`; gunakan
   environment server-only dan retry/backoff.
 - Setelah objek terhapus, isi `deleted_at` dan status retensi tanpa menghapus
@@ -647,19 +647,21 @@ tier melalui penghapusan bukti yang dapat diaudit.
 ### Exit criteria
 
 - AC-06, AC-07, AC-08, dan AC-09 lulus.
-- Approve, audit, dan pembuatan deletion job terjadi atomik.
+- Upload metadata selfie dan pembuatan deletion job terjadi atomik.
 - Worker aman dijalankan berulang.
 - File hilang dari Storage tetapi metadata keputusan tetap tersedia.
 - Pengguna tidak dapat mengambil signed URL setelah retensi selesai.
 
 ### Status implementasi 28 Juli 2026
 
-- Halaman Presensi live supervisor memiliki inbox pending, detail durasi,
-  selfie private melalui signed URL dua menit, serta keputusan approve,
-  reject, dan needs correction melalui RPC first-write-wins.
-- Approve tetap membuat deletion job secara atomik di database. Server Action
-  mencoba penghapusan segera; Vercel Cron menjadi retry harian dengan claim
-  bersyarat, backoff maksimal 24 jam, dan batas enam percobaan.
+- Halaman Presensi live supervisor menampilkan waktu dan selfie private
+  melalui signed URL dua menit sejak clock-in. Daftar diperbarui setiap 30
+  detik; keputusan approve, reject, dan needs correction baru tersedia
+  setelah clock-out dan tetap memakai RPC first-write-wins.
+- Pembuatan metadata selfie otomatis membuat deletion job tepat tujuh hari
+  setelah upload. Keputusan validasi tidak mempercepat jadwal tersebut.
+  Vercel Cron memproses job jatuh tempo dengan claim bersyarat, backoff
+  maksimal 24 jam, dan batas enam percobaan.
 - Worker menandai metadata evidence sebagai deleted tanpa menghapus histori
   presensi, mencatat audit penghapusan, menganggap objek yang sudah tidak ada
   sebagai sukses idempotent, dan UI menampilkan jumlah job gagal.
@@ -667,18 +669,17 @@ tier melalui penghapusan bukti yang dapat diaudit.
   tetap menolak request tanpa bearer secret. Worker memulihkan job processing
   yang lease-nya kedaluwarsa; perubahan evidence, job, dan audit diselesaikan
   oleh RPC service-role dalam satu transaksi.
-- pgTAP lokal/hosted `234/234` mencakup finalisasi atomik, retry idempotent,
+- pgTAP lokal/hosted `235/235` mencakup finalisasi atomik, retry idempotent,
   hak akses isi roster massal, mode sel kosong idempotent, dan replace atomik.
   Lint, TypeScript, production build, serta 16/16 E2E desktop/mobile lulus.
 - `CRON_SECRET` sudah dikonfigurasi dan deployment endpoint cron terverifikasi
   menolak request tanpa bearer dengan `401`. Isi roster massal ditambahkan
   untuk membuka jalur uji kasir tanpa mengisi seluruh bulan per sel.
 - Invocation berotorisasi terhadap alias production berhasil mencapai worker
-  dengan `200` dan hasil `scanned=0`, `completed=0`, `failed=0`. Hosted saat
-  verifikasi memiliki satu presensi pending, satu selfie aktif, dan belum
-  memiliki deletion job karena keputusan supervisor belum dilakukan.
-- Tersisa: supervisor menguji approve terhadap selfie kasir nyata, lalu
-  verifikasi objek terhapus dan signed URL lama tidak dapat mengambil objek.
+  dengan `200`. Selfie nyata yang sudah ada telah memperoleh deletion job
+  tujuh hari dengan `scheduled_for = uploaded_at + 7 days`.
+- Tersisa: setelah job selfie nyata jatuh tempo, verifikasi objek terhapus dan
+  signed URL lama tidak dapat mengambil objek.
   Invocation otomatis Vercel pukul 03.17 WIB tetap perlu dikonfirmasi melalui
   log dashboard setelah jadwal berikutnya berjalan.
 
