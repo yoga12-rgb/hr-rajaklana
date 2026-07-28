@@ -6,6 +6,8 @@ import { useDataSource } from "@/context/DataSourceContext";
 import {
   useArchiveEmployeeMaster,
   useCreateEmployeeMaster,
+  useCreateUserAccount,
+  useResetUserPassword,
   useCurrentAccessRole,
   useLiveEmployees,
   useLiveEmploymentStatuses,
@@ -30,6 +32,10 @@ import {
   LoaderCircle,
   Pencil,
   TriangleAlert,
+  KeyRound,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
@@ -82,6 +88,10 @@ function LiveEmployeesPage() {
     null
   );
   const [archiveReason, setArchiveReason] = useState("");
+  const [accountEmployee, setAccountEmployee] = useState<LiveEmployee | null>(
+    null
+  );
+  const [resetEmployee, setResetEmployee] = useState<LiveEmployee | null>(null);
 
   if (
     employeesQuery.isPending ||
@@ -199,38 +209,86 @@ function LiveEmployeesPage() {
         }
         renderEmployeeActions={
           canManage
-            ? (employee) => (
-                <div className="flex items-center justify-end gap-2 border-t border-slate-800/70 pt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openEditForm(
-                        liveEmployees.find(
-                          (item) => item.id === employee.id
-                        )!
-                      )
-                    }
-                    className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-300 transition-colors hover:border-amber-500/40 hover:text-amber-400"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Ubah
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openArchiveForm(
-                        liveEmployees.find(
-                          (item) => item.id === employee.id
-                        )!
-                      )
-                    }
-                    className="flex cursor-pointer items-center gap-1 rounded-lg border border-rose-500/25 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/15"
-                  >
-                    <Archive className="h-3.5 w-3.5" />
-                    Arsipkan
-                  </button>
-                </div>
-              )
+            ? (employee) => {
+                const liveEmp = liveEmployees.find(
+                  (item) => item.id === employee.id
+                )!;
+                const account = liveEmp.user_account;
+                const hasAccount = !!account;
+
+                return (
+                  <div className="space-y-2.5 border-t border-slate-800/70 pt-3">
+                    {/* Account status row */}
+                    <div className="flex items-center justify-between">
+                      {hasAccount ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-400">
+                          <ShieldCheck className="h-3 w-3" />
+                          {account.access_role === "supervisor"
+                            ? "Supervisor"
+                            : account.access_role === "management"
+                              ? "Management"
+                              : "Employee"}
+                          {account.account_status !== "active" && (
+                            <span className="text-amber-400">
+                              · {account.account_status}
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-500">
+                          Belum punya akun
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!hasAccount && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClickSound();
+                            setAccountEmployee(liveEmp);
+                          }}
+                          className="flex cursor-pointer items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-400 transition-colors hover:bg-amber-500/15"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                          Buat Akun
+                        </button>
+                      )}
+                      {hasAccount && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClickSound();
+                            setResetEmployee(liveEmp);
+                          }}
+                          className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 transition-colors hover:border-amber-500/40 hover:text-amber-400"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                          Reset Sandi
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openEditForm(liveEmp)}
+                        className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-300 transition-colors hover:border-amber-500/40 hover:text-amber-400"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Ubah
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openArchiveForm(liveEmp)}
+                        className="flex cursor-pointer items-center gap-1 rounded-lg border border-rose-500/25 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/15"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        Arsipkan
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
             : undefined
         }
       />
@@ -314,6 +372,29 @@ function LiveEmployeesPage() {
           </div>
         </form>
       </Modal>
+
+      {accountEmployee && (
+        <CreateAccountModal
+          employee={accountEmployee}
+          onClose={() => setAccountEmployee(null)}
+          onSuccess={(message) => {
+            setAccountEmployee(null);
+            showToast(message, "success");
+          }}
+        />
+      )}
+
+      {resetEmployee && resetEmployee.user_account && (
+        <ResetPasswordModal
+          employee={resetEmployee}
+          userId={resetEmployee.user_account.user_id}
+          onClose={() => setResetEmployee(null)}
+          onSuccess={(message) => {
+            setResetEmployee(null);
+            showToast(message, "success");
+          }}
+        />
+      )}
     </>
   );
 }
@@ -891,6 +972,336 @@ function LiveEmployeeFormModal({
           >
             {isPending && <LoaderCircle className="h-4 w-4 animate-spin" />}
             {employee ? "Simpan Perubahan" : "Simpan Karyawan"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Modal untuk membuat akun login Supabase Auth bagi karyawan yang belum
+ * memiliki akun. Supervisor mengisi email, password awal, dan access role.
+ * Akun yang dibuat akan berstatus `invited` dengan `must_change_password=true`.
+ */
+function CreateAccountModal({
+  employee,
+  onClose,
+  onSuccess,
+}: {
+  employee: LiveEmployee;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}) {
+  const createMutation = useCreateUserAccount();
+  const [email, setEmail] = useState(
+    `${employee.full_name.toLowerCase().replace(/\s+/g, ".")}@rajaklana.com`
+  );
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [accessRole, setAccessRole] = useState<
+    "employee" | "supervisor" | "management"
+  >("employee");
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!email.trim() || !password) {
+      setFormError("Email dan kata sandi awal wajib diisi.");
+      return;
+    }
+
+    try {
+      await createMutation.mutateAsync({
+        email: email.trim().toLowerCase(),
+        initialPassword: password,
+        employeeId: employee.id,
+        accessRole,
+      });
+      playSuccessHaptic();
+      onSuccess(
+        `Akun ${email.trim()} berhasil dibuat untuk ${employee.full_name}. Pengguna wajib ganti sandi pada login pertama.`
+      );
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Akun belum dapat dibuat."
+      );
+    }
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={() => {
+        if (!createMutation.isPending) onClose();
+      }}
+      title="Buat Akun Login"
+      icon={KeyRound}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Employee info */}
+        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/20 text-sm font-bold text-amber-400">
+            {employee.full_name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-slate-100">
+              {employee.full_name}
+            </p>
+            <p className="text-xs text-slate-400">
+              {employee.nik} · {employee.job_position?.name}
+            </p>
+          </div>
+        </div>
+
+        {formError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"
+          >
+            {formError}
+          </div>
+        )}
+
+        {/* Email */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-slate-300">
+            Email login
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="nama@rajaklana.com"
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            required
+          />
+        </div>
+
+        {/* Password */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-slate-300">
+            Kata sandi awal
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Minimal 8 karakter, huruf besar, kecil, angka"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 pr-10 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              minLength={8}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500">
+            Pengguna wajib mengganti sandi ini pada login pertama.
+          </p>
+        </div>
+
+        {/* Access Role */}
+        <Combobox
+          label="Hak akses"
+          options={[
+            {
+              value: "employee",
+              label: "Employee",
+              subtext: "Kasir / karyawan biasa",
+            },
+            {
+              value: "supervisor",
+              label: "Supervisor",
+              subtext: "Kelola data, jadwal, dan persetujuan",
+            },
+            {
+              value: "management",
+              label: "Management",
+              subtext: "Akses baca laporan saja",
+            },
+          ]}
+          value={accessRole}
+          onChange={(val) =>
+            setAccessRole(val as "employee" | "supervisor" | "management")
+          }
+        />
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={createMutation.isPending}
+            className="flex-1 rounded-xl bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={createMutation.isPending}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {createMutation.isPending && (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            )}
+            Buat Akun
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Modal untuk reset password pengguna oleh supervisor.
+ * Password baru akan memaksa pengguna mengganti sandi pada login berikutnya.
+ */
+function ResetPasswordModal({
+  employee,
+  userId,
+  onClose,
+  onSuccess,
+}: {
+  employee: LiveEmployee;
+  userId: string;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}) {
+  const resetMutation = useResetUserPassword();
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!password) {
+      setFormError("Kata sandi baru wajib diisi.");
+      return;
+    }
+
+    try {
+      await resetMutation.mutateAsync({ userId, password });
+      playSuccessHaptic();
+      onSuccess(
+        `Kata sandi ${employee.full_name} berhasil direset. Pengguna wajib mengganti sandi pada login berikutnya.`
+      );
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Kata sandi belum dapat direset."
+      );
+    }
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={() => {
+        if (!resetMutation.isPending) onClose();
+      }}
+      title="Reset Kata Sandi"
+      icon={KeyRound}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Employee info */}
+        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/20 text-sm font-bold text-amber-400">
+            {employee.full_name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-slate-100">
+              {employee.full_name}
+            </p>
+            <p className="text-xs text-slate-400">{employee.nik}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <TriangleAlert className="h-5 w-5 shrink-0 text-amber-400" />
+          <p>
+            Kata sandi baru akan menggantikan sandi lama. Pengguna wajib
+            menggantinya lagi pada login berikutnya.
+          </p>
+        </div>
+
+        {formError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"
+          >
+            {formError}
+          </div>
+        )}
+
+        {/* Password */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-slate-300">
+            Kata sandi baru
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Minimal 8 karakter, huruf besar, kecil, angka"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 pr-10 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+              minLength={8}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={resetMutation.isPending}
+            className="flex-1 rounded-xl bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={resetMutation.isPending}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {resetMutation.isPending && (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            )}
+            Reset Sandi
           </button>
         </div>
       </form>

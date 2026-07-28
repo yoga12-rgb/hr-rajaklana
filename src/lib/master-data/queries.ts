@@ -2,6 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import {
+  createUserAccount,
+  resetUserPassword,
+} from "@/lib/auth/actions";
+import type { CreateAccountInput } from "@/lib/auth/actions";
 import { masterDataKeys } from "./query-keys";
 import {
   listActiveEmployees,
@@ -218,6 +223,27 @@ export function useCommitEmployeeImport() {
   return useMutation({
     mutationFn: (input: EmployeeImportCommitInput) =>
       commitEmployeeImport(createClient(), input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: masterDataKeys.employees() }),
+  });
+}
+
+export function useCreateUserAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateAccountInput) => createUserAccount(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: masterDataKeys.employees() }),
+  });
+}
+
+export function useResetUserPassword() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      resetUserPassword(userId, password),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: masterDataKeys.employees() }),
   });

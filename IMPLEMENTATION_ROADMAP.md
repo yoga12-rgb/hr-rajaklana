@@ -5,8 +5,8 @@
 | Atribut               | Nilai                                                           |
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
-| Terakhir diverifikasi | 26 Juli 2026                                                    |
-| Fase saat ini         | M5 presensi GPS dan selfie sedang dikerjakan                    |
+| Terakhir diverifikasi | 28 Juli 2026                                                    |
+| Fase saat ini         | M6 validasi presensi dan retensi file menjadi pekerjaan berikut |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tujuh belas migration berikut identik antara
+- Project hosted sudah terhubung dan delapan belas migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                  | Fungsi                                    |
@@ -95,12 +95,13 @@ Sudah tersedia:
 | `20260728150000_attendance_clock_workflow.sql`             | Clock-in/out, geofence server, dan selfie |
 | `20260728153000_harden_attendance_function_privileges.sql` | Hardening hak RPC presensi                |
 | `20260728160000_attendance_geofence_preview.sql`           | Preview jarak geofence server untuk UI    |
+| `20260728170000_fix_get_monthly_roster_empty_period.sql`   | Karyawan tersedia sebelum periode roster  |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `192/192`.
+- pgTAP lulus `213/213`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -305,6 +306,8 @@ Selesai:
   transaksional `complete_password_change`.
 - Operasi server-only untuk membuat akun dan reset password manual tersedia
   dengan pemeriksaan role.
+- Halaman Karyawan live menampilkan status akun serta modal supervisor untuk
+  membuat akun dan mengganti kata sandi awal tanpa mengekspos secret admin.
 - Script idempotent `npm run auth:bootstrap-supervisor` tersedia, membaca
   environment lokal, dan tidak menyimpan password.
 - Supervisor pertama `RK-2026-001` sudah terverifikasi di hosted Auth dan
@@ -546,7 +549,7 @@ Selesai:
 
 ---
 
-## M5 — Presensi GPS, Geofence, dan Selfie (`IN PROGRESS`)
+## M5 — Presensi GPS, Geofence, dan Selfie (`DONE`)
 
 ### Tujuan
 
@@ -579,7 +582,7 @@ mobile-first.
 - Retry tidak membuat record atau file ganda.
 - Uji perangkat nyata dilakukan pada Android dan iOS/Safari bila tersedia.
 
-### Status implementasi 26 Juli 2026
+### Status implementasi 28 Juli 2026
 
 - Migration lokal/hosted menambahkan RPC workspace, clock-in idempotent, clock-out,
   Haversine server-side, batas accuracy, status jam kerja, audit, dan menutup
@@ -594,16 +597,17 @@ mobile-first.
 - Supervisor dapat memilih outlet aktif mana pun tanpa jadwal/selfie. Kasir
   wajib memiliki jadwal terbit, berada dalam satu jam sebelum shift, berada
   dalam geofence, dan mengambil selfie langsung dari kamera.
-- pgTAP lokal/hosted `212/212` mencakup hak akses, preview geofence, accuracy buruk, luar
+- pgTAP lokal/hosted `213/213` mencakup hak akses, preview geofence, accuracy buruk, luar
   geofence, selfie wajib, fleksibilitas supervisor, idempotensi, satu sesi,
   dan clock-out. Schema lint lokal/hosted, ESLint, TypeScript, production
   build, serta 14/14 E2E juga lulus setelah perbaikan UI.
-- Tersisa sebelum status `DONE`: smoke test kamera/GPS pada Android serta
-  iOS/Safari bila perangkat tersedia.
+- Pemilik produk mengonfirmasi alur presensi dan penyimpanan selfie berhasil
+  pada perangkat yang tersedia. Pengujian iOS/Safari tetap menjadi cakupan
+  pilot saat perangkat tersedia dan tidak menghalangi dimulainya retensi M6.
 
 ---
 
-## M6 — Validasi Presensi dan Retensi File (`BACKLOG`)
+## M6 — Validasi Presensi dan Retensi File (`NEXT`)
 
 ### Tujuan
 

@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(37);
+select extensions.plan(38);
 
 select extensions.ok(
   not has_function_privilege(
@@ -400,6 +400,22 @@ values
     false
   );
 
+select set_config(
+  'request.jwt.claim.sub',
+  '66000000-0000-0000-0000-000000000002',
+  true
+);
+set local role authenticated;
+
+select extensions.ok(
+  public.get_monthly_roster('2097-02-01')->'period' = 'null'::jsonb
+    and jsonb_array_length(
+      public.get_monthly_roster('2097-02-01')->'employees'
+    ) = 4,
+  'supervisor can select employees before the monthly roster period exists'
+);
+
+reset role;
 select set_config(
   'request.jwt.claim.sub',
   '66000000-0000-0000-0000-000000000001',
@@ -896,7 +912,7 @@ select extensions.throws_ok(
 
 select extensions.skip(
   'fixture creation requires local postgres privileges',
-  23
+  24
 );
 
 \endif

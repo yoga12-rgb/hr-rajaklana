@@ -15,6 +15,17 @@ import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { useDataSource } from "@/context/DataSourceContext";
 import { LiveLeavesPage } from "@/components/leaves/LiveLeavesPage";
 
+function localDateOffset(days: number) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function LeavesPage() {
   const { mode } = useDataSource();
 
@@ -35,8 +46,8 @@ function DemoLeavesPage() {
   
   // Form State
   const [leaveType, setLeaveType] = useState<LeaveRequest["type"]>("Cuti Tahunan");
-  const [startDate, setStartDate] = useState<string>("2026-07-27");
-  const [endDate, setEndDate] = useState<string>("2026-07-28");
+  const [startDate, setStartDate] = useState<string>(() => localDateOffset(0));
+  const [endDate, setEndDate] = useState<string>(() => localDateOffset(1));
   const [reason, setReason] = useState<string>("");
 
   const myRequests = leaveRequests.filter((request) => request.employeeId === "EMP-999");

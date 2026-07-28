@@ -163,6 +163,11 @@ export async function listActiveEmployees(client: MasterDataClient) {
             code,
             name
           )
+        ),
+        user_account:user_accounts (
+          user_id,
+          access_role,
+          account_status
         )
       `
     )

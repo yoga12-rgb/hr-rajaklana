@@ -17,9 +17,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tujuh belas migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 212/212 pada
-  26 Juli 2026.
+- Delapan belas migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 213/213 pada
+  28 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
@@ -35,7 +35,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Modul selain data karyawan, Jadwal, Cuti/Izin, Lembur, dan Pengaturan master
   data masih memakai `HRContext` dan `localStorage`.
 - Login, logout, route protection, wajib ganti password, operasi akun
-  server-only, dan script bootstrap supervisor sudah diimplementasikan.
+  server-only, UI akun pada halaman Karyawan, dan script bootstrap supervisor
+  sudah diimplementasikan.
 - Supervisor pertama sudah dibuat; login pertama, wajib ganti password,
   logout, dan login ulang telah berhasil diuji secara lokal.
 - Otorisasi anonymous, employee, supervisor, dan management telah diuji;
@@ -58,8 +59,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Milestone **M3 — Penjadwalan Manual, Off Day, dan Versi Roster** sudah
   selesai.
 - Milestone **M4 — Cuti, Izin, dan Lembur** sudah selesai.
-- Milestone aktif adalah **M5 — Presensi GPS, Geofence, dan
-  Selfie** pada
+- Milestone aktif adalah **M6 — Validasi Presensi dan Retensi File** pada
   `IMPLEMENTATION_ROADMAP.md`.
 - Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
   selesai. Setelah menyelesaikan milestone, perbarui status roadmap dan
