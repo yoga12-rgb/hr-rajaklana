@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(25);
+select extensions.plan(29);
 
 select extensions.ok(
   not has_function_privilege('anon', 'public.get_attendance_workspace()', 'execute'),
@@ -43,6 +43,14 @@ select extensions.ok(
 select extensions.ok(
   not has_table_privilege('authenticated', 'public.file_deletion_jobs', 'update'),
   'clients cannot update retention jobs directly'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.complete_attendance_file_deletion_job(uuid,timestamptz)',
+    'execute'
+  ),
+  'clients cannot finalize retention jobs'
 );
 select has_table_privilege(current_user, 'public.job_positions', 'insert')
   as can_seed_attendance_fixtures
@@ -415,9 +423,62 @@ select extensions.throws_ok(
   'attendance validation is first-write-wins'
 );
 
+reset role;
+update public.file_deletion_jobs
+set
+  status = 'processing',
+  attempt_count = 1
+where evidence_id = '7b000000-0000-0000-0000-000000000001';
+
+select id as deletion_job_id
+from public.file_deletion_jobs
+where evidence_id = '7b000000-0000-0000-0000-000000000001'
+\gset
+
+select set_config('request.jwt.claim.role', 'service_role', true);
+set local role service_role;
+select extensions.lives_ok(
+  format(
+    $$select public.complete_attendance_file_deletion_job(%L, now())$$,
+    :'deletion_job_id'
+  ),
+  'service worker finalizes deletion metadata and audit atomically'
+);
+
+reset role;
+select extensions.ok(
+  (
+    select evidence.retention_status = 'deleted'
+      and evidence.deleted_at is not null
+      and job.status = 'completed'
+      and job.completed_at is not null
+      and exists (
+        select 1
+        from public.audit_logs audit
+        where audit.entity_type = 'file_deletion_job'
+          and audit.entity_id = job.id
+          and audit.action = 'delete_storage_object'
+      )
+    from public.attendance_evidence evidence
+    join public.file_deletion_jobs job on job.evidence_id = evidence.id
+    where evidence.id = '7b000000-0000-0000-0000-000000000001'
+  ),
+  'completed deletion preserves atomic job, evidence, and audit state'
+);
+
+select set_config('request.jwt.claim.role', 'service_role', true);
+set local role service_role;
+select extensions.lives_ok(
+  format(
+    $$select public.complete_attendance_file_deletion_job(%L, now())$$,
+    :'deletion_job_id'
+  ),
+  'repeating deletion completion is idempotent'
+);
+
 \else
 
-select extensions.skip(18, 'database role cannot seed attendance fixtures');
+select extensions.skip(21, 'database role cannot seed attendance fixtures');
 
 \endif
 

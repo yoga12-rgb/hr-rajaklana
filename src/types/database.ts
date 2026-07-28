@@ -2351,6 +2351,10 @@ export type Database = {
         Args: { p_dry_run_job_id: string; p_reason: string; p_rows: Json }
         Returns: Json
       }
+      complete_attendance_file_deletion_job: {
+        Args: { p_deleted_at?: string; p_job_id: string }
+        Returns: undefined
+      }
       complete_password_change: {
         Args: never
         Returns: {

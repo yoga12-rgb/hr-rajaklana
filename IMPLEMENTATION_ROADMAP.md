@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan sembilan belas migration berikut identik antara
+- Project hosted sudah terhubung dan dua puluh migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                  | Fungsi                                    |
@@ -97,12 +97,13 @@ Sudah tersedia:
 | `20260728160000_attendance_geofence_preview.sql`           | Preview jarak geofence server untuk UI    |
 | `20260728170000_fix_get_monthly_roster_empty_period.sql`   | Karyawan tersedia sebelum periode roster  |
 | `20260728190000_harden_attendance_retention_access.sql`    | Hardening akses selfie dan retention job  |
+| `20260728200000_atomic_attendance_deletion_completion.sql` | Finalisasi retensi dan audit atomik        |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `218/218`.
+- pgTAP lulus `222/222`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -649,8 +650,12 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - Worker menandai metadata evidence sebagai deleted tanpa menghapus histori
   presensi, mencatat audit penghapusan, menganggap objek yang sudah tidak ada
   sebagai sukses idempotent, dan UI menampilkan jumlah job gagal.
-- pgTAP lokal/hosted `218/218`, lint, TypeScript, production build, serta
-  14/14 E2E desktop/mobile lulus.
+- Route cron dikecualikan secara spesifik dari redirect cookie aplikasi dan
+  tetap menolak request tanpa bearer secret. Worker memulihkan job processing
+  yang lease-nya kedaluwarsa; perubahan evidence, job, dan audit diselesaikan
+  oleh RPC service-role dalam satu transaksi.
+- pgTAP lokal/hosted `222/222` mencakup finalisasi atomik dan retry idempotent.
+  Lint, TypeScript, production build, serta 16/16 E2E desktop/mobile lulus.
 - Tersisa: isi `CRON_SECRET` di Vercel, verifikasi cron deployment, uji
   approve terhadap selfie nyata, dan pastikan signed URL lama tidak dapat
   mengambil objek setelah worker selesai.

@@ -8,6 +8,7 @@ import {
 
 const authPublicPaths = ["/login"];
 const authUtilityPaths = ["/change-password"];
+const internalServicePaths = ["/api/internal/attendance-retention"];
 
 function isE2EPrototypeMode() {
   return (
@@ -26,6 +27,10 @@ function isAuthUtilityPath(pathname: string) {
   return authUtilityPaths.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
+}
+
+function isInternalServicePath(pathname: string) {
+  return internalServicePaths.includes(pathname);
 }
 
 function redirectToLogin(request: NextRequest, reason?: string) {
@@ -54,6 +59,12 @@ export async function updateSession(request: NextRequest) {
   // Menjaga regression test prototype tetap terisolasi dari hosted Auth.
   // Vercel selalu menolak bypass ini walaupun variabel tersetel tanpa sengaja.
   if (isE2EPrototypeMode()) {
+    return response;
+  }
+
+  // Route internal melakukan autentikasi bearer sendiri dan harus dapat
+  // dipanggil Vercel Cron tanpa cookie sesi pengguna.
+  if (isInternalServicePath(pathname)) {
     return response;
   }
 

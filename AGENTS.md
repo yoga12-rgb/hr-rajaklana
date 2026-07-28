@@ -1,7 +1,9 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
 <!-- END:nextjs-agent-rules -->
 
 # Agent Guide & Repository Architecture Documentation
@@ -17,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Sembilan belas migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 218/218 pada
+- Dua puluh migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 222/222 pada
   28 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -52,8 +54,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
   UI menampilkan preview jarak server, status proses, kondisi offline, serta
   retry upload idempotent. Inbox validasi supervisor, signed URL singkat,
-  deletion worker idempotent, retry cron, dan monitoring job gagal sedang
-  dikerjakan; optimizer roster otomatis belum diimplementasikan.
+  deletion worker idempotent, pemulihan lease, finalisasi metadata/audit
+  atomik, retry cron, dan monitoring job gagal sudah tersedia; optimizer
+  roster otomatis belum diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -198,45 +201,45 @@ Roadmap teknis, milestone, quality gate, dan handoff agent berada di
 
 ## 🛠️ Aturan Komponen Reusable (Guidelines for AI Agents)
 
-1. **Pop-up / Modal Dialog**: 
-   * **WAJIB** menggunakan komponen `Modal` dari `@/components/ui/Modal`.
-   * Contoh: `<Modal isOpen={isOpen} onClose={handleClose} title="Title" icon={LucideIcon}>...content...</Modal>`
+1. **Pop-up / Modal Dialog**:
+   - **WAJIB** menggunakan komponen `Modal` dari `@/components/ui/Modal`.
+   - Contoh: `<Modal isOpen={isOpen} onClose={handleClose} title="Title" icon={LucideIcon}>...content...</Modal>`
 
 2. **Ringkasan Kartu Statistik (Metrics)**:
-   * **WAJIB** menggunakan komponen `StatCard` dari `@/components/ui/StatCard`.
-   * Contoh: `<StatCard title="Total" value="10" icon={Users} />`
+   - **WAJIB** menggunakan komponen `StatCard` dari `@/components/ui/StatCard`.
+   - Contoh: `<StatCard title="Total" value="10" icon={Users} />`
 
 3. **Grafik Analytics**:
-   * Gunakan atau tambahkan komponen terpisah di `src/components/ui/` jika membuat jenis grafik baru.
+   - Gunakan atau tambahkan komponen terpisah di `src/components/ui/` jika membuat jenis grafik baru.
 
 4. **State Data**:
-   * Modul prototype yang belum dimigrasikan wajib tetap memakai `useHR()` dari `@/context/HRContext`.
-   * Modul yang sudah dimigrasikan ke Supabase wajib memakai DAL/query hooks
+   - Modul prototype yang belum dimigrasikan wajib tetap memakai `useHR()` dari `@/context/HRContext`.
+   - Modul yang sudah dimigrasikan ke Supabase wajib memakai DAL/query hooks
      bertipe dan tidak boleh melakukan dual-write ke `HRContext`.
-   * Ikuti urutan migrasi dan mode sumber data eksplisit pada
+   - Ikuti urutan migrasi dan mode sumber data eksplisit pada
      `IMPLEMENTATION_ROADMAP.md`.
 
 5. **Pengecualian Fitur (Fitur yang Dilarang)**:
-   * **DILARANG EKSPLISIT** menyarankan, membuat, atau menambahkan fitur **Slip Gaji / Payroll / Ringkasan Gaji** dalam bentuk apa pun. Pengguna telah mengonfirmasi bahwa aplikasi ini difokuskan pada HR (Karyawan, Presensi, Cuti, Shift, Laporan) tanpa pengelolaan gaji.
+   - **DILARANG EKSPLISIT** menyarankan, membuat, atau menambahkan fitur **Slip Gaji / Payroll / Ringkasan Gaji** dalam bentuk apa pun. Pengguna telah mengonfirmasi bahwa aplikasi ini difokuskan pada HR (Karyawan, Presensi, Cuti, Shift, Laporan) tanpa pengelolaan gaji.
 
 6. **Prinsip Mobile-First & Best Practice Industri**:
-   * **WAJIB Mobile-First**: Semua komponen dan halaman baru harus dirancang dan dioptimalkan untuk layar smartphone (`< 640px`) terlebih dahulu, lalu disesuaikan secara responsif untuk desktop.
-   * **UX Native & Bebas `alert()`**: Wajib gunakan `showToast()` dari `useHR()` untuk notifikasi. Dilarang menggunakan `alert()` browser. Gunakan animasi mikro Framer Motion dan feedback suara `playClickSound()`.
+   - **WAJIB Mobile-First**: Semua komponen dan halaman baru harus dirancang dan dioptimalkan untuk layar smartphone (`< 640px`) terlebih dahulu, lalu disesuaikan secara responsif untuk desktop.
+   - **UX Native & Bebas `alert()`**: Wajib gunakan `showToast()` dari `useHR()` untuk notifikasi. Dilarang menggunakan `alert()` browser. Gunakan animasi mikro Framer Motion dan feedback suara `playClickSound()`.
 
 7. **Pemeliharaan Dokumentasi Otomatis (Self-Documentation Rule)**:
-   * **WAJIB** memperbarui file `AGENTS.md` (bagian struktur direktori / aturan) dan menambahkan komentar JSDoc pada file komponen setiap kali membuat komponen reusable baru, merombak arsitektur, atau menambah fitur besar. Dokumen tidak boleh dibiarkan usang.
+   - **WAJIB** memperbarui file `AGENTS.md` (bagian struktur direktori / aturan) dan menambahkan komentar JSDoc pada file komponen setiap kali membuat komponen reusable baru, merombak arsitektur, atau menambah fitur besar. Dokumen tidak boleh dibiarkan usang.
 
 8. **General Domain Rule (Aplikasi HR & Operasional Umum)**:
-   * **WAJIB General**: Aplikasi ini adalah **Sistem HRD & Workforce Operations Umum** yang serbaguna untuk bidang perusahaan operasional apa pun. **DILARANG EKSPLISIT** menggunakan istilah spesifik seperti *resto, resort, kitchen, waiter* secara kaku. Gunakan istilah umum seperti *Perusahaan, Rajaklana HQ, Area Operasional, Produksi & Operasional, Layanan & Lapangan, Team Lead, Supervisor*.
+   - **WAJIB General**: Aplikasi ini adalah **Sistem HRD & Workforce Operations Umum** yang serbaguna untuk bidang perusahaan operasional apa pun. **DILARANG EKSPLISIT** menggunakan istilah spesifik seperti _resto, resort, kitchen, waiter_ secara kaku. Gunakan istilah umum seperti _Perusahaan, Rajaklana HQ, Area Operasional, Produksi & Operasional, Layanan & Lapangan, Team Lead, Supervisor_.
 
 9. **Aturan Standar Mobile PWA & Native UX (Wajib Dipatuhi)**:
-   * **iOS & Android Safe-Area Insets**: Komponen `Header` wajib menyertakan `pt-[env(safe-area-inset-top)]` dan `h-[calc(4rem+env(safe-area-inset-top))]`, serta `BottomNav` menyertakan `pb-[max(1rem,env(safe-area-inset-bottom))]` untuk menghindari bentrokan dengan *notch*, *status bar*, dan *iOS Home Bar*. Metadata `viewport` wajib menggunakan `viewportFit: "cover"`.
-   * **Header Glassmorphism Translucent**: Header wajib menggunakan `bg-slate-900/85 backdrop-blur-xl` sehingga saat halaman di-*scroll*, konten di bawahnya samar terpotong (*frosted glass*) dengan mewah.
-   * **Robust Body Scroll Lock (Modal / Bottom Sheet)**: Komponen `Modal` wajib menggunakan teknik `position: fixed` pada `document.body` saat terbuka untuk mematikan *background scrolling* pada iOS Safari.
-   * **Smart Virtual Keyboard Auto-Scroll**: Komponen `Modal` wajib memanfaatkan `window.visualViewport` API & focus listener (`handleFocusIn`) untuk menyuntikkan padding dinamik (`pb-64`) dan memanggil `scrollIntoView({ block: 'center' })` agar elemen input (`input`, `textarea`, `select`, `Combobox`, `DatePicker`, `TimePicker`) tidak pernah tertutupi keyboard HP.
-   * **Toast Notification Mobile Standard**: Komponen `Toast` diposisikan secara melayang di bawah header (`top-[calc(4.25rem+env(safe-area-inset-top))]`) dengan bentuk *Floating Capsule Pill* (`rounded-2xl`), *Glassmorphism Blur*, dan ikon dalam wadah transparan (`w-7 h-7 bg-amber-500/15`).
-   * **Desain Bebas Scrollbar**: Semua *scrollbar* visual disembunyikan secara global di `globals.css` (`::-webkit-scrollbar { display: none; }`) untuk estetika aplikasi *native*.
-   * **Kamera Selfie Presensi Portrait**: Kamera presensi wajib menggunakan rasio *Portrait* (`480x640`, `aspectRatio: 0.75`), container bingkai tegak (`h-72 sm:h-80`), dan transformasi cermin `ctx.scale(-1, 1)` agar pratinjau dan foto selfie konsisten.
+   - **iOS & Android Safe-Area Insets**: Komponen `Header` wajib menyertakan `pt-[env(safe-area-inset-top)]` dan `h-[calc(4rem+env(safe-area-inset-top))]`, serta `BottomNav` menyertakan `pb-[max(1rem,env(safe-area-inset-bottom))]` untuk menghindari bentrokan dengan _notch_, _status bar_, dan _iOS Home Bar_. Metadata `viewport` wajib menggunakan `viewportFit: "cover"`.
+   - **Header Glassmorphism Translucent**: Header wajib menggunakan `bg-slate-900/85 backdrop-blur-xl` sehingga saat halaman di-_scroll_, konten di bawahnya samar terpotong (_frosted glass_) dengan mewah.
+   - **Robust Body Scroll Lock (Modal / Bottom Sheet)**: Komponen `Modal` wajib menggunakan teknik `position: fixed` pada `document.body` saat terbuka untuk mematikan _background scrolling_ pada iOS Safari.
+   - **Smart Virtual Keyboard Auto-Scroll**: Komponen `Modal` wajib memanfaatkan `window.visualViewport` API & focus listener (`handleFocusIn`) untuk menyuntikkan padding dinamik (`pb-64`) dan memanggil `scrollIntoView({ block: 'center' })` agar elemen input (`input`, `textarea`, `select`, `Combobox`, `DatePicker`, `TimePicker`) tidak pernah tertutupi keyboard HP.
+   - **Toast Notification Mobile Standard**: Komponen `Toast` diposisikan secara melayang di bawah header (`top-[calc(4.25rem+env(safe-area-inset-top))]`) dengan bentuk _Floating Capsule Pill_ (`rounded-2xl`), _Glassmorphism Blur_, dan ikon dalam wadah transparan (`w-7 h-7 bg-amber-500/15`).
+   - **Desain Bebas Scrollbar**: Semua _scrollbar_ visual disembunyikan secara global di `globals.css` (`::-webkit-scrollbar { display: none; }`) untuk estetika aplikasi _native_.
+   - **Kamera Selfie Presensi Portrait**: Kamera presensi wajib menggunakan rasio _Portrait_ (`480x640`, `aspectRatio: 0.75`), container bingkai tegak (`h-72 sm:h-80`), dan transformasi cermin `ctx.scale(-1, 1)` agar pratinjau dan foto selfie konsisten.
 
 ---
 
@@ -245,13 +248,13 @@ Roadmap teknis, milestone, quality gate, dan handoff agent berada di
 Fondasi Supabase sudah tersedia, tetapi UI masih menggunakan data prototype.
 Urutan implementasi wajib mengikuti `IMPLEMENTATION_ROADMAP.md`. Saat setiap
 modul dipindahkan ke data nyata, AI Agent **WAJIB** mematuhi rencana arsitektur
-*Instant UX / Zero-Latency* berikut:
+_Instant UX / Zero-Latency_ berikut:
 
 1. **Optimistic UI Updates**:
-   * Aksi pengguna (seperti Absen Masuk, Tambah Karyawan, Setujui Cuti, Tukar Shift) harus **langsung mengubah UI secara instan (0ms)** di client, sementara proses mutasi API dikirim di latar belakang secara asinkron.
+   - Aksi pengguna (seperti Absen Masuk, Tambah Karyawan, Setujui Cuti, Tukar Shift) harus **langsung mengubah UI secara instan (0ms)** di client, sementara proses mutasi API dikirim di latar belakang secara asinkron.
 2. **Caching & Stale-While-Revalidate (`@tanstack/react-query`)**:
-   * Gunakan TanStack Query (React Query) untuk menangani *data fetching* dan *caching* agar navigasi antar menu menggunakan data cache (terbuka seketika tanpa loading spinner yang mengganggu).
+   - Gunakan TanStack Query (React Query) untuk menangani _data fetching_ dan _caching_ agar navigasi antar menu menggunakan data cache (terbuka seketika tanpa loading spinner yang mengganggu).
 3. **Prefetching & React Suspense**:
-   * Manfaatkan *prefetching* data pada tombol navigasi dan tampilkan `Skeleton` loader saat data awal memuat.
+   - Manfaatkan _prefetching_ data pada tombol navigasi dan tampilkan `Skeleton` loader saat data awal memuat.
 4. **Offline-First / Local Storage Persistence**:
-   * Pertimbangkan penyimpan data lokal (IndexedDB / LocalStorage) agar aplikasi tetap responsif jika digunakan di area operasional dengan sinyal HP terbatas.
+   - Pertimbangkan penyimpan data lokal (IndexedDB / LocalStorage) agar aplikasi tetap responsif jika digunakan di area operasional dengan sinyal HP terbatas.

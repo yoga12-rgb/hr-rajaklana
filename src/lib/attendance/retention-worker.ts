@@ -21,6 +21,25 @@ function isAlreadyMissing(message: string) {
 export async function processDueAttendanceDeletionJobs(limit = 20) {
   const admin = createAdminClient();
   const now = new Date().toISOString();
+  const staleBefore = new Date(Date.now() - 15 * 60_000).toISOString();
+
+  const { error: leaseRecoveryError } = await admin
+    .from("file_deletion_jobs")
+    .update({
+      status: "failed",
+      scheduled_for: now,
+      last_error: "Worker sebelumnya berhenti sebelum menyelesaikan job.",
+    })
+    .eq("status", "processing")
+    .lt("updated_at", staleBefore)
+    .not("evidence_id", "is", null);
+
+  if (leaseRecoveryError) {
+    throw new Error(
+      `Lease retensi belum dapat dipulihkan: ${leaseRecoveryError.message}`
+    );
+  }
+
   const { data: jobs, error: listError } = await admin
     .from("file_deletion_jobs")
     .select(
@@ -65,41 +84,21 @@ export async function processDueAttendanceDeletionJobs(limit = 20) {
         throw removal.error;
       }
 
-      const deletedAt = new Date().toISOString();
-      if (job.evidence_id) {
-        const { error: evidenceError } = await admin
-          .from("attendance_evidence")
-          .update({
-            deleted_at: deletedAt,
-            retention_status: "deleted",
-          })
-          .eq("id", job.evidence_id);
-        if (evidenceError) throw evidenceError;
+      const { error: completionError } = await admin.rpc(
+        "complete_attendance_file_deletion_job",
+        {
+          p_job_id: job.id,
+          p_deleted_at: new Date().toISOString(),
+        }
+      );
+      if (completionError) {
+        throw completionError;
       }
 
-      const { error: completionError } = await admin
-        .from("file_deletion_jobs")
-        .update({
-          status: "completed",
-          completed_at: deletedAt,
-          last_error: null,
-        })
-        .eq("id", job.id)
-        .eq("status", "processing");
-      if (completionError) throw completionError;
-
-      await admin.from("audit_logs").insert({
-        action: "delete_storage_object",
-        entity_type: "file_deletion_job",
-        entity_id: job.id,
-        after_values: {
-          storage_bucket: job.storage_bucket,
-          storage_path: job.storage_path,
-          deletion_reason: job.deletion_reason,
-          attempt,
-        },
-        reason: job.deletion_reason,
-      });
+      // Audit dan perubahan metadata diselesaikan atomik oleh RPC.
+      if (!job.evidence_id) {
+        throw new Error("Deletion job tidak memiliki evidence presensi.");
+      }
       completed += 1;
     } catch (error) {
       const message =

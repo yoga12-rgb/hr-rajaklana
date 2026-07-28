@@ -103,5 +103,9 @@ Jangan menjalankan reset terhadap production.
   server-only menghapus objek secara idempotent dan mempertahankan metadata.
 - Endpoint cron retensi memerlukan `CRON_SECRET`. Secret hanya disimpan di
   environment Vercel dan tidak boleh memakai nilai publishable atau admin key.
+- Proxy aplikasi melewatkan hanya path cron retensi yang eksplisit; Route
+  Handler tetap menolak request tanpa bearer secret. Worker memulihkan lease
+  processing yang macet dan memakai RPC service-role agar status job,
+  metadata evidence, serta audit selesai atomik.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.
