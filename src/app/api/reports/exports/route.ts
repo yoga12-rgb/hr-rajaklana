@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { processReportExport } from "@/lib/reports/export-worker";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -25,15 +26,32 @@ function parseJob(value: Json) {
   return value;
 }
 
+function sessionExpired() {
+  return NextResponse.json(
+    { error: "Sesi habis. Silakan login ulang." },
+    { status: 401 }
+  );
+}
+
 /** Menjadwalkan atau mengulang ekspor XLSX tanpa menunggu worker selesai. */
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  // Mode demo/CI sengaja tidak membawa env Supabase. Tolak seperti request
+  // anonim tanpa mencoba membuat client atau membocorkan detail konfigurasi.
+  if (!isSupabaseConfigured()) return sessionExpired();
+
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Layanan ekspor belum tersedia." },
+      { status: 503 }
+    );
+  }
+
   const { data: claimsData } = await supabase.auth.getClaims();
   if (!claimsData?.claims?.sub) {
-    return NextResponse.json(
-      { error: "Sesi habis. Silakan login ulang." },
-      { status: 401 }
-    );
+    return sessionExpired();
   }
 
   let body: Record<string, unknown>;
