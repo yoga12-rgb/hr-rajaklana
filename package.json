@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",
+    "test:unit": "node --no-warnings --experimental-strip-types --test tests/**/*.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "auth:bootstrap-supervisor": "node scripts/bootstrap-supervisor.mjs",

@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 29 Juli 2026                                                    |
-| Fase saat ini         | M6 validasi presensi dan retensi file sedang dikerjakan         |
+| Fase saat ini         | M7 roster otomatis berjalan dengan verifikasi M6 ditangguhkan   |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -624,7 +624,7 @@ mobile-first.
 
 ---
 
-## M6 — Validasi Presensi dan Retensi File (`IN PROGRESS`)
+## M6 — Validasi Presensi dan Retensi File (`DEFERRED VERIFICATION`)
 
 ### Tujuan
 
@@ -709,10 +709,13 @@ tier melalui penghapusan bukti yang dapat diaudit.
   Invocation otomatis Vercel berikutnya perlu dikonfirmasi melalui
   `--cron-status`. Pada paket Hobby, schedule tersebut dapat dijalankan kapan
   saja antara pukul 03.00-03.59 WIB, bukan wajib tepat pukul 03.17 WIB.
+- Pada 29 Juli 2026, pemilik produk menyetujui penangguhan khusus untuk dua
+  verifikasi berbasis waktu di atas agar M7 dapat dimulai. M6 belum berstatus
+  selesai dan tetap menjadi gate wajib sebelum M8/pilot produksi.
 
 ---
 
-## M7 — Roster Otomatis, Middle, dan Fairness (`BACKLOG`)
+## M7 — Roster Otomatis, Middle, dan Fairness (`IN PROGRESS`)
 
 ### Tujuan
 
@@ -737,6 +740,19 @@ diedit supervisor.
   parsial sebagai roster valid.
 - Supervisor dapat mengubah output dengan alasan dan mempublikasikan versi
   baru.
+
+### Progres 29 Juli 2026
+
+- Generator TypeScript murni `deterministic-matching-v1` sudah tersedia dengan
+  snapshot aturan, seed, konflik blocking, dan fairness report per kasir.
+- Alokasi Middle memakai deterministic bipartite matching; Pagi/Malam memakai
+  pemerataan jumlah shift dan frekuensi pasangan sebagai soft constraints.
+- Lima unit test mencakup fixture bulanan valid, reproduktibilitas, pola off,
+  batas Middle, konflik kapasitas, dan larangan backup lintas outlet tanpa
+  penugasan manual, serta target performa 200 kasir. Unit test sudah masuk
+  GitHub Quality Gate.
+- Integrasi snapshot input Supabase, commit atomik generation run, preview UI,
+  fixture multi-outlet, serta benchmark pilot masih harus diselesaikan.
 
 ### Exit criteria
 

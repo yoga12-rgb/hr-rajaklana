@@ -76,11 +76,15 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Milestone **M3 — Penjadwalan Manual, Off Day, dan Versi Roster** sudah
   selesai.
 - Milestone **M4 — Cuti, Izin, dan Lembur** sudah selesai.
-- Milestone aktif adalah **M6 — Validasi Presensi dan Retensi File** pada
-  `IMPLEMENTATION_ROADMAP.md`.
-- Jangan memulai milestone berikutnya sebelum exit criteria milestone aktif
-  selesai. Setelah menyelesaikan milestone, perbarui status roadmap dan
-  dokumentasi ini.
+- **M6 — Validasi Presensi dan Retensi File** berstatus
+  `DEFERRED VERIFICATION`; invocation otomatis dan penghapusan evidence nyata
+  tetap wajib diverifikasi sebelum M8/pilot produksi.
+- Milestone aktif adalah **M7 — Roster Otomatis, Middle, dan Fairness** pada
+  `IMPLEMENTATION_ROADMAP.md`, berdasarkan persetujuan eksplisit pemilik produk
+  pada 29 Juli 2026 untuk menangguhkan hanya verifikasi M6 yang berbasis waktu.
+- Jangan memulai M8 sebelum exit criteria M7 selesai dan verifikasi M6 yang
+  tertunda ditutup. Setelah menyelesaikan milestone, perbarui status roadmap
+  dan dokumentasi ini.
 
 ---
 
@@ -167,7 +171,8 @@ src/
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
-│   └── repository.ts     # Repository RPC roster bertipe dan role-aware
+│   ├── repository.ts     # Repository RPC roster bertipe dan role-aware
+│   └── optimizer.ts      # Generator roster deterministik tanpa I/O
 ├── lib/workforce-requests/
 │   ├── query-keys.ts     # Query key factory cuti dan lembur
 │   ├── queries.ts        # Query/mutation hooks dengan optimistic rollback
@@ -186,7 +191,8 @@ src/
 scripts/
 └── verify-attendance-retention.mjs # Verifikasi read-only metadata, Storage, audit, dan signed URL
 docs/
-└── ATTENDANCE_RETENTION_VERIFICATION.md # Checklist penutupan exit criteria M6
+├── ATTENDANCE_RETENTION_VERIFICATION.md # Checklist penutupan exit criteria M6
+└── ROSTER_OPTIMIZER.md # Kontrak, aturan, dan tahap integrasi optimizer M7
 ```
 
 Roadmap teknis, milestone, quality gate, dan handoff agent berada di
