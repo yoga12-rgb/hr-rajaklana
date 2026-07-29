@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh enam migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 242/242 pada
+- Dua puluh tujuh migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 251/251 pada
   29 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -50,7 +50,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Jadwal live sudah mendukung roster manual bulanan berversi, isi jadwal
   massal atomik, off day, backup outlet, publikasi, acknowledgement, dan
   tukar shift dua tahap. Pekan dimiliki oleh bulan tempat hari Senin awal
-  pekan berada sehingga pekan parsial tidak dihitung ulang.
+  pekan berada sehingga pekan parsial tidak dihitung ulang. Off pekan terakhir
+  boleh jatuh pada awal bulan berikutnya, tetapi ledger tetap dimiliki bulan
+  asal dan dibaca sebagai carry-in oleh generator bulan berikutnya.
 - Cuti/Izin live sudah mendukung saldo tahunan, reservasi, dokumen privat,
   pembatalan, jenis cuti dinamis, serta keputusan atomik. Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
@@ -74,7 +76,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   shift manual terkunci, template, kebutuhan staf, dan policy version. Hasil
   valid disimpan atomik sebagai draft beserta run, score, seed, dan audit;
   hasil invalid hanya menyimpan konflik. UI supervisor menampilkan preview
-  konflik dan fairness sebelum publikasi.
+  konflik dan fairness sebelum publikasi, shortcut koreksi off, serta pilihan
+  cepat tanggal carry-over untuk pekan terakhir.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.

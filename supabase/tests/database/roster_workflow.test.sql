@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(54);
+select extensions.plan(63);
 
 select extensions.ok(
   not has_function_privilege(
@@ -38,6 +38,14 @@ select extensions.ok(
     'execute'
   ),
   'anonymous cannot save manual roster assignments'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.save_cross_month_roster_off_day(date,uuid,date,text,date,boolean)',
+    'execute'
+  ),
+  'anonymous cannot save cross-month off days'
 );
 select extensions.ok(
   not has_function_privilege(
@@ -549,6 +557,179 @@ select extensions.ok(
     )::uuid,
   'same optimizer idempotency key replays the original generation run'
 );
+
+do $$
+begin
+  perform set_config(
+    'test.cross_month_off_result',
+    public.save_cross_month_roster_off_day(
+      '2097-04-01',
+      '65000000-0000-0000-0000-000000000001',
+      '2097-05-01',
+      'Off pekan terakhir April',
+      null,
+      false
+    )::text,
+    true
+  );
+end;
+$$;
+
+select extensions.ok(
+  (
+    current_setting('test.cross_month_off_result')::jsonb
+      ->>'carry_over'
+  )::boolean
+    and (
+      current_setting('test.cross_month_off_result')::jsonb
+        ->>'assignment_id'
+    ) is null,
+  'supervisor can save an off day in the following month for the final owner week'
+);
+
+reset role;
+
+select extensions.ok(
+  exists (
+    select 1
+    from public.employee_off_days off_day
+    join public.roster_periods period
+      on period.id = off_day.roster_period_id
+    where period.month_start = '2097-04-01'
+      and off_day.employee_id =
+        '65000000-0000-0000-0000-000000000001'
+      and off_day.source_week_start = '2097-04-29'
+      and off_day.off_date = '2097-05-01'
+  ),
+  'cross-month off remains owned by the month containing its Monday'
+);
+
+select extensions.ok(
+  not exists (
+    select 1
+    from public.schedule_assignments assignment
+    where assignment.roster_version_id = (
+      current_setting('test.cross_month_off_result')::jsonb
+        ->>'roster_version_id'
+    )::uuid
+      and assignment.employee_id =
+        '65000000-0000-0000-0000-000000000001'
+      and assignment.work_date = '2097-05-01'
+  ),
+  'owner-month draft does not receive an out-of-period assignment'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '66000000-0000-0000-0000-000000000002',
+  true
+);
+set local role authenticated;
+
+select extensions.ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_roster_generation_input('2097-04-01')->'employees'
+    ) employee
+    cross join lateral jsonb_array_elements(employee->'offDays') off_day
+    where employee->>'id' =
+        '65000000-0000-0000-0000-000000000001'
+      and off_day->>'date' = '2097-05-01'
+      and off_day->>'sourceWeekStart' = '2097-04-29'
+  ),
+  'owner-month optimizer input includes the carry-out entitlement'
+);
+
+select extensions.ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_roster_generation_input('2097-05-01')->'employees'
+    ) employee
+    cross join lateral jsonb_array_elements(employee->'offDays') off_day
+    where employee->>'id' =
+        '65000000-0000-0000-0000-000000000001'
+      and off_day->>'date' = '2097-05-01'
+      and off_day->>'sourceWeekStart' = '2097-04-29'
+  ),
+  'following-month optimizer input includes the carry-in actual off date'
+);
+
+do $$
+begin
+  perform set_config(
+    'test.cross_month_commit_result',
+    public.commit_generated_roster(
+      '2097-05-01',
+      'roster-test-carry-in-2097-05',
+      'deterministic-matching-v1',
+      '{"monthStart":"2097-05-01"}'::jsonb,
+      'valid',
+      '[{
+        "employeeId":"65000000-0000-0000-0000-000000000001",
+        "outletId":"63000000-0000-0000-0000-000000000001",
+        "date":"2097-05-01",
+        "shift":"off",
+        "assignmentType":"primary",
+        "source":"fixed"
+      }]'::jsonb,
+      '[]'::jsonb,
+      '[]'::jsonb
+    )::text,
+    true
+  );
+end;
+$$;
+
+select extensions.is(
+  (
+    current_setting('test.cross_month_commit_result')::jsonb
+      ->>'assignment_count'
+  )::integer,
+  1,
+  'generated roster commit accepts an off day owned by the previous month'
+);
+
+reset role;
+
+select extensions.ok(
+  exists (
+    select 1
+    from public.schedule_assignments assignment
+    where assignment.roster_version_id = (
+      current_setting('test.cross_month_commit_result')::jsonb
+        ->>'roster_version_id'
+    )::uuid
+      and assignment.employee_id =
+        '65000000-0000-0000-0000-000000000001'
+      and assignment.work_date = '2097-05-01'
+      and assignment.status = 'off'
+  ),
+  'carry-in off is persisted as an assignment in the following-month draft'
+);
+
+select extensions.throws_ok(
+  format(
+    $$update public.roster_versions
+      set status = 'published'
+      where id = %L$$,
+    (
+      current_setting('test.cross_month_commit_result')::jsonb
+        ->>'roster_version_id'
+    )::uuid
+  ),
+  '23514',
+  'Roster belum dapat dipublikasikan: jadwal setelah off carry-over 2097-05-01 wajib Malam.',
+  'publish guard validates the night shift after a carry-in off day'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '66000000-0000-0000-0000-000000000002',
+  true
+);
+set local role authenticated;
 
 reset role;
 select set_config(
@@ -1158,7 +1339,7 @@ select extensions.throws_ok(
 
 select extensions.skip(
   'fixture creation requires local postgres privileges',
-  37
+  45
 );
 
 \endif

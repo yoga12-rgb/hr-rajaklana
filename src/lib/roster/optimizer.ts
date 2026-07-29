@@ -411,13 +411,16 @@ export function generateDeterministicRoster(
         (offDay) => (offDay.sourceWeekStart ?? weekStart(offDay.date)) === ownerWeek
       );
       if (allocations.length !== 1) {
+        const ownerWeekEnd = addDays(ownerWeek, 6);
         addConflict(conflicts, {
           code: "off_entitlement_mismatch",
           employeeId: employee.id,
           date: ownerWeek,
           description: `${employee.name} memiliki ${allocations.length} alokasi off untuk pekan ${ownerWeek}; seharusnya tepat satu.`,
           suggestions: [
-            "Atur satu off day atau pinjam jatah dari pekan bersebelahan.",
+            ownerWeekEnd > end
+              ? `Pilih satu tanggal off antara ${ownerWeek}–${ownerWeekEnd}; tanggal awal bulan berikutnya tetap memakai jatah bulan ini.`
+              : "Atur satu off day atau pinjam jatah dari pekan bersebelahan.",
           ],
         });
       }

@@ -36,14 +36,14 @@ export function useGenerateAutomaticRoster(monthStart: string) {
   });
 }
 
-export function useSaveManualRosterAssignment(monthStart: string) {
+export function useSaveManualRosterAssignment() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: SaveRosterAssignmentInput) =>
       saveManualRosterAssignment(createClient(), input),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: rosterKeys.month(monthStart) }),
+      queryClient.invalidateQueries({ queryKey: rosterKeys.all }),
   });
 }
 

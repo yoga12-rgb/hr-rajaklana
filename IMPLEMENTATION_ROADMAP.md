@@ -102,12 +102,15 @@ Sudah tersedia:
 | `20260728220000_update_active_placement_effective_date.sql`        | Koreksi tanggal efektif penempatan aktif  |
 | `20260728230000_assign_partial_week_to_starting_month.sql`         | Kepemilikan pekan parsial untuk jatah off |
 | `20260729003000_preview_clock_in_and_retain_selfie_seven_days.sql` | Preview clock-in dan retensi tujuh hari   |
+| `20260729130000_add_leave_schedule_status.sql`                     | Status cuti pada assignment roster        |
+| `20260729131000_auto_roster_generation_workflow.sql`               | Snapshot dan commit optimizer roster      |
+| `20260729150000_support_cross_month_off_days.sql`                  | Carry-over off pekan terakhir lintas bulan |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `235/235`.
+- pgTAP lulus `251/251`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -121,8 +124,8 @@ menjadi aplikasi multi-user:
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
 - Belum ada data karyawan/outlet nyata yang diimpor.
-- Upload selfie nyata dan worker penghapusan file sudah tersedia. Optimizer
-  roster otomatis belum diimplementasikan.
+- Upload selfie nyata, worker penghapusan file, dan optimizer roster otomatis
+  deterministik sudah tersedia.
 - Konfigurasi environment Vercel tidak dapat dianggap selesai hanya karena
   tersedia secara lokal; wajib diverifikasi dari deployment.
 
@@ -751,6 +754,10 @@ diedit supervisor.
 - Snapshot supervisor dari Supabase mencakup kasir eligible, seluruh
   penempatan efektif dalam bulan, off day, cuti approved, shift manual
   terkunci, template shift, kebutuhan staf, serta policy version.
+- Jatah pekan terakhir dapat memakai tanggal pada awal bulan berikutnya.
+  Snapshot bulan pemilik membaca carry-out untuk validasi hak, sedangkan
+  snapshot bulan berikutnya membaca tanggal aktual sebagai carry-in. Commit
+  dan publish tetap memvalidasi assignment off serta pola Malam setelah off.
 - Route Handler server-side menjalankan optimizer dan membentuk idempotency
   key dari input, seed, algoritma, serta output. Commit database memakai
   advisory lock dan satu transaksi untuk generation run, konflik, fairness,
@@ -764,14 +771,16 @@ diedit supervisor.
 - UI mobile-first menambahkan alur **Buat Otomatis**, ringkasan jumlah
   assignment, durasi, skor fairness, distribusi Pagi/Middle/Malam/Off per
   kasir, dan preview maksimal dua belas konflik.
-- Tujuh unit test mencakup fixture bulanan valid, determinisme, pola off, batas
+- Delapan unit test mencakup fixture bulanan valid, determinisme, pola off,
+  rentang carry-over lintas bulan, batas
   Middle, warning lebih dari enam hari kerja berturut-turut, konflik kapasitas,
   backup lintas outlet, perubahan penempatan efektif di tengah bulan, dan
   benchmark 200 kasir. Benchmark lokal selesai sekitar 223 ms, jauh di bawah
   target PRD 30 detik.
-- Dua migration M7 sudah identik lokal/hosted. Lint schema `public` bersih,
-  pgTAP lokal/hosted lulus `242/242`, lint, typecheck, build produksi, enam
-  unit test, serta `18/18` E2E desktop/mobile lulus.
+- Dua migration M7 dan satu migration koreksi carry-over sudah identik
+  lokal/hosted. Lint schema `public` bersih, pgTAP lokal/hosted lulus
+  `251/251`, lint, typecheck, build produksi, delapan unit test, serta
+  `18/18` E2E desktop/mobile lulus.
 
 ### Exit criteria
 
@@ -903,8 +912,9 @@ Untuk perubahan hosted:
 
 - [x] Project ref diperiksa: `ttbogurultjbporryylb`.
 - [x] `migration list --linked` diperiksa sebelum dan sesudah push.
-- [x] Dua migration M7 diterapkan tanpa reset production.
-- [x] Hosted lint dan pgTAP `242/242` lulus.
+- [x] Dua migration M7 dan satu koreksi carry-over diterapkan tanpa reset
+  production.
+- [x] Hosted lint dan pgTAP `251/251` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---

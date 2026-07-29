@@ -2395,6 +2395,19 @@ export type Database = {
         }
         Returns: Json
       }
+      commit_generated_roster_without_carry_over: {
+        Args: {
+          p_algorithm_version: string
+          p_assignments: Json
+          p_conflicts: Json
+          p_fairness_details: Json
+          p_idempotency_key: string
+          p_month_start: string
+          p_result_status: string
+          p_rule_snapshot: Json
+        }
+        Returns: Json
+      }
       complete_attendance_file_deletion_job: {
         Args: { p_deleted_at?: string; p_job_id: string }
         Returns: undefined
@@ -2590,6 +2603,10 @@ export type Database = {
         Args: { p_month_start: string }
         Returns: Json
       }
+      get_roster_generation_input_without_carry_over: {
+        Args: { p_month_start: string }
+        Returns: Json
+      }
       get_shift_swap_options: {
         Args: { p_requester_schedule_id: string }
         Returns: Json
@@ -2668,6 +2685,17 @@ export type Database = {
           p_colleague_schedule_id: string
           p_reason: string
           p_requester_schedule_id: string
+        }
+        Returns: Json
+      }
+      save_cross_month_roster_off_day: {
+        Args: {
+          p_borrowed_from_adjacent_week?: boolean
+          p_employee_id: string
+          p_month_start: string
+          p_off_date: string
+          p_reason: string
+          p_source_week_start?: string
         }
         Returns: Json
       }

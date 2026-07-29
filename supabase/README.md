@@ -85,7 +85,11 @@ Jangan menjalankan reset terhadap production.
 - Off day yang dipinjam hanya boleh berasal dari pekan bersebelahan dan satu
   sumber pekan hanya dapat dialokasikan sekali per karyawan. Bulan pemilik
   jatah ditentukan oleh tanggal Senin awal pekan, sehingga pekan parsial pada
-  awal bulan tidak dihitung ulang. Backup outlet
+  awal bulan tidak dihitung ulang. Off pada pekan terakhir dapat jatuh sampai
+  hari Minggu di awal bulan berikutnya melalui
+  `save_cross_month_roster_off_day`; ledger tetap berada pada bulan pemilik,
+  sementara snapshot dan commit bulan berikutnya membacanya sebagai carry-in.
+  Backup outlet
   serta minimum staffing divalidasi sebelum publikasi.
 - Tukar shift dibatasi untuk kasir pada outlet dan versi roster yang sama.
   Persetujuan rekan harus selesai sebelum keputusan supervisor, dan keputusan

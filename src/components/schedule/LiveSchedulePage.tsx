@@ -67,6 +67,22 @@ const monthEndFromStart = (monthStart: string) => {
   )}-${String(end.getDate()).padStart(2, "0")}`;
 };
 
+const addDaysToInput = (value: string, days: number) => {
+  const date = dateFromInput(value);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const crossMonthOffLimit = (monthStart: string) => {
+  const monthEnd = monthEndFromStart(monthStart);
+  const endDate = dateFromInput(monthEnd);
+  const daysUntilSunday = (7 - endDate.getDay()) % 7;
+  return addDaysToInput(monthEnd, daysUntilSunday);
+};
+
 const monthDays = (monthStart: string) => {
   const start = dateFromInput(monthStart);
   const count = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
@@ -161,7 +177,7 @@ export function LiveSchedulePage() {
   const rosterQuery = useMonthlyRoster(monthStart);
   const outletsQuery = useLiveOutlets();
   const templatesQuery = useActiveShiftTemplates();
-  const saveMutation = useSaveManualRosterAssignment(monthStart);
+  const saveMutation = useSaveManualRosterAssignment();
   const bulkFillMutation = useBulkFillManualRoster(monthStart);
   const generateMutation = useGenerateAutomaticRoster(monthStart);
   const publishMutation = usePublishManualRoster(monthStart);
@@ -177,6 +193,20 @@ export function LiveSchedulePage() {
   );
 
   const days = useMemo(() => monthDays(monthStart), [monthStart]);
+  const monthEnd = useMemo(() => monthEndFromStart(monthStart), [monthStart]);
+  const offDateLimit = useMemo(
+    () => crossMonthOffLimit(monthStart),
+    [monthStart]
+  );
+  const lastOwnerWeekDates = useMemo(() => {
+    if (offDateLimit <= monthEnd) return [];
+    const weekStart = addDaysToInput(offDateLimit, -6);
+    return Array.from({ length: 7 }, (_, index) =>
+      addDaysToInput(weekStart, index)
+    );
+  }, [monthEnd, offDateLimit]);
+  const isCrossMonthOff =
+    scheduleStatus === "off" && workDate > monthEnd;
   const roster = rosterQuery.data;
   const canManage = roleQuery.data === "supervisor";
   const isManagement = roleQuery.data === "management";
@@ -317,6 +347,35 @@ export function LiveSchedulePage() {
       showToast("Pilih outlet untuk jadwal kerja.", "warning");
       return;
     }
+    if (
+      workDate < monthStart ||
+      (scheduleStatus === "scheduled" && workDate > monthEnd) ||
+      (scheduleStatus === "off" && workDate > offDateLimit)
+    ) {
+      showToast(
+        scheduleStatus === "off"
+          ? `Tanggal off untuk roster ini hanya dapat dipilih sampai ${offDateLimit}.`
+          : "Tanggal kerja harus berada dalam bulan roster yang sedang dibuka.",
+        "warning"
+      );
+      return;
+    }
+    if (scheduleStatus === "off" && borrowedOff && !sourceWeekStart) {
+      showToast("Pilih hari Senin untuk pekan sumber off.", "warning");
+      return;
+    }
+    if (
+      scheduleStatus === "off" &&
+      borrowedOff &&
+      (dateFromInput(sourceWeekStart).getDay() !== 1 ||
+        sourceWeekStart.slice(0, 7) !== monthStart.slice(0, 7))
+    ) {
+      showToast(
+        "Pekan sumber harus hari Senin dan dimiliki bulan roster ini.",
+        "warning"
+      );
+      return;
+    }
     if (scheduleStatus === "scheduled" && !hasSelectedShiftTemplate) {
       showToast(
         "Buat template shift aktif untuk outlet ini melalui Pengaturan.",
@@ -347,7 +406,12 @@ export function LiveSchedulePage() {
       setShowEdit(false);
       const warning = result.warnings[0]?.message;
       showToast(
-        warning ? `Jadwal tersimpan. ${warning}` : "Jadwal draft tersimpan.",
+        result.carry_over
+          ? warning ??
+              "Off lintas bulan tersimpan dan akan dibaca roster bulan berikutnya."
+          : warning
+            ? `Jadwal tersimpan. ${warning}`
+            : "Jadwal draft tersimpan.",
         warning ? "warning" : "success"
       );
     } catch (error) {
@@ -356,6 +420,23 @@ export function LiveSchedulePage() {
         "warning"
       );
     }
+  };
+
+  const handleFixOffConflict = (
+    conflict: AutomaticRosterGenerationResult["conflicts"][number]
+  ) => {
+    if (!conflict.employeeId || !conflict.date) return;
+    const employee = rows.find((row) => row.id === conflict.employeeId);
+    setSelectedEmployeeId(conflict.employeeId);
+    setWorkDate(conflict.date);
+    setScheduleStatus("off");
+    setAssignmentType("primary");
+    setOutletId(employee?.primaryOutletId ?? "");
+    setBorrowedOff(false);
+    setSourceWeekStart("");
+    setChangeReason(`Atur jatah off pekan ${conflict.date}`);
+    setShowGenerate(false);
+    setShowEdit(true);
   };
 
   const handlePublish = async (event: React.FormEvent) => {
@@ -969,6 +1050,17 @@ export function LiveSchedulePage() {
                               Saran: {conflict.suggestions[0]}
                             </p>
                           )}
+                          {conflict.code === "off_entitlement_mismatch" &&
+                            conflict.employeeId &&
+                            conflict.date && (
+                              <button
+                                type="button"
+                                onClick={() => handleFixOffConflict(conflict)}
+                                className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-bold text-amber-300 transition-colors hover:bg-amber-500/20"
+                              >
+                                Atur off pekan ini
+                              </button>
+                            )}
                         </div>
                       ))}
                   </div>
@@ -1022,7 +1114,7 @@ export function LiveSchedulePage() {
                           <p className="text-[9px] text-slate-500">
                             Pagi {detail.morningCount} · Middle{" "}
                             {detail.middleCount} · Malam {detail.nightCount} ·
-                            Off {detail.offCount}
+                            Off dalam bulan {detail.offCount}
                           </p>
                         </div>
                         <span className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
@@ -1076,7 +1168,7 @@ export function LiveSchedulePage() {
             }}
           />
           <DatePicker
-            label="Tanggal jadwal"
+            label={scheduleStatus === "off" ? "Tanggal off" : "Tanggal jadwal"}
             value={workDate}
             onChange={setWorkDate}
           />
@@ -1184,6 +1276,47 @@ export function LiveSchedulePage() {
             </>
           ) : (
             <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2.5 text-[11px] leading-relaxed text-amber-100">
+                Pekan dimiliki bulan tempat hari Seninnya berada. Untuk roster
+                ini, off pekan terakhir boleh dipilih sampai{" "}
+                <span className="font-bold">{offDateLimit}</span>.
+                {isCrossMonthOff &&
+                  " Tanggal ini tetap memakai jatah bulan yang sedang dibuka dan akan muncul otomatis saat roster bulan berikutnya dibuat."}
+              </div>
+              {lastOwnerWeekDates.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    Pilih cepat off pekan terakhir
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+                    {lastOwnerWeekDates.map((date) => (
+                      <button
+                        key={date}
+                        type="button"
+                        onClick={() => setWorkDate(date)}
+                        aria-pressed={workDate === date}
+                        className={`rounded-lg border px-1.5 py-2 text-center transition-colors ${
+                          workDate === date
+                            ? "border-amber-500 bg-amber-500 text-slate-950"
+                            : "border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-500/40"
+                        }`}
+                      >
+                        <span className="block text-[9px] font-medium">
+                          {new Intl.DateTimeFormat("id-ID", {
+                            weekday: "short",
+                          }).format(dateFromInput(date))}
+                        </span>
+                        <span className="block text-[10px] font-bold">
+                          {new Intl.DateTimeFormat("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                          }).format(dateFromInput(date))}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <label className="flex items-center gap-2 text-xs text-slate-300">
                 <input
                   type="checkbox"

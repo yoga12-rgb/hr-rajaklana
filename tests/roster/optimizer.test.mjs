@@ -180,6 +180,25 @@ test("memperingatkan lebih dari enam hari kerja tanpa menggagalkan roster", () =
   assert.ok(warning?.suggestions.length);
 });
 
+test("menjelaskan rentang off lintas bulan untuk pekan pemilik terakhir", () => {
+  const input = createInput();
+  input.employees[0].offDays = input.employees[0].offDays.filter(
+    (offDay) => offDay.sourceWeekStart !== "2026-06-29"
+  );
+
+  const result = generateDeterministicRoster(input);
+  const conflict = result.conflicts.find(
+    (candidate) =>
+      candidate.code === "off_entitlement_mismatch" &&
+      candidate.employeeId === "employee-1" &&
+      candidate.date === "2026-06-29"
+  );
+
+  assert.equal(result.status, "invalid");
+  assert.match(conflict?.suggestions[0] ?? "", /2026-06-29–2026-07-05/);
+  assert.match(conflict?.suggestions[0] ?? "", /bulan berikutnya/);
+});
+
 test("menolak perpindahan lintas outlet yang bukan backup manual", () => {
   const input = createInput();
   input.outlets.push({

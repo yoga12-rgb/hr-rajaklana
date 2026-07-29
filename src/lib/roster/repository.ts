@@ -109,7 +109,10 @@ export interface SaveRosterAssignmentInput {
 
 export interface SaveRosterAssignmentResult {
   roster_version_id: string;
-  assignment_id: string;
+  assignment_id: string | null;
+  off_day_id?: string;
+  carry_over?: boolean;
+  affected_month_start?: string;
   warnings: Array<{ code: string; message: string }>;
 }
 
@@ -214,6 +217,30 @@ export async function saveManualRosterAssignment(
   client: RosterClient,
   input: SaveRosterAssignmentInput
 ) {
+  const nextMonth = new Date(`${input.monthStart}T00:00:00.000Z`);
+  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+  const nextMonthStart = nextMonth.toISOString().slice(0, 10);
+
+  if (input.status === "off" && input.workDate >= nextMonthStart) {
+    const { data, error } = await client.rpc(
+      "save_cross_month_roster_off_day",
+      {
+        p_month_start: input.monthStart,
+        p_employee_id: input.employeeId,
+        p_off_date: input.workDate,
+        p_reason: input.reason,
+        p_source_week_start: input.sourceWeekStart ?? undefined,
+        p_borrowed_from_adjacent_week:
+          input.borrowedFromAdjacentWeek ?? false,
+      }
+    );
+
+    if (error) {
+      throw rosterError("Off lintas bulan belum dapat disimpan", error);
+    }
+    return parseObject(data) as unknown as SaveRosterAssignmentResult;
+  }
+
   const args = {
     p_month_start: input.monthStart,
     p_employee_id: input.employeeId,
