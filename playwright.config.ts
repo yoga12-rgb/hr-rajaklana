@@ -11,7 +11,7 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   reporter: process.env.CI
-    ? [["line"], ["html", { open: "never" }]]
+    ? [["line"], ["github"], ["html", { open: "never" }]]
     : [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
