@@ -165,3 +165,7 @@ Jangan menjalankan reset terhadap production.
   ke bucket privat `exports`, dan client hanya menerima signed URL 60 detik.
   Status `failed` dapat diulang maksimal tiga kali; direct insert/update job
   serta claim worker ditolak untuk client authenticated.
+- Offline read tidak mempersistenkan respons Supabase secara umum. Hanya query
+  roster bulanan yang disanitasi ke kolom jadwal minimum, maksimal tiga bulan,
+  TTL 24 jam, dan dipisahkan per user ID. Bukti, dokumen, alasan, notifikasi,
+  signed URL, serta response API tidak boleh masuk cache perangkat.

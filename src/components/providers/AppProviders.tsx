@@ -1,10 +1,15 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { DataSourceProvider } from "@/context/DataSourceContext";
 import { HRProvider } from "@/context/HRContext";
 import type { DataSourceConfig } from "@/lib/data-source";
+import { OfflineReadProvider } from "./OfflineReadProvider";
 
 /**
  * Menggabungkan provider global aplikasi. QueryClient dibuat satu kali per
@@ -20,6 +25,15 @@ export function AppProviders({
   const [queryClient] = useState(
     () =>
       new QueryClient({
+        mutationCache: new MutationCache({
+          onMutate: () => {
+            if (typeof navigator !== "undefined" && !navigator.onLine) {
+              throw new Error(
+                "Anda sedang offline. Hubungkan perangkat sebelum menyimpan perubahan."
+              );
+            }
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 60_000,
@@ -28,6 +42,7 @@ export function AppProviders({
           },
           mutations: {
             retry: 0,
+            networkMode: "always",
           },
         },
       })
@@ -35,9 +50,11 @@ export function AppProviders({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DataSourceProvider value={dataSource}>
-        <HRProvider>{children}</HRProvider>
-      </DataSourceProvider>
+      <OfflineReadProvider queryClient={queryClient} dataSource={dataSource}>
+        <DataSourceProvider value={dataSource}>
+          <HRProvider>{children}</HRProvider>
+        </DataSourceProvider>
+      </OfflineReadProvider>
     </QueryClientProvider>
   );
 }

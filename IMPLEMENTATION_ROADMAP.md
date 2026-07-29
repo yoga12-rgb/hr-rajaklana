@@ -838,11 +838,15 @@ Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
   sesudah respons, segmentasi query maksimal 92 hari, XLSX server-side,
   private Storage, SHA-256 checksum, polling status, retry maksimal tiga kali,
   dan signed URL 60 detik. Management hanya membaca job miliknya.
+- Offline read roster mempersistenkan maksimal tiga snapshot bulan selama 24
+  jam per akun. Snapshot disanitasi ke kolom jadwal yang diizinkan, cache akun
+  lama dibuang saat pergantian akun, shell/asset dicache service worker tanpa
+  response API, dan mutasi TanStack ditolak langsung ketika offline.
 - Lint schema lokal/hosted bersih; pgTAP lokal/hosted `299/299`, lint,
-  typecheck, build live/demo, delapan unit test, dan 20 E2E desktop/mobile
+  typecheck, build live/demo, sepuluh unit test, dan 20 E2E desktop/mobile
   lulus.
-- Pekerjaan berikutnya: offline read yang menjaga privasi perangkat,
-  observability/SOP, lalu pilot setelah gate M6.
+- Pekerjaan berikutnya: observability/SOP, backup/restore drill, lalu pilot
+  setelah gate M6.
 
 ### Pekerjaan
 
@@ -990,8 +994,8 @@ Prompt singkat yang dapat diberikan kepada agent baru:
 
 > Pelajari `AGENTS.md`, `PRD.md`, `ERD.md`,
 > `IMPLEMENTATION_ROADMAP.md`, dan `supabase/README.md`. Periksa kondisi repo
-> dan lanjutkan M8 dari rancangan offline read
-> yang menjaga privasi perangkat. Implementasi non-pilot boleh berjalan,
+> dan lanjutkan M8 dari observability, SOP, dan backup/restore drill.
+> Implementasi non-pilot boleh berjalan,
 > tetapi jangan nyatakan M6/M8 `DONE` atau mulai pilot sampai invocation cron
 > otomatis dan penghapusan evidence nyata tujuh hari terverifikasi.
 > Pertahankan data prototype sampai modul tersebut benar-benar dimigrasikan,

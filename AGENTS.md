@@ -93,6 +93,11 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   lokal dari snapshot query yang sama; PDF memakai print browser. Ekspor
   periode panjang hingga 366 hari memakai job asynchronous, worker server-only,
   private Storage, checksum, retry terbatas, dan signed URL singkat.
+- Offline read roster live menyimpan maksimal tiga bulan selama 24 jam per
+  akun. Snapshot hanya memuat kolom jadwal yang diizinkan, dibersihkan dari
+  alasan/peristiwa sensitif, dan cache akun sebelumnya dihapus saat akun
+  berganti. Service worker hanya meng-cache shell/asset same-origin, bukan API.
+  Seluruh TanStack mutation ditolak segera ketika perangkat offline.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -171,7 +176,8 @@ src/
 │   ├── overtime/
 │   │   └── LiveOvertimePage.tsx # Pengajuan, penugasan, durasi, dan keputusan lembur
 │   ├── providers/
-│   │   └── AppProviders.tsx # Query, data-source, dan provider prototype
+│   │   ├── AppProviders.tsx # Query, data-source, dan provider prototype
+│   │   └── OfflineReadProvider.tsx # Cache roster per akun dan status offline
 │   ├── Header.tsx        # Header navigasi desktop/mobile dengan Pusat Notifikasi HR (Bell Icon)
 │   ├── Sidebar.tsx       # Sidebar navigasi desktop
 │   ├── BottomNav.tsx     # Mobile Bottom Navigation (5 Menu Ergonomis + Center FAB Presensi + More Menu Bottom Sheet ⋯)
@@ -209,6 +215,8 @@ src/
 │   ├── repository.ts     # RPC laporan bertipe dan role-aware
 │   ├── workbook.ts       # Sheet XLSX bersama untuk browser/worker
 │   └── export-worker.ts  # Worker server-only, checksum, dan private upload
+├── lib/offline/
+│   └── roster-cache.ts   # Sanitasi snapshot roster untuk perangkat
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
@@ -235,6 +243,8 @@ scripts/
 docs/
 ├── ATTENDANCE_RETENTION_VERIFICATION.md # Checklist penutupan exit criteria M6
 └── ROSTER_OPTIMIZER.md # Kontrak, aturan, dan tahap integrasi optimizer M7
+public/
+└── sw.js                 # Runtime cache shell/asset, tanpa cache API
 ```
 
 Roadmap teknis, milestone, quality gate, dan handoff agent berada di
