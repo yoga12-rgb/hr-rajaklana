@@ -85,3 +85,15 @@ Sebagai pemeriksaan tambahan pada dashboard Vercel:
 Paket Hobby hanya menyimpan runtime log selama satu jam dan dapat menjalankan
 cron kapan saja dalam jam yang dijadwalkan. Karena itu, audit persisten adalah
 bukti utama setelah jendela log dashboard berakhir.
+
+### Bukti smoke test terakhir
+
+Pada 29 Juli 2026 pukul 12.32 WIB, invocation manual berotorisasi terhadap
+alias production menghasilkan HTTP `200` dengan `scanned: 0`, `completed: 0`,
+dan `failed: 0`. Audit `cron_completed` tersimpan dengan agregat yang sama dan
+runtime log Vercel mencatat request GET production berstatus `200`.
+
+Smoke test ini membuktikan route, bearer authentication, worker, koneksi
+Supabase, dan audit persisten bekerja. Pemeriksaan `--cron-status` setelah
+jadwal harian tetap wajib karena hanya user agent `vercel-cron/1.0` yang
+dianggap sebagai bukti scheduler otomatis.

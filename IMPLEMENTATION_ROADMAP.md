@@ -698,6 +698,12 @@ tier melalui penghapusan bukti yang dapat diaudit.
   `17 20 * * *`. Riwayat invocation 29 Juli tidak dapat diambil karena runtime
   log paket Hobby hanya disimpan satu jam; bukti persisten mulai tersedia
   setelah deployment audit invocation ini dan jadwal harian berikutnya.
+- Smoke test production berotorisasi pada 29 Juli 2026 pukul 12.32 WIB
+  menghasilkan HTTP `200` dengan `scanned: 0`, `completed: 0`, `failed: 0`.
+  Audit `cron_completed` dengan agregat yang sama tersimpan di Supabase dan
+  runtime log Vercel mencatat request GET production berstatus `200`. Bukti ini
+  memvalidasi route, autentikasi, worker, serta audit persisten, tetapi tidak
+  menggantikan bukti scheduler otomatis.
 - Tersisa: setelah job selfie nyata jatuh tempo, verifikasi objek terhapus dan
   signed URL lama tidak dapat mengambil objek.
   Invocation otomatis Vercel berikutnya perlu dikonfirmasi melalui
