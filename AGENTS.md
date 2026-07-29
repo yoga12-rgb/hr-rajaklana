@@ -63,8 +63,10 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   lease, finalisasi metadata/audit atomik, retry cron, dan monitoring job gagal
   sudah tersedia. Monitoring retensi membedakan job terjadwal, retry, jatuh
   tempo, lease tertahan, dan percobaan yang habis. Invocation cron mencatat
-  audit persisten tanpa secret/path Storage. Script verifikasi read-only
-  mendukung pemeriksaan evidence dan `--cron-status` di
+  audit persisten tanpa secret/path Storage; UI supervisor menampilkan
+  invocation terakhir dan memperingatkan scheduler yang tidak tercatat lebih
+  dari 26 jam. Script verifikasi read-only mendukung pemeriksaan evidence dan
+  `--cron-status` di
   `scripts/verify-attendance-retention.mjs`; checklist berada di
   `docs/ATTENDANCE_RETENTION_VERIFICATION.md`. Optimizer roster otomatis belum
   diimplementasikan.

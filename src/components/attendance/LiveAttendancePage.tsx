@@ -153,6 +153,11 @@ function AttendanceValidationQueue() {
     queue.data?.filter((item) => !item.clock_out_at).length ?? 0;
   const readyValidationCount =
     queue.data?.filter((item) => item.clock_out_at).length ?? 0;
+  const lastCronRunAt = retentionHealth.data?.lastCronRunAt ?? null;
+  const lastCronIsStale = retentionHealth.data?.lastCronIsStale ?? false;
+  const lastCronFailed =
+    retentionHealth.data?.lastCronStatus === "failed" ||
+    (retentionHealth.data?.lastCronFailedJobs ?? 0) > 0;
 
   const close = () => {
     if (decisionMutation.isPending) return;
@@ -238,11 +243,37 @@ function AttendanceValidationQueue() {
         </p>
       )}
       {retentionHealth.data && (
-        <p className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-[10px] leading-relaxed text-slate-400">
-          Retensi foto: {retentionHealth.data.scheduledJobs} terjadwal
-          {" · "}
-          {retentionHealth.data.retryingJobs} menunggu retry. Status diperbarui
-          otomatis setiap menit.
+        <div className="space-y-1.5 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-[10px] leading-relaxed text-slate-400">
+          <p>
+            Retensi foto: {retentionHealth.data.scheduledJobs} terjadwal
+            {" · "}
+            {retentionHealth.data.retryingJobs} menunggu retry. Status
+            diperbarui otomatis setiap menit.
+          </p>
+          <p className="flex items-center gap-1.5 border-t border-slate-800 pt-1.5">
+            <Clock className="h-3 w-3 shrink-0 text-amber-400" />
+            {lastCronRunAt
+              ? `Cron terakhir ${formatDateTime(lastCronRunAt)} · ${
+                  retentionHealth.data.lastCronScannedJobs ?? 0
+                } job diperiksa · ${
+                  retentionHealth.data.lastCronCompletedJobs ?? 0
+                } selesai`
+              : "Cron otomatis: menunggu invocation pertama setelah monitoring diaktifkan."}
+          </p>
+        </div>
+      )}
+      {lastCronFailed && (
+        <p className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Invocation cron terakhir gagal atau masih memiliki{" "}
+          {retentionHealth.data?.lastCronFailedJobs ?? 0} job gagal.
+        </p>
+      )}
+      {lastCronIsStale && !lastCronFailed && (
+        <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Cron otomatis belum tercatat lagi selama lebih dari 26 jam. Periksa
+          deployment dan scheduler Vercel.
         </p>
       )}
       {(retentionHealth.data?.overdueJobs ?? 0) > 0 && (

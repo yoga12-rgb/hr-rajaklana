@@ -125,6 +125,8 @@ Jangan menjalankan reset terhadap production.
 - Invocation worker berotorisasi mencatat audit persisten tanpa bearer secret
   atau path Storage. Gunakan
   `npm run attendance:verify-retention -- --cron-status` untuk memeriksa
-  invocation otomatis Vercel terbaru setelah jadwal harian berjalan.
+  invocation otomatis Vercel terbaru setelah jadwal harian berjalan. Pantauan
+  supervisor membaca audit yang sama dan memperingatkan invocation gagal atau
+  scheduler yang tidak tercatat lebih dari 26 jam.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

@@ -678,6 +678,9 @@ tier melalui penghapusan bukti yang dapat diaudit.
   menyimpan secret atau path Storage. Perintah read-only
   `npm run attendance:verify-retention -- --cron-status` membedakan invocation
   otomatis melalui user agent resmi Vercel Cron.
+- Pantauan supervisor membaca audit otomatis terbaru setiap menit dan
+  menampilkan waktu invocation, jumlah job diperiksa/selesai, kegagalan job,
+  serta peringatan bila scheduler tidak tercatat kembali lebih dari 26 jam.
 - pgTAP lokal/hosted `235/235` mencakup finalisasi atomik, retry idempotent,
   hak akses isi roster massal, mode sel kosong idempotent, dan replace atomik.
   Lint, TypeScript, production build, serta 16/16 E2E desktop/mobile lulus.

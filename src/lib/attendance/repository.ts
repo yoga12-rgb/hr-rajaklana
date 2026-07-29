@@ -118,6 +118,12 @@ export interface AttendanceRetentionHealth {
   overdueJobs: number;
   staleProcessingJobs: number;
   exhaustedJobs: number;
+  lastCronRunAt: string | null;
+  lastCronStatus: "completed" | "failed" | null;
+  lastCronIsStale: boolean;
+  lastCronScannedJobs: number | null;
+  lastCronCompletedJobs: number | null;
+  lastCronFailedJobs: number | null;
 }
 
 export interface ClockInInput {
@@ -139,6 +145,12 @@ function parseWorkspace(value: Json) {
     throw new Error("Respons workspace presensi tidak valid.");
   }
   return value as unknown as AttendanceWorkspace;
+}
+
+function jsonNumber(value: Json | null, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value[key];
+  return typeof candidate === "number" ? candidate : null;
 }
 
 function jakartaDatePath() {
@@ -358,7 +370,7 @@ export async function getAttendanceRetentionHealth(client: AttendanceClient) {
       .select("id", { count: "exact", head: true })
       .not("evidence_id", "is", null);
 
-  const [scheduled, retrying, overdue, staleProcessing, exhausted] =
+  const [scheduled, retrying, overdue, staleProcessing, exhausted, latestCron] =
     await Promise.all([
       evidenceJobs().eq("status", "scheduled"),
       evidenceJobs().eq("status", "failed").lt("attempt_count", 6),
@@ -370,6 +382,15 @@ export async function getAttendanceRetentionHealth(client: AttendanceClient) {
         .eq("status", "processing")
         .lt("updated_at", staleBefore),
       evidenceJobs().eq("status", "failed").gte("attempt_count", 6),
+      client
+        .from("audit_logs")
+        .select("action,after_values,created_at")
+        .eq("entity_type", "attendance_retention_worker")
+        .eq("user_agent", "vercel-cron/1.0")
+        .in("action", ["cron_completed", "cron_failed"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
   const failedQuery = [
@@ -378,6 +399,7 @@ export async function getAttendanceRetentionHealth(client: AttendanceClient) {
     overdue,
     staleProcessing,
     exhausted,
+    latestCron,
   ].find((result) => result.error);
   if (failedQuery?.error) {
     throw attendanceError(
@@ -392,5 +414,28 @@ export async function getAttendanceRetentionHealth(client: AttendanceClient) {
     overdueJobs: overdue.count ?? 0,
     staleProcessingJobs: staleProcessing.count ?? 0,
     exhaustedJobs: exhausted.count ?? 0,
+    lastCronRunAt: latestCron.data?.created_at ?? null,
+    lastCronStatus:
+      latestCron.data?.action === "cron_completed"
+        ? "completed"
+        : latestCron.data?.action === "cron_failed"
+          ? "failed"
+          : null,
+    lastCronIsStale:
+      latestCron.data?.created_at != null &&
+      Date.now() - new Date(latestCron.data.created_at).getTime() >
+        26 * 60 * 60 * 1000,
+    lastCronScannedJobs: jsonNumber(
+      latestCron.data?.after_values ?? null,
+      "scanned"
+    ),
+    lastCronCompletedJobs: jsonNumber(
+      latestCron.data?.after_values ?? null,
+      "completed"
+    ),
+    lastCronFailedJobs: jsonNumber(
+      latestCron.data?.after_values ?? null,
+      "failed"
+    ),
   } satisfies AttendanceRetentionHealth;
 }
