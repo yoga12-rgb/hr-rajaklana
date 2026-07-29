@@ -10,6 +10,13 @@ export interface OptimizerLockedAssignment {
   outletId: string;
   shift: OptimizerShift;
   isBackup?: boolean;
+  backupReason?: string;
+}
+
+export interface OptimizerPlacement {
+  outletId: string;
+  startDate: string;
+  endDate?: string;
 }
 
 export interface OptimizerEmployee {
@@ -18,6 +25,7 @@ export interface OptimizerEmployee {
   primaryOutletId: string;
   activeFrom?: string;
   activeUntil?: string;
+  placements?: OptimizerPlacement[];
   offDays: OptimizerOffDay[];
   leaveDates?: string[];
   lockedAssignments?: OptimizerLockedAssignment[];
@@ -53,6 +61,7 @@ export interface OptimizerAssignment {
   shift: OptimizerShift | "off" | "leave";
   assignmentType: "primary" | "backup";
   source: "generated" | "locked" | "off" | "leave";
+  backupReason?: string;
 }
 
 export interface OptimizerConflict {
@@ -87,6 +96,7 @@ export interface RosterOptimizerResult {
     monthStart: string;
     seed: string;
     hardConstraints: string[];
+    warningRules: string[];
     weights: {
       morningNightImbalance: number;
       middleDistribution: number;
@@ -163,6 +173,27 @@ function activeOn(employee: OptimizerEmployee, date: string) {
     (!employee.activeFrom || employee.activeFrom <= date) &&
     (!employee.activeUntil || employee.activeUntil >= date)
   );
+}
+
+function primaryOutletsOn(employee: OptimizerEmployee, date: string) {
+  if (!employee.placements?.length) return [employee.primaryOutletId];
+
+  return employee.placements
+    .filter(
+      (placement) =>
+        placement.startDate <= date &&
+        (!placement.endDate || placement.endDate >= date)
+    )
+    .sort(
+      (left, right) =>
+        right.startDate.localeCompare(left.startDate) ||
+        left.outletId.localeCompare(right.outletId)
+    )
+    .map((placement) => placement.outletId);
+}
+
+function primaryOutletOn(employee: OptimizerEmployee, date: string) {
+  return primaryOutletsOn(employee, date)[0];
 }
 
 function seededRank(seed: string, ...parts: string[]) {
@@ -307,13 +338,43 @@ export function generateDeterministicRoster(
   );
 
   for (const employee of input.employees) {
-    if (!outletById.has(employee.primaryOutletId)) {
+    const placementOutletIds = new Set([
+      employee.primaryOutletId,
+      ...(employee.placements ?? []).map((placement) => placement.outletId),
+    ]);
+    const missingOutletId = [...placementOutletIds].find(
+      (outletId) => !outletById.has(outletId)
+    );
+    if (missingOutletId) {
       addConflict(conflicts, {
         code: "missing_primary_outlet",
         employeeId: employee.id,
-        description: `${employee.name} tidak memiliki outlet utama yang valid.`,
+        outletId: missingOutletId,
+        description: `${employee.name} memiliki penempatan utama pada outlet yang tidak valid.`,
         suggestions: ["Perbaiki penempatan utama sebelum generate roster."],
       });
+    }
+
+    for (const date of dates) {
+      if (!activeOn(employee, date)) continue;
+      const outletIds = primaryOutletsOn(employee, date);
+      if (outletIds.length === 0) {
+        addConflict(conflicts, {
+          code: "missing_daily_placement",
+          employeeId: employee.id,
+          date,
+          description: `${employee.name} tidak memiliki penempatan utama pada tanggal ini.`,
+          suggestions: ["Lengkapi riwayat penempatan tanpa jeda sebelum generate."],
+        });
+      } else if (outletIds.length > 1) {
+        addConflict(conflicts, {
+          code: "overlapping_daily_placement",
+          employeeId: employee.id,
+          date,
+          description: `${employee.name} memiliki penempatan utama yang tumpang tindih.`,
+          suggestions: ["Koreksi tanggal efektif riwayat penempatan."],
+        });
+      }
     }
 
     const employeeOffDates = new Set(employee.offDays.map((offDay) => offDay.date));
@@ -423,11 +484,13 @@ export function generateDeterministicRoster(
       }
 
       if (isOff || isLeave) {
+        const homeOutletId =
+          primaryOutletOn(employee, date) ?? employee.primaryOutletId;
         assignments.set(key, {
           employeeId: employee.id,
           employeeName: employee.name,
           date,
-          outletId: employee.primaryOutletId,
+          outletId: homeOutletId,
           shift: isOff ? "off" : "leave",
           assignmentType: "primary",
           source: isOff ? "off" : "leave",
@@ -445,10 +508,8 @@ export function generateDeterministicRoster(
           });
           continue;
         }
-        if (
-          lockedAssignment.outletId !== employee.primaryOutletId &&
-          !lockedAssignment.isBackup
-        ) {
+        const homeOutletId = primaryOutletOn(employee, date);
+        if (lockedAssignment.outletId !== homeOutletId && !lockedAssignment.isBackup) {
           addConflict(conflicts, {
             code: "unauthorized_cross_outlet",
             employeeId: employee.id,
@@ -487,6 +548,7 @@ export function generateDeterministicRoster(
           shift: lockedAssignment.shift,
           assignmentType: lockedAssignment.isBackup ? "backup" : "primary",
           source: "locked",
+          backupReason: lockedAssignment.backupReason,
         });
       }
     }
@@ -500,7 +562,7 @@ export function generateDeterministicRoster(
           if (!activeOn(employee, date)) return false;
           const current = assignments.get(assignmentKey(employee.id, date));
           if (current?.shift === "off" || current?.shift === "leave") return false;
-          return (current?.outletId ?? employee.primaryOutletId) === outlet.id;
+          return (current?.outletId ?? primaryOutletOn(employee, date)) === outlet.id;
         })
         .map((employee) => employee.id);
       if (employeeIds.length === 0) continue;
@@ -862,6 +924,141 @@ export function generateDeterministicRoster(
     }
   }
 
+  const addFinalConflict = (
+    conflict: Omit<OptimizerConflict, "severity" | "suggestions"> & {
+      severity?: OptimizerConflict["severity"];
+      suggestions?: string[];
+    }
+  ) => {
+    const exists = conflicts.some(
+      (candidate) =>
+        candidate.code === conflict.code &&
+        candidate.employeeId === conflict.employeeId &&
+        candidate.outletId === conflict.outletId &&
+        candidate.date === conflict.date
+    );
+    if (!exists) addConflict(conflicts, conflict);
+  };
+
+  const middleByEmployeeWeek = new Map<string, number>();
+  for (const employee of input.employees) {
+    let consecutiveWorkDays = 0;
+    for (const date of dates) {
+      if (!activeOn(employee, date)) continue;
+      const assignment = assignments.get(assignmentKey(employee.id, date));
+      if (!assignment) {
+        addFinalConflict({
+          code: "missing_daily_assignment",
+          employeeId: employee.id,
+          date,
+          description: `${employee.name} belum memperoleh satu status harian.`,
+          suggestions: ["Lengkapi penempatan, template, atau kapasitas outlet."],
+        });
+        continue;
+      }
+
+      if (
+        assignment.shift === "morning" ||
+        assignment.shift === "middle" ||
+        assignment.shift === "night"
+      ) {
+        consecutiveWorkDays += 1;
+        if (consecutiveWorkDays === 7) {
+          addFinalConflict({
+            code: "consecutive_work_days",
+            severity: "warning",
+            employeeId: employee.id,
+            date,
+            description: `${employee.name} dijadwalkan bekerja lebih dari enam hari berturut-turut.`,
+            suggestions: [
+              "Tinjau ulang perpindahan off day atau tambahkan hari istirahat.",
+            ],
+          });
+        }
+      } else {
+        consecutiveWorkDays = 0;
+      }
+
+      const homeOutletId = primaryOutletOn(employee, date);
+      if (
+        assignment.assignmentType === "primary" &&
+        assignment.outletId !== homeOutletId
+      ) {
+        addFinalConflict({
+          code: "invalid_primary_outlet",
+          employeeId: employee.id,
+          outletId: assignment.outletId,
+          date,
+          description: `${employee.name} dijadwalkan sebagai primary di luar penempatan efektif.`,
+          suggestions: ["Gunakan penempatan efektif atau tandai sebagai backup manual."],
+        });
+      }
+
+      const expectedOff =
+        actualOffDates.get(employee.id)?.has(date) ?? false;
+      const expectedLeave = leaveDates.get(employee.id)?.has(date) ?? false;
+      if (
+        (expectedOff && assignment.shift !== "off") ||
+        (expectedLeave && assignment.shift !== "leave")
+      ) {
+        addFinalConflict({
+          code: "invalid_unavailable_assignment",
+          employeeId: employee.id,
+          date,
+          description: `${employee.name} mendapat shift pada hari off atau cuti.`,
+          suggestions: ["Hapus shift yang bertabrakan dengan ketidakhadiran."],
+        });
+      }
+
+      const forced = forcedShifts.get(assignmentKey(employee.id, date));
+      if (forced && assignment.shift !== forced) {
+        addFinalConflict({
+          code: "invalid_off_pattern",
+          employeeId: employee.id,
+          date,
+          description: `${employee.name} wajib ${forced} karena pola off day.`,
+          suggestions: ["Ubah jadwal terkunci atau pindahkan off day."],
+        });
+      }
+
+      if (assignment.shift === "middle") {
+        const key = `${employee.id}:${weekStart(date)}`;
+        middleByEmployeeWeek.set(key, (middleByEmployeeWeek.get(key) ?? 0) + 1);
+      }
+    }
+  }
+
+  for (const [key, count] of middleByEmployeeWeek) {
+    if (count <= 1) continue;
+    const [employeeId, ownerWeek] = key.split(":");
+    addFinalConflict({
+      code: "weekly_middle_limit",
+      employeeId,
+      date: ownerWeek,
+      description: `${employeeById.get(employeeId)?.name ?? "Kasir"} memperoleh ${count} Middle dalam satu pekan.`,
+      suggestions: ["Kurangi Middle menjadi maksimal satu per pekan."],
+    });
+  }
+
+  for (const context of dayContexts) {
+    for (const shift of ["morning", "middle", "night"] as const) {
+      const actual = context.employeeIds.filter(
+        (employeeId) =>
+          assignments.get(assignmentKey(employeeId, context.date))?.shift ===
+          shift
+      ).length;
+      if (actual < context.target[shift]) {
+        addFinalConflict({
+          code: "minimum_staffing_unmet",
+          outletId: context.outlet.id,
+          date: context.date,
+          description: `${context.outlet.name} membutuhkan ${context.target[shift]} ${shift}, tetapi hanya ${actual} terisi.`,
+          suggestions: ["Ubah off day atau tambahkan backup outlet manual."],
+        });
+      }
+    }
+  }
+
   const middleCounts = [...shiftCounts.values()].map((counts) => counts.middle);
   const averageMiddle =
     middleCounts.reduce((sum, count) => sum + count, 0) /
@@ -949,6 +1146,7 @@ export function generateDeterministicRoster(
         "manual_backup_only",
         "active_shift_template",
       ],
+      warningRules: ["consecutive_work_days"],
       weights: FAIRNESS_WEIGHTS,
     },
   };

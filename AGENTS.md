@@ -19,9 +19,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh empat migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 235/235 pada
-  28 Juli 2026.
+- Dua puluh enam migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 242/242 pada
+  29 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
@@ -68,23 +68,26 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   dari 26 jam. Script verifikasi read-only mendukung pemeriksaan evidence dan
   `--cron-status` di
   `scripts/verify-attendance-retention.mjs`; checklist berada di
-  `docs/ATTENDANCE_RETENTION_VERIFICATION.md`. Optimizer roster otomatis belum
-  diimplementasikan.
+  `docs/ATTENDANCE_RETENTION_VERIFICATION.md`.
+- Optimizer roster deterministik sudah diimplementasikan server-side. Snapshot
+  input Supabase mencakup kasir eligible, penempatan efektif, off day, cuti,
+  shift manual terkunci, template, kebutuhan staf, dan policy version. Hasil
+  valid disimpan atomik sebagai draft beserta run, score, seed, dan audit;
+  hasil invalid hanya menyimpan konflik. UI supervisor menampilkan preview
+  konflik dan fairness sebelum publikasi.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
 - Milestone **M3 — Penjadwalan Manual, Off Day, dan Versi Roster** sudah
   selesai.
 - Milestone **M4 — Cuti, Izin, dan Lembur** sudah selesai.
-- **M6 — Validasi Presensi dan Retensi File** berstatus
+- Milestone **M7 — Roster Otomatis, Middle, dan Fairness** sudah selesai.
+- **M6 — Validasi Presensi dan Retensi File** tetap berstatus
   `DEFERRED VERIFICATION`; invocation otomatis dan penghapusan evidence nyata
-  tetap wajib diverifikasi sebelum M8/pilot produksi.
-- Milestone aktif adalah **M7 — Roster Otomatis, Middle, dan Fairness** pada
-  `IMPLEMENTATION_ROADMAP.md`, berdasarkan persetujuan eksplisit pemilik produk
-  pada 29 Juli 2026 untuk menangguhkan hanya verifikasi M6 yang berbasis waktu.
-- Jangan memulai M8 sebelum exit criteria M7 selesai dan verifikasi M6 yang
-  tertunda ditutup. Setelah menyelesaikan milestone, perbarui status roadmap
-  dan dokumentasi ini.
+  masih menunggu waktu eksekusi scheduler/retensi.
+- **M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi** berstatus
+  `BLOCKED` sampai dua bukti waktu M6 tersebut lulus. Jangan mengklaim M6 atau
+  M8 selesai berdasarkan implementasi kode saja.
 
 ---
 
@@ -119,6 +122,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 ```text
 src/
 ├── app/                  # Next.js App Router Pages
+│   ├── api/roster/generate/ # Route server-side generator roster supervisor
 │   ├── template.tsx      # Global Page Transition wrapper (Framer Motion)
 │   ├── layout.tsx        # App layout with Header, Sidebar & BottomNav
 │   ├── page.tsx          # Mobile HR Dashboard (Home)
@@ -172,7 +176,8 @@ src/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
 │   ├── repository.ts     # Repository RPC roster bertipe dan role-aware
-│   └── optimizer.ts      # Generator roster deterministik tanpa I/O
+│   ├── optimizer.ts      # Generator roster deterministik tanpa I/O
+│   └── generation.ts     # Snapshot parser dan commit atomik server-side
 ├── lib/workforce-requests/
 │   ├── query-keys.ts     # Query key factory cuti dan lembur
 │   ├── queries.ts        # Query/mutation hooks dengan optimistic rollback

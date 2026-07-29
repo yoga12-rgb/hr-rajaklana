@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(47);
+select extensions.plan(54);
 
 select extensions.ok(
   not has_function_privilege(
@@ -11,6 +11,24 @@ select extensions.ok(
     'execute'
   ),
   'anonymous cannot bulk fill manual roster assignments'
+);
+
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.get_roster_generation_input(date)',
+    'execute'
+  ),
+  'anonymous cannot read roster optimizer input'
+);
+
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.commit_generated_roster(date,text,text,jsonb,text,jsonb,jsonb,jsonb)',
+    'execute'
+  ),
+  'anonymous cannot commit generated roster output'
 );
 
 select extensions.ok(
@@ -422,6 +440,114 @@ select extensions.ok(
       public.get_monthly_roster('2097-02-01')->'employees'
     ) = 4,
   'supervisor can select employees before the monthly roster period exists'
+);
+
+select extensions.is(
+  jsonb_array_length(
+    public.get_roster_generation_input('2097-04-01')->'employees'
+  ),
+  2,
+  'optimizer input contains only auto-roster eligible cashiers'
+);
+
+select extensions.is(
+  (
+    select jsonb_array_length(outlet->'availableShifts')
+    from jsonb_array_elements(
+      public.get_roster_generation_input('2097-04-01')->'outlets'
+    ) outlet
+    where outlet->>'id' = '63000000-0000-0000-0000-000000000001'
+  ),
+  3,
+  'optimizer input includes active outlet shift templates'
+);
+
+do $$
+begin
+  perform set_config(
+    'test.invalid_generation_result',
+    public.commit_generated_roster(
+      '2097-04-01',
+      'roster-test-invalid-2097-04',
+      'deterministic-matching-v1',
+      '{"monthStart":"2097-04-01"}'::jsonb,
+      'invalid',
+      '[]'::jsonb,
+      '[{
+        "code":"middle_capacity",
+        "severity":"blocking",
+        "description":"Kapasitas Middle tidak cukup",
+        "outletId":"63000000-0000-0000-0000-000000000001",
+        "date":"2097-04-03",
+        "suggestions":["Ubah off day"]
+      }]'::jsonb,
+      '[]'::jsonb
+    )::text,
+    true
+  );
+end;
+$$;
+
+select extensions.ok(
+  current_setting('test.invalid_generation_result')::jsonb
+      ->>'result_status' = 'invalid'
+    and (
+      current_setting('test.invalid_generation_result')::jsonb
+        ->>'assignment_count'
+    )::integer = 0
+    and (
+      current_setting('test.invalid_generation_result')::jsonb
+        ->>'conflict_count'
+    )::integer = 1,
+  'invalid optimizer result records conflicts without replacing assignments'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.roster_conflicts conflict
+    where conflict.generation_run_id = (
+      current_setting('test.invalid_generation_result')::jsonb
+        ->>'generation_run_id'
+    )::uuid
+      and conflict.severity = 'blocking'
+  ),
+  1,
+  'blocking optimizer conflict is persisted for supervisor review'
+);
+
+do $$
+begin
+  perform set_config(
+    'test.replayed_generation_result',
+    public.commit_generated_roster(
+      '2097-04-01',
+      'roster-test-invalid-2097-04',
+      'deterministic-matching-v1',
+      '{"monthStart":"2097-04-01"}'::jsonb,
+      'invalid',
+      '[]'::jsonb,
+      '[]'::jsonb,
+      '[]'::jsonb
+    )::text,
+    true
+  );
+end;
+$$;
+
+select extensions.ok(
+  (
+    current_setting('test.replayed_generation_result')::jsonb
+      ->>'idempotent_replay'
+  )::boolean
+    and (
+      current_setting('test.replayed_generation_result')::jsonb
+        ->>'generation_run_id'
+    )::uuid = (
+      current_setting('test.invalid_generation_result')::jsonb
+        ->>'generation_run_id'
+    )::uuid,
+  'same optimizer idempotency key replays the original generation run'
 );
 
 reset role;
@@ -1032,7 +1158,7 @@ select extensions.throws_ok(
 
 select extensions.skip(
   'fixture creation requires local postgres privileges',
-  32
+  37
 );
 
 \endif

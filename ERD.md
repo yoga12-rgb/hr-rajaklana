@@ -714,14 +714,14 @@ erDiagram
 | `roster_periods` | Siklus roster bulanan | Satu periode per bulan |
 | `roster_versions` | Versi draft/published/superseded | Nomor versi unik dalam periode |
 | `employee_off_days` | Off day yang ditetapkan supervisor | Umumnya satu per pekan; peminjaman off dicatat |
-| `schedule_assignments` | Satu jadwal kerja harian | Unik per karyawan, tanggal, dan versi |
+| `schedule_assignments` | Satu jadwal kerja harian | Unik per karyawan, tanggal, dan versi; menyimpan sumber manual/generated serta generation run |
 | `schedule_overrides` | Alasan perubahan manual | Wajib untuk pengecualian aturan atau perubahan setelah publikasi |
 | `schedule_acknowledgements` | Bukti karyawan membaca perubahan | Menyimpan versi yang dibaca |
 | `backup_assignments` | Penugasan manual ke outlet lain | Mengaktifkan geofence outlet tujuan hanya pada tanggal penugasan |
 | `shift_swap_requests` | Alur pertukaran shift | Rekan menerima lebih dahulu, supervisor memberi keputusan akhir |
-| `roster_generation_runs` | Riwayat proses algoritma | Menyimpan versi algoritma dan snapshot aturan |
+| `roster_generation_runs` | Riwayat proses algoritma | Menyimpan versi algoritma, snapshot aturan, peminta, dan idempotency key |
 | `roster_conflicts` | Konflik dan saran penyelesaian | Konflik `blocking` mencegah publikasi |
-| `roster_score_details` | Transparansi pemerataan | Menyimpan distribusi Morning/Night/Middle dan pasangan kerja |
+| `roster_score_details` | Transparansi pemerataan | Menyimpan distribusi Morning/Night/Middle/Off, pasangan kerja, dan skor |
 
 ### 8.3 Presensi
 
@@ -775,7 +775,7 @@ Implementasi transaksi cuti/lembur juga menetapkan:
 | Akun | `invited`, `active`, `locked`, `deactivated` |
 | Periode roster | `preparing`, `draft`, `published`, `closed` |
 | Versi roster | `draft`, `published`, `superseded` |
-| Jadwal | `scheduled`, `off`, `cancelled` |
+| Jadwal | `scheduled`, `off`, `leave`, `cancelled` |
 | Pertukaran shift | `pending_colleague`, `pending_supervisor`, `approved`, `rejected`, `cancelled` |
 | Presensi | `open`, `completed`, `missing_checkout`, `corrected` |
 | Validasi presensi | `pending`, `approved`, `rejected`, `needs_correction` |
@@ -796,6 +796,11 @@ where is_primary = true and end_date is null;
 -- Satu jadwal per karyawan per hari dalam setiap versi roster.
 create unique index schedule_one_assignment_per_day
 on schedule_assignments (roster_version_id, employee_id, work_date);
+
+-- Retry generator dengan input yang sama tidak membuat run atau draft ganda.
+create unique index roster_generation_runs_idempotent
+on roster_generation_runs (roster_version_id, idempotency_key)
+where idempotency_key is not null;
 
 -- Satu sumber jatah off pekanan hanya boleh dialokasikan sekali.
 create unique index employee_off_days_one_source_week

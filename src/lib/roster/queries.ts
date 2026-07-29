@@ -8,6 +8,7 @@ import {
   bulkFillManualRoster,
   decideShiftSwapColleague,
   decideShiftSwapSupervisor,
+  generateAutomaticRoster,
   getMonthlyRoster,
   getShiftSwapOptions,
   publishManualRoster,
@@ -22,6 +23,16 @@ export function useMonthlyRoster(monthStart: string, enabled = true) {
     queryKey: rosterKeys.month(monthStart),
     queryFn: () => getMonthlyRoster(createClient(), monthStart),
     enabled: enabled && Boolean(monthStart),
+  });
+}
+
+export function useGenerateAutomaticRoster(monthStart: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => generateAutomaticRoster(monthStart),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: rosterKeys.month(monthStart) }),
   });
 }
 

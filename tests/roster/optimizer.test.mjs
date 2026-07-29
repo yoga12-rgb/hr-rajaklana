@@ -159,6 +159,27 @@ test("melaporkan konflik yang dapat ditindaklanjuti ketika kapasitas Middle tida
   assert.ok(conflict.suggestions.length > 0);
 });
 
+test("memperingatkan lebih dari enam hari kerja tanpa menggagalkan roster", () => {
+  const input = createInput();
+  input.employees[0].offDays = [
+    { date: "2026-06-01", sourceWeekStart: "2026-06-01" },
+    { date: "2026-06-14", sourceWeekStart: "2026-06-08" },
+    { date: "2026-06-21", sourceWeekStart: "2026-06-15" },
+    { date: "2026-06-28", sourceWeekStart: "2026-06-22" },
+    { date: "2026-07-05", sourceWeekStart: "2026-06-29" },
+  ];
+
+  const result = generateDeterministicRoster(input);
+  const warning = result.conflicts.find(
+    (candidate) => candidate.code === "consecutive_work_days"
+  );
+
+  assert.equal(result.status, "valid");
+  assert.equal(warning?.severity, "warning");
+  assert.equal(warning?.employeeId, "employee-1");
+  assert.ok(warning?.suggestions.length);
+});
+
 test("menolak perpindahan lintas outlet yang bukan backup manual", () => {
   const input = createInput();
   input.outlets.push({
@@ -229,5 +250,58 @@ test("memenuhi target performa PRD untuk fixture 200 kasir", () => {
   assert.ok(
     elapsedMs < 30_000,
     `Generate memerlukan ${elapsedMs.toFixed(2)} ms; target maksimal 30 detik.`
+  );
+});
+
+test("mengikuti perubahan penempatan efektif di tengah bulan", () => {
+  const input = createInput();
+  input.outlets.push({
+    id: "outlet-b",
+    name: "Area Operasional B",
+    availableShifts: ["morning", "middle", "night"],
+  });
+  input.employees.push(
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `employee-b-${index + 1}`,
+      name: `Kasir B ${index + 1}`,
+      primaryOutletId: "outlet-b",
+      offDays: offDays(index),
+    }))
+  );
+  input.employees[0].placements = [
+    {
+      outletId: "outlet-a",
+      startDate: "2025-01-01",
+      endDate: "2026-06-15",
+    },
+    { outletId: "outlet-b", startDate: "2026-06-16" },
+  ];
+  input.employees[4].placements = [
+    {
+      outletId: "outlet-b",
+      startDate: "2025-01-01",
+      endDate: "2026-06-15",
+    },
+    { outletId: "outlet-a", startDate: "2026-06-16" },
+  ];
+
+  const result = generateDeterministicRoster(input);
+
+  assert.equal(result.status, "valid");
+  assert.equal(
+    result.assignments.find(
+      (assignment) =>
+        assignment.employeeId === "employee-1" &&
+        assignment.date === "2026-06-15"
+    )?.outletId,
+    "outlet-a"
+  );
+  assert.equal(
+    result.assignments.find(
+      (assignment) =>
+        assignment.employeeId === "employee-1" &&
+        assignment.date === "2026-06-16"
+    )?.outletId,
+    "outlet-b"
   );
 });

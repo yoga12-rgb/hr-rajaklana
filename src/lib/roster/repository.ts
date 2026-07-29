@@ -1,9 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
+import type {
+  OptimizerConflict,
+  OptimizerFairnessDetail,
+} from "./optimizer";
 
 type RosterClient = SupabaseClient<Database>;
 
-export type RosterShiftType = "morning" | "middle" | "night" | "off";
+export type RosterShiftType =
+  | "morning"
+  | "middle"
+  | "night"
+  | "off"
+  | "leave";
 export type RosterScheduleStatus = "scheduled" | "off";
 export type RosterAssignmentType = "primary" | "backup";
 
@@ -38,10 +47,10 @@ export interface RosterAssignment {
   outlet_id: string | null;
   outlet_name: string;
   work_date: string;
-  shift_type: RosterShiftType;
+  shift_type: RosterShiftType | null;
   planned_start: string | null;
   planned_end: string | null;
-  status: "scheduled" | "off" | "cancelled";
+  status: "scheduled" | "off" | "leave" | "cancelled";
   assignment_type: RosterAssignmentType;
   is_own: boolean;
   acknowledged: boolean;
@@ -90,7 +99,7 @@ export interface SaveRosterAssignmentInput {
   employeeId: string;
   workDate: string;
   outletId: string | null;
-  shiftType: Exclude<RosterShiftType, "off"> | null;
+  shiftType: Exclude<RosterShiftType, "off" | "leave"> | null;
   status: RosterScheduleStatus;
   assignmentType: RosterAssignmentType;
   reason: string;
@@ -110,7 +119,7 @@ export interface BulkFillRosterInput {
   monthStart: string;
   startDate: string;
   endDate: string;
-  shiftType: Exclude<RosterShiftType, "off">;
+  shiftType: Exclude<RosterShiftType, "off" | "leave">;
   fillMode: BulkRosterFillMode;
   reason: string;
   employeeIds?: string[] | null;
@@ -131,11 +140,28 @@ export interface PublishRosterResult {
   published_assignments: number;
 }
 
+export interface AutomaticRosterGenerationResult {
+  persistence: {
+    generation_run_id?: string;
+    roster_version_id?: string;
+    assignment_count?: number;
+    conflict_count?: number;
+    idempotent_replay?: boolean;
+  };
+  resultStatus: "valid" | "invalid";
+  algorithmVersion: string;
+  assignmentCount: number;
+  conflicts: OptimizerConflict[];
+  fairnessScore: number;
+  fairnessDetails: OptimizerFairnessDetail[];
+  elapsedMs: number;
+}
+
 export interface ShiftSwapOption {
   schedule_id: string;
   employee_name: string;
   work_date: string;
-  shift_type: Exclude<RosterShiftType, "off">;
+  shift_type: Exclude<RosterShiftType, "off" | "leave">;
   planned_start: string;
   planned_end: string;
 }
@@ -161,6 +187,27 @@ export async function getMonthlyRoster(
 
   if (error) throw rosterError("Gagal memuat roster", error);
   return parseObject(data) as unknown as MonthlyRoster;
+}
+
+export async function generateAutomaticRoster(monthStart: string) {
+  const response = await fetch("/api/roster/generate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ monthStart }),
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.error ?? "Roster otomatis belum dapat dibuat oleh server."
+    );
+  }
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Respons roster otomatis dari server tidak valid.");
+  }
+  return payload as unknown as AutomaticRosterGenerationResult;
 }
 
 export async function saveManualRosterAssignment(

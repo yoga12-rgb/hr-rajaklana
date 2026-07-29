@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 29 Juli 2026                                                    |
-| Fase saat ini         | M7 roster otomatis berjalan dengan verifikasi M6 ditangguhkan   |
+| Fase saat ini         | M7 selesai; M8 menunggu penutupan verifikasi waktu M6           |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -715,7 +715,7 @@ tier melalui penghapusan bukti yang dapat diaudit.
 
 ---
 
-## M7 — Roster Otomatis, Middle, dan Fairness (`IN PROGRESS`)
+## M7 — Roster Otomatis, Middle, dan Fairness (`DONE`)
 
 ### Tujuan
 
@@ -741,18 +741,37 @@ diedit supervisor.
 - Supervisor dapat mengubah output dengan alasan dan mempublikasikan versi
   baru.
 
-### Progres 29 Juli 2026
+### Progres terverifikasi 29 Juli 2026
 
-- Generator TypeScript murni `deterministic-matching-v1` sudah tersedia dengan
-  snapshot aturan, seed, konflik blocking, dan fairness report per kasir.
+- Generator TypeScript murni `deterministic-matching-v1` menghasilkan output
+  yang dapat direproduksi dari snapshot dan seed yang sama. Hard constraints
+  divalidasi ulang sebelum hasil diberi status valid.
 - Alokasi Middle memakai deterministic bipartite matching; Pagi/Malam memakai
   pemerataan jumlah shift dan frekuensi pasangan sebagai soft constraints.
-- Lima unit test mencakup fixture bulanan valid, reproduktibilitas, pola off,
-  batas Middle, konflik kapasitas, dan larangan backup lintas outlet tanpa
-  penugasan manual, serta target performa 200 kasir. Unit test sudah masuk
-  GitHub Quality Gate.
-- Integrasi snapshot input Supabase, commit atomik generation run, preview UI,
-  fixture multi-outlet, serta benchmark pilot masih harus diselesaikan.
+- Snapshot supervisor dari Supabase mencakup kasir eligible, seluruh
+  penempatan efektif dalam bulan, off day, cuti approved, shift manual
+  terkunci, template shift, kebutuhan staf, serta policy version.
+- Route Handler server-side menjalankan optimizer dan membentuk idempotency
+  key dari input, seed, algoritma, serta output. Commit database memakai
+  advisory lock dan satu transaksi untuk generation run, konflik, fairness,
+  assignment, version draft, serta audit.
+- Shift manual pada draft dipertahankan sebagai lock. Generator tidak membuat
+  backup outlet otomatis; assignment lintas outlet hanya diterima bila sudah
+  dibuat manual dengan alasan. Cuti tampil sebagai status read-only di matriks.
+- Output invalid tidak mengganti assignment lama dan menampilkan konflik serta
+  saran per tanggal. Output valid diterapkan sebagai draft dan tetap dapat
+  dikoreksi manual sebelum publikasi.
+- UI mobile-first menambahkan alur **Buat Otomatis**, ringkasan jumlah
+  assignment, durasi, skor fairness, distribusi Pagi/Middle/Malam/Off per
+  kasir, dan preview maksimal dua belas konflik.
+- Tujuh unit test mencakup fixture bulanan valid, determinisme, pola off, batas
+  Middle, warning lebih dari enam hari kerja berturut-turut, konflik kapasitas,
+  backup lintas outlet, perubahan penempatan efektif di tengah bulan, dan
+  benchmark 200 kasir. Benchmark lokal selesai sekitar 223 ms, jauh di bawah
+  target PRD 30 detik.
+- Dua migration M7 sudah identik lokal/hosted. Lint schema `public` bersih,
+  pgTAP lokal/hosted lulus `242/242`, lint, typecheck, build produksi, enam
+  unit test, serta `18/18` E2E desktop/mobile lulus.
 
 ### Exit criteria
 
@@ -765,12 +784,23 @@ diedit supervisor.
 
 ---
 
-## M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi (`BACKLOG`)
+## M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi (`BLOCKED`)
 
 ### Tujuan
 
 Menutup MVP dengan komunikasi, laporan operasional, ketahanan jaringan, dan
 observability yang layak dipakai pilot.
+
+### Gate sebelum mulai
+
+M7 sudah selesai, tetapi M8 belum boleh dimulai sampai M6 membuktikan:
+
+1. invocation otomatis Vercel Cron tercatat oleh audit persisten; dan
+2. satu selfie nyata yang melewati tujuh hari benar-benar hilang dari Storage,
+   metadata/audit tetap tersedia, serta signed URL tidak lagi dapat mengambil
+   objek.
+
+Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
 
 ### Pekerjaan
 
@@ -871,11 +901,11 @@ Sebelum commit final milestone:
 
 Untuk perubahan hosted:
 
-- [ ] Project ref diperiksa: `ttbogurultjbporryylb`.
-- [ ] `migration list --linked` diperiksa sebelum dan sesudah push.
-- [ ] Dry-run diperiksa.
-- [ ] Hosted lint dan pgTAP lulus.
-- [ ] Tidak pernah melakukan reset production.
+- [x] Project ref diperiksa: `ttbogurultjbporryylb`.
+- [x] `migration list --linked` diperiksa sebelum dan sesudah push.
+- [x] Dua migration M7 diterapkan tanpa reset production.
+- [x] Hosted lint dan pgTAP `242/242` lulus.
+- [x] Tidak pernah melakukan reset production.
 
 ---
 
@@ -890,8 +920,7 @@ Input berikut diminta hanya ketika milestone terkait dimulai:
 | M3        | Template shift per outlet, pengecualian outlet, off day awal, aturan perubahan/publish    |
 | M4        | Daftar final jenis cuti dan dokumen wajib                                                 |
 | M5        | Hasil uji accuracy GPS perangkat nyata dan toleransi pilot                                |
-| M6        | Retensi final untuk bukti reject/correction dan frekuensi worker                          |
-| M7        | Dataset satu bulan untuk mengukur fairness dan kasus outlet kekurangan staf               |
+| M6        | Bukti scheduler otomatis dan evidence nyata pascajatuh tempo tujuh hari                    |
 | M8        | Pengguna pilot, SOP dukungan, kebutuhan laporan/export final                              |
 
 Jangan mengarang data perusahaan nyata. Gunakan fixture sintetis sampai data
@@ -904,7 +933,8 @@ diberikan atau impor disetujui.
 1. Baca dokumen wajib yang disebutkan pada bagian awal.
 2. Periksa `git status`, branch, commit terbaru, dan status CI.
 3. Verifikasi baseline dengan perintah yang proporsional terhadap milestone.
-4. Kerjakan hanya milestone pertama berstatus `NEXT`.
+4. Bila belum ada `NEXT`, tutup gate verifikasi yang masih menahan milestone
+   `BLOCKED`; jangan melewati bukti berbasis waktu dengan asumsi.
 5. Ubah milestone itu menjadi `DONE` hanya setelah seluruh exit criteria lulus.
 6. Ubah milestone berikutnya dari `BACKLOG` menjadi `NEXT`.
 7. Catat keputusan baru, migration baru, risiko, dan pengujian yang benar-benar
@@ -917,7 +947,8 @@ Prompt singkat yang dapat diberikan kepada agent baru:
 
 > Pelajari `AGENTS.md`, `PRD.md`, `ERD.md`,
 > `IMPLEMENTATION_ROADMAP.md`, dan `supabase/README.md`. Periksa kondisi repo
-> dan mulai hanya dari milestone pertama yang berstatus `NEXT`. Pertahankan
+> dan mulai dengan menutup dua verifikasi waktu M6. Ubah M8 dari `BLOCKED`
+> menjadi `NEXT` hanya setelah keduanya lulus. Pertahankan
 > data prototype sampai modul tersebut benar-benar dimigrasikan, jangan
 > mengekspos secret, jangan reset Supabase hosted, jalankan seluruh quality
 > gate milestone, lalu perbarui status handoff.

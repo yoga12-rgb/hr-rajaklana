@@ -71,6 +71,14 @@ Jangan menjalankan reset terhadap production.
   kasir eligible/supervisor aktif, memakai outlet utama per tanggal, mendukung
   mode sel kosong atau replace, dan rollback seluruh rentang bila satu target
   tidak memiliki penempatan atau template shift aktif.
+- Roster otomatis membaca snapshot melalui `get_roster_generation_input`,
+  dijalankan oleh Route Handler server-side, lalu disimpan melalui
+  `commit_generated_roster`. Commit memakai advisory lock dan idempotency key,
+  menyimpan generation run/conflict/fairness/audit, mempertahankan shift manual
+  sebagai lock, dan tidak menerapkan assignment bila hasil optimizer invalid.
+- Generator tidak membuat backup outlet. Perpindahan lintas outlet tetap wajib
+  dibuat manual dengan alasan; publish RPC tetap menjadi validasi akhir
+  kelengkapan dan hard constraints sebelum roster aktif.
 - Versi roster `published` bersifat immutable. Perubahan berikutnya membuat
   draft baru dari versi aktif; publikasi mengganti versi aktif secara atomik,
   menulis audit, dan membuat notifikasi/receipt baru.

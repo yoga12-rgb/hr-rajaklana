@@ -1675,6 +1675,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
+          idempotency_key: string | null
           requested_by: string
           roster_version_id: string
           rule_snapshot: Json
@@ -1685,6 +1686,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           requested_by: string
           roster_version_id: string
           rule_snapshot: Json
@@ -1695,6 +1697,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           requested_by?: string
           roster_version_id?: string
           rule_snapshot?: Json
@@ -1757,6 +1760,7 @@ export type Database = {
           middle_count: number
           morning_count: number
           night_count: number
+          off_count: number
           pairing_counts: Json
         }
         Insert: {
@@ -1767,6 +1771,7 @@ export type Database = {
           middle_count?: number
           morning_count?: number
           night_count?: number
+          off_count?: number
           pairing_counts?: Json
         }
         Update: {
@@ -1777,6 +1782,7 @@ export type Database = {
           middle_count?: number
           morning_count?: number
           night_count?: number
+          off_count?: number
           pairing_counts?: Json
         }
         Relationships: [
@@ -1884,9 +1890,11 @@ export type Database = {
       }
       schedule_assignments: {
         Row: {
+          assignment_source: string
           assignment_type: string
           created_at: string
           employee_id: string
+          generation_run_id: string | null
           id: string
           outlet_id: string
           planned_duration_min: number
@@ -1899,9 +1907,11 @@ export type Database = {
           work_date: string
         }
         Insert: {
+          assignment_source?: string
           assignment_type?: string
           created_at?: string
           employee_id: string
+          generation_run_id?: string | null
           id?: string
           outlet_id: string
           planned_duration_min?: number
@@ -1914,9 +1924,11 @@ export type Database = {
           work_date: string
         }
         Update: {
+          assignment_source?: string
           assignment_type?: string
           created_at?: string
           employee_id?: string
+          generation_run_id?: string | null
           id?: string
           outlet_id?: string
           planned_duration_min?: number
@@ -1934,6 +1946,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_generation_run_id_fkey"
+            columns: ["generation_run_id"]
+            isOneToOne: false
+            referencedRelation: "roster_generation_runs"
             referencedColumns: ["id"]
           },
           {
@@ -2363,6 +2382,19 @@ export type Database = {
         Args: { p_dry_run_job_id: string; p_reason: string; p_rows: Json }
         Returns: Json
       }
+      commit_generated_roster: {
+        Args: {
+          p_algorithm_version: string
+          p_assignments: Json
+          p_conflicts: Json
+          p_fairness_details: Json
+          p_idempotency_key: string
+          p_month_start: string
+          p_result_status: string
+          p_rule_snapshot: Json
+        }
+        Returns: Json
+      }
       complete_attendance_file_deletion_job: {
         Args: { p_deleted_at?: string; p_job_id: string }
         Returns: undefined
@@ -2554,6 +2586,10 @@ export type Database = {
       get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
       get_overtime_workspace: { Args: never; Returns: Json }
+      get_roster_generation_input: {
+        Args: { p_month_start: string }
+        Returns: Json
+      }
       get_shift_swap_options: {
         Args: { p_requester_schedule_id: string }
         Returns: Json
@@ -2880,7 +2916,7 @@ export type Database = {
       risk_review_status: "open" | "cleared" | "confirmed"
       roster_period_status: "preparing" | "draft" | "published" | "closed"
       roster_version_status: "draft" | "published" | "superseded"
-      schedule_status: "scheduled" | "off" | "cancelled"
+      schedule_status: "scheduled" | "off" | "leave" | "cancelled"
       shift_type: "morning" | "middle" | "night"
       validation_status:
         | "pending"
@@ -3028,7 +3064,7 @@ export const Constants = {
       risk_review_status: ["open", "cleared", "confirmed"],
       roster_period_status: ["preparing", "draft", "published", "closed"],
       roster_version_status: ["draft", "published", "superseded"],
-      schedule_status: ["scheduled", "off", "cancelled"],
+      schedule_status: ["scheduled", "off", "leave", "cancelled"],
       shift_type: ["morning", "middle", "night"],
       validation_status: [
         "pending",

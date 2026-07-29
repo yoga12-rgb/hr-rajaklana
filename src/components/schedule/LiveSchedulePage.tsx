@@ -12,7 +12,9 @@ import {
   LoaderCircle,
   MapPin,
   RefreshCw,
+  Scale,
   Send,
+  Sparkles,
   TriangleAlert,
 } from "lucide-react";
 import { useHR } from "@/context/HRContext";
@@ -26,6 +28,7 @@ import {
   useBulkFillManualRoster,
   useDecideShiftSwapColleague,
   useDecideShiftSwapSupervisor,
+  useGenerateAutomaticRoster,
   useMonthlyRoster,
   usePublishManualRoster,
   useRequestShiftSwap,
@@ -33,6 +36,7 @@ import {
   useShiftSwapOptions,
 } from "@/lib/roster/queries";
 import type {
+  AutomaticRosterGenerationResult,
   BulkRosterFillMode,
   RosterAssignment,
   RosterAssignmentType,
@@ -86,6 +90,7 @@ const shiftLabels: Record<RosterShiftType, string> = {
   middle: "Middle",
   night: "Malam",
   off: "Off",
+  leave: "Cuti",
 };
 
 const shiftStyles: Record<RosterShiftType, string> = {
@@ -93,6 +98,7 @@ const shiftStyles: Record<RosterShiftType, string> = {
   middle: "border-amber-300/25 bg-amber-300/10 text-amber-200",
   night: "border-slate-600 bg-slate-800 text-slate-200",
   off: "border-rose-500/25 bg-rose-500/10 text-rose-300",
+  leave: "border-sky-500/25 bg-sky-500/10 text-sky-300",
 };
 
 type DecisionTarget = {
@@ -102,11 +108,12 @@ type DecisionTarget = {
 };
 
 /**
- * Halaman roster Supabase untuk M3.
+ * Halaman roster Supabase untuk M3 dan generator deterministik M7.
  *
  * Menampilkan matriks bulanan role-aware, menyimpan perubahan melalui RPC
  * versioned, mendukung off day/backup, publikasi, acknowledgement, dan
- * pertukaran shift tanpa menulis langsung ke tabel historis.
+ * pertukaran shift, serta preview konflik/fairness roster otomatis tanpa
+ * menulis langsung ke tabel historis.
  */
 export function LiveSchedulePage() {
   const { showToast } = useHR();
@@ -115,6 +122,7 @@ export function LiveSchedulePage() {
   );
   const [showEdit, setShowEdit] = useState(false);
   const [showBulkFill, setShowBulkFill] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [decisionTarget, setDecisionTarget] =
@@ -124,7 +132,7 @@ export function LiveSchedulePage() {
   const [scheduleStatus, setScheduleStatus] =
     useState<RosterScheduleStatus>("scheduled");
   const [shiftType, setShiftType] =
-    useState<Exclude<RosterShiftType, "off">>("morning");
+    useState<Exclude<RosterShiftType, "off" | "leave">>("morning");
   const [assignmentType, setAssignmentType] =
     useState<RosterAssignmentType>("primary");
   const [outletId, setOutletId] = useState("");
@@ -137,7 +145,7 @@ export function LiveSchedulePage() {
     monthEndFromStart(monthStart)
   );
   const [bulkShiftType, setBulkShiftType] =
-    useState<Exclude<RosterShiftType, "off">>("morning");
+    useState<Exclude<RosterShiftType, "off" | "leave">>("morning");
   const [bulkFillMode, setBulkFillMode] =
     useState<BulkRosterFillMode>("empty_only");
   const [bulkReason, setBulkReason] = useState("");
@@ -146,6 +154,8 @@ export function LiveSchedulePage() {
   const [colleagueScheduleId, setColleagueScheduleId] = useState("");
   const [swapReason, setSwapReason] = useState("");
   const [decisionNote, setDecisionNote] = useState("");
+  const [generationPreview, setGenerationPreview] =
+    useState<AutomaticRosterGenerationResult | null>(null);
 
   const roleQuery = useCurrentAccessRole();
   const rosterQuery = useMonthlyRoster(monthStart);
@@ -153,6 +163,7 @@ export function LiveSchedulePage() {
   const templatesQuery = useActiveShiftTemplates();
   const saveMutation = useSaveManualRosterAssignment(monthStart);
   const bulkFillMutation = useBulkFillManualRoster(monthStart);
+  const generateMutation = useGenerateAutomaticRoster(monthStart);
   const publishMutation = usePublishManualRoster(monthStart);
   const acknowledgeMutation = useAcknowledgeMonthlyRoster(monthStart);
   const requestSwapMutation = useRequestShiftSwap(monthStart);
@@ -230,7 +241,7 @@ export function LiveSchedulePage() {
 
   const selectAvailableShift = (
     nextOutletId: string,
-    preferredShift: Exclude<RosterShiftType, "off"> = shiftType
+    preferredShift: Exclude<RosterShiftType, "off" | "leave"> = shiftType
   ) => {
     const outletTemplates = (templatesQuery.data ?? []).filter(
       (template) => template.outlet_id === nextOutletId
@@ -242,7 +253,9 @@ export function LiveSchedulePage() {
       : outletTemplates[0]?.shift_type;
 
     if (nextShift) {
-      setShiftType(nextShift as Exclude<RosterShiftType, "off">);
+      setShiftType(
+        nextShift as Exclude<RosterShiftType, "off" | "leave">
+      );
     }
   };
 
@@ -264,7 +277,9 @@ export function LiveSchedulePage() {
     setWorkDate(date);
     setScheduleStatus(assignment?.status === "off" ? "off" : "scheduled");
     const preferredShift =
-      assignment?.shift_type && assignment.shift_type !== "off"
+      assignment?.shift_type &&
+      assignment.shift_type !== "off" &&
+      assignment.shift_type !== "leave"
         ? assignment.shift_type
         : "morning";
     selectAvailableShift(
@@ -364,6 +379,34 @@ export function LiveSchedulePage() {
         error instanceof Error
           ? error.message
           : "Roster belum dapat dipublikasikan.",
+        "warning"
+      );
+    }
+  };
+
+  const handleGenerate = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    try {
+      const result = await generateMutation.mutateAsync();
+      setGenerationPreview(result);
+      if (result.resultStatus === "valid") {
+        playSuccessHaptic();
+        showToast(
+          `Draft otomatis tersimpan: ${result.assignmentCount} penugasan.`,
+          "success"
+        );
+      } else {
+        showToast(
+          `Roster belum diterapkan karena ada ${result.conflicts.length} konflik.`,
+          "warning"
+        );
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Roster otomatis belum dapat dibuat.",
         "warning"
       );
     }
@@ -554,6 +597,18 @@ export function LiveSchedulePage() {
               <button
                 type="button"
                 onClick={() => {
+                  playClickSound();
+                  setGenerationPreview(null);
+                  setShowGenerate(true);
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950"
+              >
+                <Sparkles className="h-4 w-4" />
+                Buat Otomatis
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   const first = rows[0];
                   if (!first?.id || !first.primaryOutletId) {
                     showToast(
@@ -568,7 +623,7 @@ export function LiveSchedulePage() {
                     first.primaryOutletId
                   );
                 }}
-                className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950"
+                className="flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300"
               >
                 <Edit3 className="h-4 w-4" />
                 Atur Jadwal
@@ -674,8 +729,10 @@ export function LiveSchedulePage() {
                         const assignment = assignmentsByCell.get(
                           `${row.id ?? row.name}:${day.value}`
                         );
-                        const displayShift =
-                          assignment?.shift_type ?? ("off" as const);
+                        const displayShift: RosterShiftType =
+                          assignment?.status === "leave"
+                            ? "leave"
+                            : assignment?.shift_type ?? "off";
                         return (
                           <td key={day.value} className="p-1 text-center">
                             <button
@@ -683,7 +740,8 @@ export function LiveSchedulePage() {
                               disabled={
                                 !canManage ||
                                 !row.id ||
-                                !row.primaryOutletId
+                                !row.primaryOutletId ||
+                                assignment?.status === "leave"
                               }
                               onClick={() =>
                                 row.id &&
@@ -695,7 +753,11 @@ export function LiveSchedulePage() {
                                   assignment
                                 )
                               }
-                              title={`${row.name}, ${day.value}`}
+                              title={
+                                assignment?.status === "leave"
+                                  ? `${row.name}, ${day.value}: cuti disetujui`
+                                  : `${row.name}, ${day.value}`
+                              }
                               className={`w-full rounded-md border px-1 py-1.5 text-[9px] font-bold disabled:cursor-default ${
                                 assignment
                                   ? shiftStyles[displayShift]
@@ -830,6 +892,161 @@ export function LiveSchedulePage() {
       )}
 
       <Modal
+        isOpen={showGenerate}
+        onClose={() =>
+          !generateMutation.isPending && setShowGenerate(false)
+        }
+        title="Buat Roster Otomatis"
+        icon={Sparkles}
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={handleGenerate} className="space-y-4">
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-100">
+            Sistem membaca penempatan efektif, off day, cuti disetujui,
+            kebutuhan staf, dan template shift aktif. Perubahan manual pada
+            draft dipertahankan sebagai jadwal terkunci; perpindahan outlet
+            tetap dilakukan manual sebagai backup.
+          </div>
+
+          {generationPreview && (
+            <div className="space-y-4" aria-live="polite">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <GenerationMetric
+                  label="Hasil"
+                  value={
+                    generationPreview.resultStatus === "valid"
+                      ? "Draft tersimpan"
+                      : "Perlu diperbaiki"
+                  }
+                />
+                <GenerationMetric
+                  label="Penugasan"
+                  value={String(generationPreview.assignmentCount)}
+                />
+                <GenerationMetric
+                  label="Skor fairness"
+                  value={generationPreview.fairnessScore.toFixed(1)}
+                />
+                <GenerationMetric
+                  label="Durasi"
+                  value={`${generationPreview.elapsedMs} ms`}
+                />
+              </div>
+
+              {generationPreview.resultStatus === "valid" ? (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-100">
+                  <CalendarCheck2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                  Draft berhasil diterapkan. Periksa matriks, lakukan koreksi
+                  manual bila perlu, lalu publikasikan roster.
+                </div>
+              ) : (
+                <div
+                  role="alert"
+                  className="space-y-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3"
+                >
+                  <div className="flex items-center gap-2 text-xs font-bold text-rose-200">
+                    <TriangleAlert className="h-4 w-4" />
+                    {generationPreview.conflicts.length} konflik ditemukan;
+                    jadwal lama tidak diubah.
+                  </div>
+                  <div className="max-h-52 space-y-2 overflow-y-auto">
+                    {generationPreview.conflicts
+                      .slice(0, 12)
+                      .map((conflict, index) => (
+                        <div
+                          key={`${conflict.code}:${conflict.date ?? "all"}:${index}`}
+                          className="rounded-lg border border-rose-500/20 bg-slate-950/60 p-2.5"
+                        >
+                          <p className="text-xs font-semibold text-slate-100">
+                            {conflict.description}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-slate-400">
+                            {conflict.code}
+                            {conflict.date ? ` · ${conflict.date}` : ""}
+                          </p>
+                          {conflict.suggestions[0] && (
+                            <p className="mt-1 text-[10px] text-rose-200">
+                              Saran: {conflict.suggestions[0]}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {generationPreview.resultStatus === "valid" &&
+                generationPreview.conflicts.length > 0 && (
+                  <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+                      <TriangleAlert className="h-4 w-4" />
+                      Peringatan operasional
+                    </div>
+                    {generationPreview.conflicts.map((conflict, index) => (
+                      <div
+                        key={`${conflict.code}:${conflict.date ?? "all"}:${index}`}
+                        className="rounded-lg border border-amber-500/15 bg-slate-950/50 p-2.5"
+                      >
+                        <p className="text-xs font-semibold text-slate-100">
+                          {conflict.description}
+                        </p>
+                        {conflict.suggestions[0] && (
+                          <p className="mt-1 text-[10px] text-amber-200">
+                            Saran: {conflict.suggestions[0]}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              {generationPreview.fairnessDetails.length > 0 && (
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-amber-400" />
+                    <h3 className="text-xs font-bold text-slate-100">
+                      Ringkasan pemerataan
+                    </h3>
+                  </div>
+                  <div className="max-h-48 space-y-2 overflow-y-auto">
+                    {generationPreview.fairnessDetails.map((detail) => (
+                      <div
+                        key={detail.employeeId}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-slate-900 px-3 py-2"
+                      >
+                        <div>
+                          <p className="text-[11px] font-semibold text-slate-200">
+                            {rows.find((row) => row.id === detail.employeeId)
+                              ?.name ?? detail.employeeId}
+                          </p>
+                          <p className="text-[9px] text-slate-500">
+                            Pagi {detail.morningCount} · Middle{" "}
+                            {detail.middleCount} · Malam {detail.nightCount} ·
+                            Off {detail.offCount}
+                          </p>
+                        </div>
+                        <span className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
+                          {detail.fairnessScore.toFixed(1)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <SubmitActions
+            pending={generateMutation.isPending}
+            onCancel={() => setShowGenerate(false)}
+            submitLabel={
+              generationPreview ? "Jalankan Ulang" : "Buat Draft Otomatis"
+            }
+          />
+        </form>
+      </Modal>
+
+      <Modal
         isOpen={showEdit}
         onClose={() => !saveMutation.isPending && setShowEdit(false)}
         title="Atur Jadwal Manual"
@@ -935,7 +1152,7 @@ export function LiveSchedulePage() {
                   value={shiftType}
                   onChange={(value) =>
                     setShiftType(
-                      value as Exclude<RosterShiftType, "off">
+                      value as Exclude<RosterShiftType, "off" | "leave">
                     )
                   }
                 />
@@ -1104,7 +1321,7 @@ export function LiveSchedulePage() {
             value={bulkShiftType}
             onChange={(value) =>
               setBulkShiftType(
-                value as Exclude<RosterShiftType, "off">
+                value as Exclude<RosterShiftType, "off" | "leave">
               )
             }
           />
@@ -1177,8 +1394,17 @@ export function LiveSchedulePage() {
             label="Jadwal saya"
             options={ownAssignments
               .filter(
-                (assignment): assignment is RosterAssignment & { id: string } =>
-                  Boolean(assignment.id) && assignment.status === "scheduled"
+                (
+                  assignment
+                ): assignment is RosterAssignment & {
+                  id: string;
+                  shift_type: Exclude<RosterShiftType, "off" | "leave">;
+                } =>
+                  Boolean(assignment.id) &&
+                  assignment.status === "scheduled" &&
+                  assignment.shift_type !== null &&
+                  assignment.shift_type !== "off" &&
+                  assignment.shift_type !== "leave"
               )
               .map((assignment) => ({
                 value: assignment.id,
@@ -1285,6 +1511,23 @@ function DecisionButton({
     >
       {label}
     </button>
+  );
+}
+
+function GenerationMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+      <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-xs font-bold text-slate-100">{value}</p>
+    </div>
   );
 }
 

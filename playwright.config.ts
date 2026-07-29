@@ -33,6 +33,7 @@ export default defineConfig({
     command: `npm run start -- -p ${port}`,
     env: {
       ...process.env,
+      APP_DATA_SOURCE: "demo",
       E2E_AUTH_BYPASS: "1",
     },
     url: baseURL,
