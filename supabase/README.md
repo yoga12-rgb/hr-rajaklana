@@ -122,5 +122,9 @@ Jangan menjalankan reset terhadap production.
   `npm run attendance:verify-retention -- --evidence-id <uuid>`. Tambahkan
   `--expect-deleted` hanya setelah cron pascajatuh tempo; checklist lengkap
   berada di `docs/ATTENDANCE_RETENTION_VERIFICATION.md`.
+- Invocation worker berotorisasi mencatat audit persisten tanpa bearer secret
+  atau path Storage. Gunakan
+  `npm run attendance:verify-retention -- --cron-status` untuk memeriksa
+  invocation otomatis Vercel terbaru setelah jadwal harian berjalan.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.

@@ -7,6 +7,7 @@ loadEnvConfig(process.cwd());
 const args = process.argv.slice(2);
 const expectDeleted = args.includes("--expect-deleted");
 const useLatest = args.includes("--latest");
+const checkCronStatus = args.includes("--cron-status");
 const evidenceIdIndex = args.indexOf("--evidence-id");
 const evidenceId =
   evidenceIdIndex >= 0 ? args[evidenceIdIndex + 1]?.trim() : undefined;
@@ -18,11 +19,13 @@ Penggunaan:
   npm run attendance:verify-retention -- --latest
   npm run attendance:verify-retention -- --evidence-id <uuid>
   npm run attendance:verify-retention -- --evidence-id <uuid> --expect-deleted
+  npm run attendance:verify-retention -- --cron-status
 
 Opsi:
   --latest          Periksa evidence presensi terbaru.
   --evidence-id     Periksa satu evidence berdasarkan UUID.
   --expect-deleted  Jadikan kondisi belum terhapus sebagai kegagalan.
+  --cron-status     Periksa invocation otomatis Vercel Cron terbaru.
   --help            Tampilkan bantuan.
 
 Script tidak mengubah database atau Storage dan tidak mencetak secret/path file.`);
@@ -34,8 +37,9 @@ if (args.includes("--help")) {
 }
 
 if (
-  (useLatest && evidenceId) ||
-  (!useLatest && !evidenceId) ||
+  [useLatest, Boolean(evidenceId), checkCronStatus].filter(Boolean).length !==
+    1 ||
+  (expectDeleted && checkCronStatus) ||
   (evidenceId &&
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       evidenceId
@@ -118,7 +122,58 @@ async function freshSignedUrlCanRetrieve(bucket, path) {
   }
 }
 
+async function runCronStatus() {
+  const { data: invocation, error } = await supabase
+    .from("audit_logs")
+    .select("action,after_values,created_at,user_agent")
+    .eq("entity_type", "attendance_retention_worker")
+    .eq("user_agent", "vercel-cron/1.0")
+    .in("action", ["cron_completed", "cron_failed"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  console.log("Verifikasi invocation otomatis Vercel Cron");
+  if (!invocation) {
+    console.log("[WAIT] Invocation: belum ada audit otomatis yang tersimpan");
+    console.log("");
+    console.log("HASIL: WAIT");
+    return;
+  }
+
+  const result =
+    invocation.after_values &&
+    typeof invocation.after_values === "object" &&
+    !Array.isArray(invocation.after_values)
+      ? invocation.after_values
+      : {};
+  const succeeded =
+    invocation.action === "cron_completed" && result.failed === 0;
+
+  console.log(
+    `[${succeeded ? "PASS" : "FAIL"}] Invocation: ${formatJakarta(
+      invocation.created_at
+    )}`
+  );
+  console.log(
+    `       Hasil: scanned ${result.scanned ?? "-"}, completed ${
+      result.completed ?? "-"
+    }, failed ${result.failed ?? "-"}`
+  );
+  console.log("");
+  console.log(`HASIL: ${succeeded ? "PASS" : "FAIL"}`);
+
+  if (!succeeded) process.exitCode = 1;
+}
+
 async function run() {
+  if (checkCronStatus) {
+    await runCronStatus();
+    return;
+  }
+
   let evidenceQuery = supabase
     .from("attendance_evidence")
     .select(

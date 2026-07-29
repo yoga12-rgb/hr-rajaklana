@@ -5,8 +5,8 @@
 | Atribut               | Nilai                                                           |
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
-| Terakhir diverifikasi | 28 Juli 2026                                                    |
-| Fase saat ini         | M6 validasi presensi dan retensi file sedang dikerjakan          |
+| Terakhir diverifikasi | 29 Juli 2026                                                    |
+| Fase saat ini         | M6 validasi presensi dan retensi file sedang dikerjakan         |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -76,32 +76,32 @@ Sudah tersedia:
 - Project hosted sudah terhubung dan dua puluh empat migration berikut identik antara
   lokal dan remote:
 
-| Migration                                                  | Fungsi                                    |
-| ---------------------------------------------------------- | ----------------------------------------- |
-| `20260724104032_initial_workforce_schema.sql`              | Schema inti workforce                     |
-| `20260724104038_secure_storage_and_rls.sql`                | RLS, private Storage, RPC, dan keamanan   |
-| `20260724183617_enable_database_testing.sql`               | Mengaktifkan pgTAP                        |
-| `20260724183900_grant_cli_database_testing_access.sql`     | Akses minimum role CLI untuk tes          |
-| `20260726153000_complete_password_change.sql`              | Aktivasi akun dan audit password atomik   |
-| `20260726193000_harden_auth_role_helper_privileges.sql`    | Hardening hak eksekusi helper role        |
-| `20260726213000_employee_master_data_rpcs.sql`             | CRUD/arsip karyawan dan penempatan atomik |
-| `20260726230000_outlet_master_data_rpcs.sql`               | CRUD/status outlet dan geofence atomik    |
-| `20260727003000_policy_and_shift_template_rpcs.sql`        | Kebijakan versioned dan template shift    |
-| `20260727013000_harden_policy_shift_write_paths.sql`       | Tutup jalur tulis langsung tabel historis |
-| `20260727130000_employee_import_workflow.sql`              | Dry-run dan commit atomik impor XLSX      |
-| `20260727210000_manual_roster_workflow.sql`                | Roster manual, off, publish, dan tukar    |
-| `20260727223000_harden_roster_function_privileges.sql`     | Hardening hak eksekusi RPC roster         |
-| `20260728003000_leave_overtime_workflow.sql`               | Cuti, dokumen privat, saldo, dan lembur   |
-| `20260728150000_attendance_clock_workflow.sql`             | Clock-in/out, geofence server, dan selfie |
-| `20260728153000_harden_attendance_function_privileges.sql` | Hardening hak RPC presensi                |
-| `20260728160000_attendance_geofence_preview.sql`           | Preview jarak geofence server untuk UI    |
-| `20260728170000_fix_get_monthly_roster_empty_period.sql`   | Karyawan tersedia sebelum periode roster  |
-| `20260728190000_harden_attendance_retention_access.sql`    | Hardening akses selfie dan retention job  |
-| `20260728200000_atomic_attendance_deletion_completion.sql` | Finalisasi retensi dan audit atomik        |
-| `20260728210000_bulk_manual_roster_fill.sql`               | Isi rentang roster manual secara atomik    |
-| `20260728220000_update_active_placement_effective_date.sql` | Koreksi tanggal efektif penempatan aktif   |
-| `20260728230000_assign_partial_week_to_starting_month.sql`  | Kepemilikan pekan parsial untuk jatah off  |
-| `20260729003000_preview_clock_in_and_retain_selfie_seven_days.sql` | Preview clock-in dan retensi tujuh hari |
+| Migration                                                          | Fungsi                                    |
+| ------------------------------------------------------------------ | ----------------------------------------- |
+| `20260724104032_initial_workforce_schema.sql`                      | Schema inti workforce                     |
+| `20260724104038_secure_storage_and_rls.sql`                        | RLS, private Storage, RPC, dan keamanan   |
+| `20260724183617_enable_database_testing.sql`                       | Mengaktifkan pgTAP                        |
+| `20260724183900_grant_cli_database_testing_access.sql`             | Akses minimum role CLI untuk tes          |
+| `20260726153000_complete_password_change.sql`                      | Aktivasi akun dan audit password atomik   |
+| `20260726193000_harden_auth_role_helper_privileges.sql`            | Hardening hak eksekusi helper role        |
+| `20260726213000_employee_master_data_rpcs.sql`                     | CRUD/arsip karyawan dan penempatan atomik |
+| `20260726230000_outlet_master_data_rpcs.sql`                       | CRUD/status outlet dan geofence atomik    |
+| `20260727003000_policy_and_shift_template_rpcs.sql`                | Kebijakan versioned dan template shift    |
+| `20260727013000_harden_policy_shift_write_paths.sql`               | Tutup jalur tulis langsung tabel historis |
+| `20260727130000_employee_import_workflow.sql`                      | Dry-run dan commit atomik impor XLSX      |
+| `20260727210000_manual_roster_workflow.sql`                        | Roster manual, off, publish, dan tukar    |
+| `20260727223000_harden_roster_function_privileges.sql`             | Hardening hak eksekusi RPC roster         |
+| `20260728003000_leave_overtime_workflow.sql`                       | Cuti, dokumen privat, saldo, dan lembur   |
+| `20260728150000_attendance_clock_workflow.sql`                     | Clock-in/out, geofence server, dan selfie |
+| `20260728153000_harden_attendance_function_privileges.sql`         | Hardening hak RPC presensi                |
+| `20260728160000_attendance_geofence_preview.sql`                   | Preview jarak geofence server untuk UI    |
+| `20260728170000_fix_get_monthly_roster_empty_period.sql`           | Karyawan tersedia sebelum periode roster  |
+| `20260728190000_harden_attendance_retention_access.sql`            | Hardening akses selfie dan retention job  |
+| `20260728200000_atomic_attendance_deletion_completion.sql`         | Finalisasi retensi dan audit atomik       |
+| `20260728210000_bulk_manual_roster_fill.sql`                       | Isi rentang roster manual secara atomik   |
+| `20260728220000_update_active_placement_effective_date.sql`        | Koreksi tanggal efektif penempatan aktif  |
+| `20260728230000_assign_partial_week_to_starting_month.sql`         | Kepemilikan pekan parsial untuk jatah off |
+| `20260729003000_preview_clock_in_and_retain_selfie_seven_days.sql` | Preview clock-in dan retensi tujuh hari   |
 
 Verifikasi terakhir terhadap hosted project:
 
@@ -652,7 +652,7 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - File hilang dari Storage tetapi metadata keputusan tetap tersedia.
 - Pengguna tidak dapat mengambil signed URL setelah retensi selesai.
 
-### Status implementasi 28 Juli 2026
+### Status implementasi 29 Juli 2026
 
 - Halaman Presensi live supervisor menampilkan waktu dan selfie private
   melalui signed URL dua menit sejak clock-in. Daftar diperbarui setiap 30
@@ -673,6 +673,11 @@ tier melalui penghapusan bukti yang dapat diaudit.
   tetap menolak request tanpa bearer secret. Worker memulihkan job processing
   yang lease-nya kedaluwarsa; perubahan evidence, job, dan audit diselesaikan
   oleh RPC service-role dalam satu transaksi.
+- Setiap invocation berotorisasi mencatat audit persisten
+  `attendance_retention_worker` beserta status dan agregat hasil tanpa
+  menyimpan secret atau path Storage. Perintah read-only
+  `npm run attendance:verify-retention -- --cron-status` membedakan invocation
+  otomatis melalui user agent resmi Vercel Cron.
 - pgTAP lokal/hosted `235/235` mencakup finalisasi atomik, retry idempotent,
   hak akses isi roster massal, mode sel kosong idempotent, dan replace atomik.
   Lint, TypeScript, production build, serta 16/16 E2E desktop/mobile lulus.
@@ -685,10 +690,16 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - Script verifikasi production read-only dan checklist operasional tersedia
   untuk memeriksa jadwal job, metadata, keberadaan objek, audit penghapusan,
   serta kegagalan akses signed URL tanpa mencetak secret atau path Storage.
+- Pada 29 Juli 2026, API Vercel mengonfirmasi cron aktif pada deployment
+  production untuk route `/api/internal/attendance-retention` dengan schedule
+  `17 20 * * *`. Riwayat invocation 29 Juli tidak dapat diambil karena runtime
+  log paket Hobby hanya disimpan satu jam; bukti persisten mulai tersedia
+  setelah deployment audit invocation ini dan jadwal harian berikutnya.
 - Tersisa: setelah job selfie nyata jatuh tempo, verifikasi objek terhapus dan
   signed URL lama tidak dapat mengambil objek.
-  Invocation otomatis Vercel pukul 03.17 WIB tetap perlu dikonfirmasi melalui
-  log dashboard setelah jadwal berikutnya berjalan.
+  Invocation otomatis Vercel berikutnya perlu dikonfirmasi melalui
+  `--cron-status`. Pada paket Hobby, schedule tersebut dapat dijalankan kapan
+  saja antara pukul 03.00-03.59 WIB, bukan wajib tepat pukul 03.17 WIB.
 
 ---
 

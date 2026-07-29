@@ -62,8 +62,10 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   setelah upload. Signed URL singkat, deletion worker idempotent, pemulihan
   lease, finalisasi metadata/audit atomik, retry cron, dan monitoring job gagal
   sudah tersedia. Monitoring retensi membedakan job terjadwal, retry, jatuh
-  tempo, lease tertahan, dan percobaan yang habis. Script verifikasi read-only
-  tersedia di `scripts/verify-attendance-retention.mjs`; checklist berada di
+  tempo, lease tertahan, dan percobaan yang habis. Invocation cron mencatat
+  audit persisten tanpa secret/path Storage. Script verifikasi read-only
+  mendukung pemeriksaan evidence dan `--cron-status` di
+  `scripts/verify-attendance-retention.mjs`; checklist berada di
   `docs/ATTENDANCE_RETENTION_VERIFICATION.md`. Optimizer roster otomatis belum
   diimplementasikan.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**

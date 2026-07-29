@@ -39,7 +39,7 @@ Status `WAIT` sebelum tenggat bukan kegagalan.
 
 Jalankan setelah jadwal cron pertama yang terjadi sesudah batas retensi. Untuk
 evidence pilot 28 Juli 2026, pemeriksaan final dilakukan setelah cron
-5 Agustus 2026 pukul 03.17 WIB:
+5 Agustus 2026 dalam jendela pukul 03.00-03.59 WIB:
 
 ```bash
 npm run attendance:verify-retention -- --evidence-id <uuid> --expect-deleted
@@ -61,14 +61,27 @@ versioned.
 
 ## Konfirmasi Vercel Cron
 
-Pada dashboard Vercel:
+Setelah deployment yang mencatat audit invocation aktif, tunggu jadwal harian
+berikutnya lalu jalankan:
+
+```bash
+npm run attendance:verify-retention -- --cron-status
+```
+
+Hasil `PASS` membuktikan request memakai user agent resmi `vercel-cron/1.0`,
+berhasil melewati autentikasi route, menjalankan worker, dan menyimpan agregat
+hasil secara persisten. Audit tidak menyimpan bearer secret maupun path
+Storage. `scanned: 0` tetap sehat ketika belum ada job jatuh tempo.
+
+Sebagai pemeriksaan tambahan pada dashboard Vercel:
 
 1. Buka project production HR Rajaklana.
 2. Buka **Logs** dan filter route
    `/api/internal/attendance-retention`.
-3. Pastikan invocation otomatis memiliki status `200` dan waktu sekitar
-   03.17 WIB.
+3. Pastikan invocation otomatis memiliki status `200` dan waktu antara
+   03.00-03.59 WIB.
 4. Jangan menyalin nilai header `Authorization` atau `CRON_SECRET`.
 
-Respons worker yang sehat dapat berisi `scanned: 0` ketika belum ada job jatuh
-tempo. Ini tetap membuktikan scheduler dan autentikasi cron berjalan.
+Paket Hobby hanya menyimpan runtime log selama satu jam dan dapat menjalankan
+cron kapan saja dalam jam yang dijadwalkan. Karena itu, audit persisten adalah
+bukti utama setelah jendela log dashboard berakhir.
