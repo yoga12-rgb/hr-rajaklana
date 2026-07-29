@@ -2620,6 +2620,15 @@ export type Database = {
       get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
       get_overtime_workspace: { Args: never; Returns: Json }
+      get_report_workspace: {
+        Args: {
+          p_employee_id?: string
+          p_outlet_id?: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: Json
+      }
       get_roster_generation_input: {
         Args: { p_month_start: string }
         Returns: Json

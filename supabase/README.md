@@ -154,3 +154,8 @@ Jangan menjalankan reset terhadap production.
 - Tabel `announcements` dan `notifications` berada pada publication realtime.
   Client tetap polling setiap 60 detik sebagai fallback ketika websocket
   terputus.
+- Laporan interaktif wajib melalui `get_report_workspace`. RPC hanya menerima
+  supervisor/management, menerapkan filter periode/outlet/karyawan di database,
+  dan membatasi rentang maksimal 92 hari. XLSX/PDF interaktif dibuat dari
+  snapshot respons yang sama; rentang lebih besar harus memakai export worker
+  asynchronous dan tidak boleh memperbesar batas RPC ini.

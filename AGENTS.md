@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh delapan migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 275/275 pada
+- Dua puluh sembilan migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 289/289 pada
   29 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -35,9 +35,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Tab kebijakan kerja/cuti dan template shift outlet sudah memakai Supabase.
   Kebijakan diterbitkan sebagai versi baru; penggantian template shift
   mempertahankan record lama untuk referensi jadwal historis.
-- Modul selain Dashboard, komunikasi, data karyawan, Jadwal, Cuti/Izin,
-  Lembur, Presensi, dan Pengaturan master data masih memakai `HRContext` dan
-  `localStorage`.
+- Modul selain Dashboard, komunikasi, Laporan, data karyawan, Jadwal,
+  Cuti/Izin, Lembur, Presensi, dan Pengaturan master data masih memakai
+  `HRContext` dan `localStorage`.
 - Login, logout, route protection, wajib ganti password, operasi akun
   server-only, UI akun pada halaman Karyawan, dan script bootstrap supervisor
   sudah diimplementasikan.
@@ -86,6 +86,12 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   kontekstual. Pengumuman mendukung target seluruh perusahaan/outlet/karyawan,
   pin, kategori, acknowledgement wajib, dan statistik penerima untuk
   supervisor/management; management tetap hanya-baca.
+- Laporan live tersedia untuk supervisor dan management melalui RPC
+  role-aware dengan filter periode maksimal 92 hari, outlet, dan karyawan.
+  Ringkasan mencakup presensi, keterlambatan/pulang awal, cuti, lembur,
+  distribusi shift, dan perbandingan outlet. Ekspor XLSX multi-sheet dibuat
+  lokal dari snapshot query yang sama; PDF memakai print browser. Jalur export
+  besar asynchronous masih menjadi pekerjaan M8.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -154,6 +160,8 @@ src/
 │   │   └── LiveNotificationBell.tsx # Pusat notifikasi, read receipt, realtime/polling
 │   ├── dashboard/
 │   │   └── LiveDashboardPage.tsx # Dashboard live sesuai scope RLS tanpa data mock
+│   ├── reports/
+│   │   └── LiveReportsPage.tsx # Laporan live role-aware dan export XLSX/PDF
 │   ├── schedule/
 │   │   └── LiveSchedulePage.tsx # Roster live, publish, acknowledgement, dan tukar shift
 │   ├── leaves/
@@ -193,6 +201,10 @@ src/
 │   ├── query-keys.ts     # Query key factory komunikasi
 │   ├── queries.ts        # Query/mutation dan invalidasi realtime
 │   └── repository.ts     # RPC workspace, publish, read, dan acknowledgement
+├── lib/reports/
+│   ├── query-keys.ts     # Filter dan query key laporan
+│   ├── queries.ts        # Query workspace laporan live
+│   └── repository.ts     # RPC laporan bertipe dan role-aware
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift

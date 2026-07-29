@@ -17,6 +17,8 @@ import {
 import { StatCard } from "@/components/ui/StatCard";
 import { DepartmentChart } from "@/components/ui/DepartmentChart";
 import { Combobox } from "@/components/ui/Combobox";
+import { LiveReportsPage } from "@/components/reports/LiveReportsPage";
+import { useDataSource } from "@/context/DataSourceContext";
 
 const PERIOD_OPTIONS = [
   { value: "Juli 2026", label: "Juli 2026 (Berjalan)" },
@@ -69,6 +71,16 @@ const escapeCsvCell = (value: string | number) =>
   `"${String(value).replaceAll('"', '""')}"`;
 
 export default function ReportsPage() {
+  const dataSource = useDataSource();
+
+  return dataSource.mode === "supabase" ? (
+    <LiveReportsPage />
+  ) : (
+    <DemoReportsPage />
+  );
+}
+
+function DemoReportsPage() {
   const { employees, attendanceLogs, leaveRequests, showToast } = useHR();
   const [selectedMonth, setSelectedMonth] = useState("Juli 2026");
   const [selectedDept, setSelectedDept] = useState("Semua");

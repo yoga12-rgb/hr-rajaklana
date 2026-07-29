@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan dua puluh delapan migration berikut identik antara
+- Project hosted sudah terhubung dan dua puluh sembilan migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                          | Fungsi                                    |
@@ -106,21 +106,22 @@ Sudah tersedia:
 | `20260729131000_auto_roster_generation_workflow.sql`               | Snapshot dan commit optimizer roster      |
 | `20260729150000_support_cross_month_off_days.sql`                  | Carry-over off pekan terakhir lintas bulan |
 | `20260729160000_m8_communication_workflow.sql`                    | Notifikasi dan pengumuman bertarget live    |
+| `20260729173000_m8_live_reports_workspace.sql`                   | Laporan operasional live role-aware         |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `275/275`.
+- pgTAP lulus `289/289`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
 Fondasi backend dan autentikasi sudah aktif, tetapi aplikasi belum sepenuhnya
 menjadi aplikasi multi-user:
 
-- Dashboard, komunikasi, halaman karyawan, Jadwal, Cuti/Izin, Lembur, dan
-  Presensi pada mode live tidak membaca atau memutasi data bisnis `HRContext`;
-  Laporan dan sebagian modul pendukung masih memakai data prototype.
+- Dashboard, komunikasi, Laporan, halaman karyawan, Jadwal, Cuti/Izin,
+  Lembur, dan Presensi pada mode live tidak membaca atau memutasi data bisnis
+  `HRContext`; sebagian modul pendukung masih memakai data prototype.
 - Halaman login, logout, perubahan kata sandi pertama, proteksi route, dan
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
@@ -828,11 +829,16 @@ Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
 - Header live memakai notifikasi Supabase; dashboard live membaca identitas,
   scope karyawan, status/riwayat presensi, pengajuan, dan validasi dari DAL
   Supabase tanpa fallback ke mock.
-- Lint schema lokal/hosted bersih; pgTAP lokal/hosted `275/275`, lint,
+- Laporan live role-aware mendukung periode maksimal 92 hari, outlet, dan
+  karyawan; ringkasan presensi/cuti/lembur/shift/perbandingan outlet; XLSX
+  multi-sheet lokal; serta PDF melalui print browser. Karyawan ditolak,
+  supervisor dan management dapat membaca.
+- Lint schema lokal/hosted bersih; pgTAP lokal/hosted `289/289`, lint,
   typecheck, build live/demo, delapan unit test, dan 18 E2E desktop/mobile
   lulus.
-- Pekerjaan berikutnya: migrasi Laporan, export job besar, offline read yang
-  menjaga privasi perangkat, observability/SOP, lalu pilot setelah gate M6.
+- Pekerjaan berikutnya: export job asynchronous untuk laporan besar, offline
+  read yang menjaga privasi perangkat, observability/SOP, lalu pilot setelah
+  gate M6.
 
 ### Pekerjaan
 
