@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tiga puluh migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 299/299 pada
+- Tiga puluh dua migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 310/310 pada
   29 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -98,6 +98,12 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   alasan/peristiwa sensitif, dan cache akun sebelumnya dihapus saat akun
   berganti. Service worker hanya meng-cache shell/asset same-origin, bukan API.
   Seluruh TanStack mutation ditolak segera ketika perangkat offline.
+- Kesehatan operasional live tersedia di halaman Laporan untuk supervisor dan
+  management. RPC hanya mengembalikan agregat retensi, ekspor, generator
+  roster, artefak backup aplikasi, dan timeline audit yang sudah disensor;
+  actor ID, payload audit, error mentah, path Storage, dan secret tidak boleh
+  dikirim ke client. Runbook insiden, backup/restore drill lokal disposable,
+  dan checklist pilot berada di `docs/`.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -217,6 +223,10 @@ src/
 │   └── export-worker.ts  # Worker server-only, checksum, dan private upload
 ├── lib/offline/
 │   └── roster-cache.ts   # Sanitasi snapshot roster untuk perangkat
+├── lib/operations/
+│   ├── query-keys.ts     # Query key kesehatan operasional
+│   ├── queries.ts        # Polling status read-only setiap 60 detik
+│   └── repository.ts     # RPC agregat dan audit yang disensor
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
@@ -239,10 +249,14 @@ src/
 └── utils/
     └── clickSound.ts     # Audio feedback + Haptic Feedback (navigator.vibrate) utility
 scripts/
-└── verify-attendance-retention.mjs # Verifikasi read-only metadata, Storage, audit, dan signed URL
+├── verify-attendance-retention.mjs # Verifikasi read-only metadata, Storage, audit, dan signed URL
+└── run-local-backup-restore-drill.mjs # Restore disposable Supabase lokal
 docs/
 ├── ATTENDANCE_RETENTION_VERIFICATION.md # Checklist penutupan exit criteria M6
-└── ROSTER_OPTIMIZER.md # Kontrak, aturan, dan tahap integrasi optimizer M7
+├── ROSTER_OPTIMIZER.md # Kontrak, aturan, dan tahap integrasi optimizer M7
+├── OPERATIONS_RUNBOOK.md # Triase, respons, pemulihan, dan penutupan insiden
+├── BACKUP_RESTORE_DRILL.md # Prosedur drill lokal dan verifikasi hosted
+└── PILOT_ROLLOUT_CHECKLIST.md # Gate dan smoke test pilot terbatas
 public/
 └── sw.js                 # Runtime cache shell/asset, tanpa cache API
 ```

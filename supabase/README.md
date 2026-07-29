@@ -169,3 +169,14 @@ Jangan menjalankan reset terhadap production.
   roster bulanan yang disanitasi ke kolom jadwal minimum, maksimal tiga bulan,
   TTL 24 jam, dan dipisahkan per user ID. Bukti, dokumen, alasan, notifikasi,
   signed URL, serta response API tidak boleh masuk cache perangkat.
+- Kesehatan operasional dibaca melalui
+  `get_operational_health_workspace`. Hanya supervisor/management yang dapat
+  masuk; management tetap read-only. RPC merangkum antrean retensi, ekspor,
+  generator roster, audit, dan artefak backup aplikasi tanpa mengembalikan
+  actor ID, payload before/after, reason, error mentah, atau path Storage.
+- Jalankan `npm run operations:restore-drill` hanya terhadap stack Supabase
+  lokal. Script memvalidasi label project Docker, memulihkan logical backup ke
+  database disposable, membandingkan tabel/fungsi/ledger migration, lalu
+  membersihkan artefak. Verifikasi backup hosted tetap dilakukan terpisah
+  mengikuti `docs/BACKUP_RESTORE_DRILL.md`; statusnya tidak boleh diasumsikan
+  dari aplikasi.

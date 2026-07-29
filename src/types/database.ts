@@ -2701,6 +2701,8 @@ export type Database = {
       get_communication_workspace: { Args: never; Returns: Json }
       get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
+      get_operational_health_workspace: { Args: never; Returns: Json }
+      get_operational_health_workspace_internal: { Args: never; Returns: Json }
       get_overtime_workspace: { Args: never; Returns: Json }
       get_report_export_jobs: { Args: never; Returns: Json }
       get_report_workspace: {

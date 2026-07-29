@@ -21,6 +21,7 @@ import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/ui/StatCard";
+import { OperationalHealthPanel } from "@/components/operations/OperationalHealthPanel";
 import { useHR } from "@/context/HRContext";
 import {
   useReportExportDownload,
@@ -207,6 +208,8 @@ export function LiveReportsPage() {
           </button>
         </div>
       </div>
+
+      <OperationalHealthPanel />
 
       <section className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3 sm:grid-cols-3 print:hidden">
         <DateRangePicker

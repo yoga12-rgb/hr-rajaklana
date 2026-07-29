@@ -7,6 +7,7 @@ test("form login berada di tengah viewport", async ({ page }) => {
   await expect(heading).toBeVisible();
 
   const section = page.locator("main > section");
+  await expect(section).toBeVisible();
   const sectionBox = await section.boundingBox();
   const viewport = page.viewportSize();
 

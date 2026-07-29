@@ -13,6 +13,7 @@
     "test:e2e:headed": "playwright test --headed",
     "auth:bootstrap-supervisor": "node scripts/bootstrap-supervisor.mjs",
     "attendance:verify-retention": "node scripts/verify-attendance-retention.mjs",
+    "operations:restore-drill": "node scripts/run-local-backup-restore-drill.mjs",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",

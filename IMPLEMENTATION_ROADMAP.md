@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga puluh migration berikut identik antara
+- Project hosted sudah terhubung dan tiga puluh dua migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                          | Fungsi                                    |
@@ -108,12 +108,14 @@ Sudah tersedia:
 | `20260729160000_m8_communication_workflow.sql`                    | Notifikasi dan pengumuman bertarget live    |
 | `20260729173000_m8_live_reports_workspace.sql`                   | Laporan operasional live role-aware         |
 | `20260729190000_m8_async_report_exports.sql`                     | Antrean ekspor XLSX besar dan akses privat   |
+| `20260729203000_m8_operational_health_workspace.sql`             | Agregat observability dan audit tersensor    |
+| `20260729210000_harden_operational_health_role_check.sql`        | Gate role NULL-safe workspace operasional    |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `299/299`.
+- pgTAP lulus `310/310`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -842,11 +844,19 @@ Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
   jam per akun. Snapshot disanitasi ke kolom jadwal yang diizinkan, cache akun
   lama dibuang saat pergantian akun, shell/asset dicache service worker tanpa
   response API, dan mutasi TanStack ditolak langsung ketika offline.
-- Lint schema lokal/hosted bersih; pgTAP lokal/hosted `299/299`, lint,
-  typecheck, build live/demo, sepuluh unit test, dan 20 E2E desktop/mobile
-  lulus.
-- Pekerjaan berikutnya: observability/SOP, backup/restore drill, lalu pilot
-  setelah gate M6.
+- Workspace kesehatan operasional role-aware merangkum job retensi, ekspor,
+  generator roster, artefak backup aplikasi, dan audit terbaru. Timeline audit
+  disensor di database sehingga actor ID, payload, error mentah, path Storage,
+  dan secret tidak mencapai client.
+- Runbook insiden, panduan backup/restore, dan checklist pilot sudah tersedia.
+  Restore drill lokal nyata lulus pada 29 Juli 2026: 42 tabel, 78 fungsi, dan
+  32 migration identik setelah dipulihkan ke database disposable; dump dan
+  database drill dibersihkan otomatis.
+- Local/hosted lint schema bersih dan pgTAP `310/310`; lint, typecheck, build
+  live/demo, sepuluh unit test, dan 20 E2E desktop/mobile lulus.
+- Seluruh pekerjaan non-pilot M8 sudah siap. Pilot tetap menunggu gate M6,
+  verifikasi backup hosted, pilihan outlet/pengguna pilot, dan persetujuan
+  checklist oleh pemilik produk.
 
 ### Pekerjaan
 
@@ -932,17 +942,18 @@ Sebelum commit final milestone:
 - [ ] Pastikan `git status` dan perubahan milik pengguna tidak tertimpa.
 - [ ] Migration baru dapat diterapkan dari database kosong.
 - [ ] RLS diuji sebagai anonymous, employee, supervisor, dan management.
-- [ ] Tidak ada secret/password/token pada diff atau output yang akan dibagikan.
-- [ ] `npm run supabase:reset` lulus.
-- [ ] `npm run supabase:lint` lulus.
-- [ ] `npm run supabase:test` lulus.
-- [ ] `npm run supabase:types` dijalankan bila schema berubah.
-- [ ] `npm run lint` lulus.
-- [ ] `npm run typecheck` lulus.
-- [ ] `npm run build` lulus.
-- [ ] `npm run test:e2e` lulus.
-- [ ] Alur mobile, keyboard, safe-area, loading, empty, error, dan retry diuji.
-- [ ] `AGENTS.md`, README terkait, serta status dokumen ini diperbarui.
+- [x] Tidak ada secret/password/token pada diff atau output yang akan dibagikan.
+- [x] `npm run supabase:reset` lulus.
+- [x] `npm run supabase:lint` lulus.
+- [x] `npm run supabase:test` lulus.
+- [x] `npm run supabase:types` dijalankan bila schema berubah.
+- [x] `npm run lint` lulus.
+- [x] `npm run typecheck` lulus.
+- [x] `npm run build` lulus.
+- [x] `npm run test:e2e` lulus.
+- [ ] Alur live mobile, keyboard, safe-area, loading, empty, error, dan retry
+      diverifikasi pada perangkat pilot.
+- [x] `AGENTS.md`, README terkait, serta status dokumen ini diperbarui.
 - [ ] Commit fokus dan branch/remote sinkron.
 
 Untuk perubahan hosted:
@@ -951,7 +962,8 @@ Untuk perubahan hosted:
 - [x] `migration list --linked` diperiksa sebelum dan sesudah push.
 - [x] Dua migration M7 dan satu koreksi carry-over diterapkan tanpa reset
   production.
-- [x] Hosted lint dan pgTAP `251/251` lulus.
+- [x] Dua migration observability M8 diterapkan tanpa reset production.
+- [x] Hosted lint dan pgTAP `310/310` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---
@@ -994,7 +1006,8 @@ Prompt singkat yang dapat diberikan kepada agent baru:
 
 > Pelajari `AGENTS.md`, `PRD.md`, `ERD.md`,
 > `IMPLEMENTATION_ROADMAP.md`, dan `supabase/README.md`. Periksa kondisi repo
-> dan lanjutkan M8 dari observability, SOP, dan backup/restore drill.
+> dan lanjutkan M8 dari quality gate observability serta kesiapan pilot.
+> Panel kesehatan, SOP, restore drill lokal, dan checklist pilot sudah ada.
 > Implementasi non-pilot boleh berjalan,
 > tetapi jangan nyatakan M6/M8 `DONE` atau mulai pilot sampai invocation cron
 > otomatis dan penghapusan evidence nyata tujuh hari terverifikasi.
