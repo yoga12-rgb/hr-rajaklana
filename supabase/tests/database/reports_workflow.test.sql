@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(14);
+select extensions.plan(24);
 
 set local role anon;
 select extensions.throws_ok(
@@ -20,6 +20,33 @@ select extensions.ok(
     'execute'
   ),
   'authenticated role may enter the role-aware report RPC'
+);
+
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'public.request_report_export(date,date,uuid,uuid,uuid)',
+    'execute'
+  ),
+  'authenticated role may enter the role-aware export request RPC'
+);
+
+select extensions.ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.claim_report_export(uuid)',
+    'execute'
+  ),
+  'authenticated role cannot claim report export jobs'
+);
+
+select extensions.ok(
+  has_function_privilege(
+    'service_role',
+    'public.claim_report_export(uuid)',
+    'execute'
+  ),
+  'service role may claim report export jobs'
 );
 
 select has_table_privilege(
@@ -125,6 +152,19 @@ select extensions.throws_ok(
   'employee cannot read operational reports'
 );
 
+select extensions.throws_ok(
+  $$select public.request_report_export(
+    current_date,
+    current_date,
+    null,
+    null,
+    'a7000000-0000-0000-0000-000000000001'
+  )$$,
+  '42501',
+  'Ekspor laporan hanya tersedia untuk supervisor dan management.',
+  'employee cannot request operational report exports'
+);
+
 reset role;
 select set_config(
   'request.jwt.claim.sub',
@@ -137,6 +177,60 @@ select extensions.is(
   public.get_report_workspace(current_date, current_date, null, null)->>'role',
   'supervisor',
   'supervisor opens report workspace'
+);
+
+select extensions.is(
+  public.request_report_export(
+    current_date - 180,
+    current_date,
+    null,
+    null,
+    'a7000000-0000-0000-0000-000000000002'
+  )->>'status',
+  'scheduled',
+  'supervisor can schedule a long report export'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.backup_exports
+    where request_key = 'a7000000-0000-0000-0000-000000000002'
+  ),
+  1,
+  'report export request key is idempotent'
+);
+
+select extensions.throws_ok(
+  $$select public.request_report_export(
+    current_date - 366,
+    current_date,
+    null,
+    null,
+    'a7000000-0000-0000-0000-000000000003'
+  )$$,
+  '22023',
+  'Satu ekspor dibatasi maksimal 366 hari.',
+  'report export rejects periods longer than 366 days'
+);
+
+select extensions.throws_ok(
+  $$insert into public.backup_exports (
+    export_type,
+    period_start,
+    period_end,
+    requested_by,
+    request_key
+  ) values (
+    'report',
+    current_date,
+    current_date,
+    'a5000000-0000-0000-0000-000000000002',
+    'a7000000-0000-0000-0000-000000000004'
+  )$$,
+  '42501',
+  null,
+  'supervisor cannot bypass the export request RPC'
 );
 
 select extensions.is(
@@ -231,6 +325,24 @@ select extensions.is(
 );
 
 select extensions.is(
+  public.request_report_export(
+    current_date - 30,
+    current_date,
+    null,
+    null,
+    'a7000000-0000-0000-0000-000000000005'
+  )->>'status',
+  'scheduled',
+  'management can schedule its own report export'
+);
+
+select extensions.is(
+  jsonb_array_length(public.get_report_export_jobs()),
+  1,
+  'management export history only contains its own jobs'
+);
+
+select extensions.is(
   (
     public.get_report_workspace(current_date, current_date, null, null)
       #>> '{summary,early_checkout_count}'
@@ -250,7 +362,7 @@ reset role;
 
 select * from extensions.skip(
   'hosted CLI role cannot seed transactional report fixtures',
-  12
+  19
 );
 
 \endif

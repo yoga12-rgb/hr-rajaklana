@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan dua puluh sembilan migration berikut identik antara
+- Project hosted sudah terhubung dan tiga puluh migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                          | Fungsi                                    |
@@ -107,12 +107,13 @@ Sudah tersedia:
 | `20260729150000_support_cross_month_off_days.sql`                  | Carry-over off pekan terakhir lintas bulan |
 | `20260729160000_m8_communication_workflow.sql`                    | Notifikasi dan pengumuman bertarget live    |
 | `20260729173000_m8_live_reports_workspace.sql`                   | Laporan operasional live role-aware         |
+| `20260729190000_m8_async_report_exports.sql`                     | Antrean ekspor XLSX besar dan akses privat   |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `289/289`.
+- pgTAP lulus `299/299`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -833,12 +834,15 @@ Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
   karyawan; ringkasan presensi/cuti/lembur/shift/perbandingan outlet; XLSX
   multi-sheet lokal; serta PDF melalui print browser. Karyawan ditolak,
   supervisor dan management dapat membaca.
-- Lint schema lokal/hosted bersih; pgTAP lokal/hosted `289/289`, lint,
-  typecheck, build live/demo, delapan unit test, dan 18 E2E desktop/mobile
+- Ekspor laporan besar hingga 366 hari memakai job idempotent, pemrosesan
+  sesudah respons, segmentasi query maksimal 92 hari, XLSX server-side,
+  private Storage, SHA-256 checksum, polling status, retry maksimal tiga kali,
+  dan signed URL 60 detik. Management hanya membaca job miliknya.
+- Lint schema lokal/hosted bersih; pgTAP lokal/hosted `299/299`, lint,
+  typecheck, build live/demo, delapan unit test, dan 20 E2E desktop/mobile
   lulus.
-- Pekerjaan berikutnya: export job asynchronous untuk laporan besar, offline
-  read yang menjaga privasi perangkat, observability/SOP, lalu pilot setelah
-  gate M6.
+- Pekerjaan berikutnya: offline read yang menjaga privasi perangkat,
+  observability/SOP, lalu pilot setelah gate M6.
 
 ### Pekerjaan
 
@@ -986,7 +990,7 @@ Prompt singkat yang dapat diberikan kepada agent baru:
 
 > Pelajari `AGENTS.md`, `PRD.md`, `ERD.md`,
 > `IMPLEMENTATION_ROADMAP.md`, dan `supabase/README.md`. Periksa kondisi repo
-> dan lanjutkan M8 dari migrasi Laporan/export serta rancangan offline read
+> dan lanjutkan M8 dari rancangan offline read
 > yang menjaga privasi perangkat. Implementasi non-pilot boleh berjalan,
 > tetapi jangan nyatakan M6/M8 `DONE` atau mulai pilot sampai invocation cron
 > otomatis dan penghapusan evidence nyata tujuh hari terverifikasi.

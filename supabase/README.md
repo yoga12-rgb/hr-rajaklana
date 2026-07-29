@@ -159,3 +159,9 @@ Jangan menjalankan reset terhadap production.
   dan membatasi rentang maksimal 92 hari. XLSX/PDF interaktif dibuat dari
   snapshot respons yang sama; rentang lebih besar harus memakai export worker
   asynchronous dan tidak boleh memperbesar batas RPC ini.
+- Ekspor XLSX asynchronous dibuat melalui `request_report_export` dengan
+  request key idempotent dan rentang maksimal 366 hari. Route server memecah
+  query menjadi segmen maksimal 92 hari, worker service-role mengunggah hasil
+  ke bucket privat `exports`, dan client hanya menerima signed URL 60 detik.
+  Status `failed` dapat diulang maksimal tiga kali; direct insert/update job
+  serta claim worker ditolak untuk client authenticated.

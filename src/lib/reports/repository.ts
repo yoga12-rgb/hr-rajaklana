@@ -93,7 +93,25 @@ export interface ReportWorkspace {
   outlet_comparison: ReportOutletComparison[];
 }
 
-function parseWorkspace(value: Json) {
+export interface ReportExportJob {
+  id: string;
+  period_start: string;
+  period_end: string;
+  outlet_id: string | null;
+  employee_id: string | null;
+  requested_by: string;
+  status: "scheduled" | "processing" | "completed" | "failed" | "cancelled";
+  storage_path: string | null;
+  checksum: string | null;
+  file_size_bytes: number | null;
+  attempt_count: number;
+  last_error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export function parseWorkspace(value: Json) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Respons server laporan tidak valid.");
   }
@@ -114,4 +132,66 @@ export async function getReportWorkspace(
     throw new Error(`Laporan belum dapat dimuat: ${error.message}`);
   }
   return parseWorkspace(data);
+}
+
+export async function getReportExportJobs(client: ReportClient) {
+  const { data, error } = await client.rpc("get_report_export_jobs");
+  if (error) {
+    throw new Error(`Riwayat ekspor belum dapat dimuat: ${error.message}`);
+  }
+  if (!Array.isArray(data)) {
+    throw new Error("Respons riwayat ekspor tidak valid.");
+  }
+  return data as unknown as ReportExportJob[];
+}
+
+export async function requestReportExport(filters: ReportFilters) {
+  const response = await fetch("/api/reports/exports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...filters,
+      requestKey: crypto.randomUUID(),
+    }),
+  });
+  const payload = (await response.json()) as {
+    job?: ReportExportJob;
+    error?: string;
+  };
+  if (!response.ok || !payload.job) {
+    throw new Error(payload.error ?? "Ekspor belum dapat dijadwalkan.");
+  }
+  return payload.job;
+}
+
+export async function retryReportExport(exportId: string) {
+  const response = await fetch("/api/reports/exports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ exportId }),
+  });
+  const payload = (await response.json()) as {
+    job?: ReportExportJob;
+    error?: string;
+  };
+  if (!response.ok || !payload.job) {
+    throw new Error(payload.error ?? "Ekspor belum dapat diulang.");
+  }
+  return payload.job;
+}
+
+export async function createReportExportDownloadUrl(
+  client: ReportClient,
+  job: ReportExportJob
+) {
+  if (job.status !== "completed" || !job.storage_path) {
+    throw new Error("File ekspor belum tersedia.");
+  }
+  const { data, error } = await client.storage
+    .from("exports")
+    .createSignedUrl(job.storage_path, 60);
+  if (error || !data?.signedUrl) {
+    throw new Error("Tautan unduhan belum dapat dibuat.");
+  }
+  return data.signedUrl;
 }

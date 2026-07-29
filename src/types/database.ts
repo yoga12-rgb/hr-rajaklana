@@ -573,45 +573,84 @@ export type Database = {
       }
       backup_exports: {
         Row: {
+          attempt_count: number
           checksum: string | null
           completed_at: string | null
           created_at: string
+          employee_id: string | null
           export_type: string
+          file_size_bytes: number | null
           id: string
+          last_error: string | null
+          mime_type: string | null
+          outlet_id: string | null
           period_end: string
           period_start: string
+          request_key: string | null
           requested_by: string
+          started_at: string | null
           status: Database["public"]["Enums"]["job_status"]
           storage_path: string | null
           updated_at: string
         }
         Insert: {
+          attempt_count?: number
           checksum?: string | null
           completed_at?: string | null
           created_at?: string
+          employee_id?: string | null
           export_type: string
+          file_size_bytes?: number | null
           id?: string
+          last_error?: string | null
+          mime_type?: string | null
+          outlet_id?: string | null
           period_end: string
           period_start: string
+          request_key?: string | null
           requested_by: string
+          started_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           storage_path?: string | null
           updated_at?: string
         }
         Update: {
+          attempt_count?: number
           checksum?: string | null
           completed_at?: string | null
           created_at?: string
+          employee_id?: string | null
           export_type?: string
+          file_size_bytes?: number | null
           id?: string
+          last_error?: string | null
+          mime_type?: string | null
+          outlet_id?: string | null
           period_end?: string
           period_start?: string
+          request_key?: string | null
           requested_by?: string
+          started_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           storage_path?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "backup_exports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_exports_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       data_import_jobs: {
         Row: {
@@ -2294,6 +2333,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_report_export: {
+        Args: { p_export_id: string }
+        Returns: {
+          attempt_count: number
+          checksum: string | null
+          completed_at: string | null
+          created_at: string
+          employee_id: string | null
+          export_type: string
+          file_size_bytes: number | null
+          id: string
+          last_error: string | null
+          mime_type: string | null
+          outlet_id: string | null
+          period_end: string
+          period_start: string
+          request_key: string | null
+          requested_by: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["job_status"]
+          storage_path: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "backup_exports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       clock_in_attendance: {
         Args: {
           p_accuracy_m: number
@@ -2438,6 +2507,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      complete_report_export: {
+        Args: {
+          p_checksum: string
+          p_export_id: string
+          p_file_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: undefined
       }
       create_announcement: {
         Args: {
@@ -2615,11 +2693,16 @@ export type Database = {
         Args: { p_month_start: string; p_reason: string }
         Returns: string
       }
+      fail_report_export: {
+        Args: { p_error: string; p_export_id: string }
+        Returns: undefined
+      }
       get_attendance_workspace: { Args: never; Returns: Json }
       get_communication_workspace: { Args: never; Returns: Json }
       get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
       get_overtime_workspace: { Args: never; Returns: Json }
+      get_report_export_jobs: { Args: never; Returns: Json }
       get_report_workspace: {
         Args: {
           p_employee_id?: string
@@ -2715,6 +2798,16 @@ export type Database = {
         }
         Returns: string
       }
+      request_report_export: {
+        Args: {
+          p_employee_id?: string
+          p_outlet_id?: string
+          p_period_end: string
+          p_period_start: string
+          p_request_key?: string
+        }
+        Returns: Json
+      }
       request_shift_swap: {
         Args: {
           p_colleague_schedule_id: string
@@ -2723,6 +2816,7 @@ export type Database = {
         }
         Returns: Json
       }
+      retry_report_export: { Args: { p_export_id: string }; Returns: Json }
       save_cross_month_roster_off_day: {
         Args: {
           p_borrowed_from_adjacent_week?: boolean

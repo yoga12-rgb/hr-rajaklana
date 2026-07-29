@@ -117,7 +117,7 @@ select extensions.is(
         'leave_documents_insert_own',
         'leave_documents_read_authorized',
         'imports_manage_supervisor',
-        'exports_read_operations',
+        'exports_read_authorized',
         'exports_manage_supervisor'
       )
   ),

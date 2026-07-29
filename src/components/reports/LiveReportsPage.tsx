@@ -1,25 +1,35 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Cell, SheetData } from "write-excel-file/browser";
 import {
   AlertTriangle,
+  Archive,
   Calendar,
+  CheckCircle2,
   Clock,
   Download,
   FileSpreadsheet,
   FileText,
   LoaderCircle,
+  RefreshCw,
   TimerReset,
   Users,
+  XCircle,
 } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/ui/StatCard";
 import { useHR } from "@/context/HRContext";
-import { useReportWorkspace } from "@/lib/reports/queries";
-import type { ReportWorkspace } from "@/lib/reports/repository";
+import {
+  useReportExportDownload,
+  useReportExportJobs,
+  useReportWorkspace,
+  useRequestReportExport,
+  useRetryReportExport,
+} from "@/lib/reports/queries";
+import { reportWorkbookSheets } from "@/lib/reports/workbook";
 import { playClickSound, playSuccessHaptic } from "@/utils/clickSound";
 
 function inputDate(date: Date) {
@@ -51,101 +61,6 @@ function formatTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function headerCell(value: string): Cell {
-  return {
-    value,
-    type: String,
-    fontWeight: "bold",
-    backgroundColor: "#F59E0B",
-    textColor: "#020617",
-  };
-}
-
-function textCell(value: string | number | null): Cell {
-  return { value: value ?? "—", type: typeof value === "number" ? Number : String };
-}
-
-function workbookData(data: ReportWorkspace) {
-  const summary: SheetData = [
-    ["Metrik", "Nilai"].map(headerCell),
-    [textCell("Periode"), textCell(`${data.period_start} s/d ${data.period_end}`)],
-    [textCell("Karyawan dalam scope"), textCell(data.summary.employee_count)],
-    [textCell("Log presensi"), textCell(data.summary.attendance_count)],
-    [textCell("Tepat waktu/fleksibel"), textCell(data.summary.on_time_count)],
-    [textCell("Terlambat"), textCell(data.summary.late_count)],
-    [textCell("Pulang awal/jam kurang"), textCell(data.summary.early_checkout_count)],
-    [textCell("Cuti disetujui (hari)"), textCell(data.summary.approved_leave_days)],
-    [textCell("Lembur disetujui (menit)"), textCell(data.summary.approved_overtime_minutes)],
-  ];
-  const attendance: SheetData = [
-    [
-      "Nama",
-      "Jabatan",
-      "Outlet",
-      "Tanggal",
-      "Masuk",
-      "Pulang",
-      "Durasi (menit)",
-      "Status masuk",
-      "Status pulang",
-      "Validasi",
-    ].map(headerCell),
-    ...data.attendance.map((row) => [
-      textCell(row.employee_name),
-      textCell(row.position_name),
-      textCell(row.outlet_name),
-      textCell(row.work_date),
-      textCell(formatTime(row.clock_in_at)),
-      textCell(formatTime(row.clock_out_at)),
-      textCell(row.worked_duration_min),
-      textCell(row.clock_in_state),
-      textCell(row.clock_out_state),
-      textCell(row.validation_status),
-    ]),
-  ];
-  const leaves: SheetData = [
-    ["Nama", "Jenis", "Mulai", "Selesai", "Hari", "Status"].map(headerCell),
-    ...data.leaves.map((row) => [
-      textCell(row.employee_name),
-      textCell(row.leave_type_name),
-      textCell(row.starts_on),
-      textCell(row.ends_on),
-      textCell(row.requested_days),
-      textCell(row.status),
-    ]),
-  ];
-  const overtime: SheetData = [
-    [
-      "Nama",
-      "Tanggal",
-      "Sumber",
-      "Rencana (menit)",
-      "Aktual (menit)",
-      "Disetujui (menit)",
-      "Status",
-    ].map(headerCell),
-    ...data.overtime.map((row) => [
-      textCell(row.employee_name),
-      textCell(row.overtime_date),
-      textCell(row.source_type),
-      textCell(row.planned_duration_min),
-      textCell(row.actual_duration_min),
-      textCell(row.approved_duration_min),
-      textCell(row.status),
-    ]),
-  ];
-  const shifts: SheetData = [
-    ["Shift/Status", "Jenis Penugasan", "Status", "Total"].map(headerCell),
-    ...data.shift_distribution.map((row) => [
-      textCell(row.shift_type),
-      textCell(row.assignment_type),
-      textCell(row.status),
-      textCell(row.total),
-    ]),
-  ];
-  return { summary, attendance, leaves, overtime, shifts };
-}
-
 /**
  * Laporan operasional live M8 untuk supervisor dan management.
  *
@@ -161,6 +76,17 @@ export function LiveReportsPage() {
   const [outletId, setOutletId] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportStart, setExportStart] = useState(
+    `${new Date().getFullYear()}-01-01`
+  );
+  const [exportEnd, setExportEnd] = useState(
+    `${new Date().getFullYear()}-12-31`
+  );
+  const exportJobs = useReportExportJobs();
+  const requestExport = useRequestReportExport();
+  const retryExport = useRetryReportExport();
+  const downloadExport = useReportExportDownload();
   const report = useReportWorkspace({
     periodStart,
     periodEnd,
@@ -191,20 +117,40 @@ export function LiveReportsPage() {
     setIsExporting(true);
     try {
       const { default: writeXlsxFile } = await import("write-excel-file/browser");
-      const sheets = workbookData(report.data);
-      await writeXlsxFile([
-        { data: sheets.summary, sheet: "Ringkasan", stickyRowsCount: 1 },
-        { data: sheets.attendance, sheet: "Presensi", stickyRowsCount: 1 },
-        { data: sheets.leaves, sheet: "Cuti", stickyRowsCount: 1 },
-        { data: sheets.overtime, sheet: "Lembur", stickyRowsCount: 1 },
-        { data: sheets.shifts, sheet: "Distribusi Shift", stickyRowsCount: 1 },
-      ]).toFile(`laporan-operasional-${periodStart}-${periodEnd}.xlsx`);
+      await writeXlsxFile(reportWorkbookSheets(report.data)).toFile(
+        `laporan-operasional-${periodStart}-${periodEnd}.xlsx`
+      );
       playSuccessHaptic();
       showToast("Laporan XLSX berhasil diunduh.", "success");
     } catch {
       showToast("Laporan XLSX belum dapat dibuat di perangkat ini.", "warning");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleRequestExport = async () => {
+    playClickSound();
+    try {
+      await requestExport.mutateAsync({
+        periodStart: exportStart,
+        periodEnd: exportEnd,
+        outletId,
+        employeeId,
+      });
+      setExportModalOpen(false);
+      playSuccessHaptic();
+      showToast(
+        "Ekspor dijadwalkan. Status akan diperbarui otomatis.",
+        "success"
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Ekspor belum dapat dijadwalkan.",
+        "warning"
+      );
     }
   };
 
@@ -286,6 +232,129 @@ export function LiveReportsPage() {
           onChange={setEmployeeId}
           searchPlaceholder="Cari karyawan..."
         />
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-slate-800 bg-slate-900 p-4 print:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-100">
+              <Archive className="h-4 w-4 text-amber-400" />
+              Ekspor Periode Panjang
+            </h2>
+            <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+              XLSX hingga 366 hari dibuat server di belakang layar dan disimpan
+              privat. Filter outlet dan karyawan mengikuti pilihan di atas.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setExportModalOpen(true);
+            }}
+            className="shrink-0 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950"
+          >
+            Buat Ekspor
+          </button>
+        </div>
+
+        {exportJobs.isError && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-500/25 bg-rose-500/10 p-3">
+            <p className="text-[10px] text-rose-300">
+              Riwayat ekspor belum dapat dimuat.
+            </p>
+            <button
+              type="button"
+              onClick={() => void exportJobs.refetch()}
+              className="text-[10px] font-bold text-amber-400"
+            >
+              Coba lagi
+            </button>
+          </div>
+        )}
+
+        {exportJobs.data && exportJobs.data.length > 0 ? (
+          <div className="space-y-2">
+            {exportJobs.data.slice(0, 5).map((job) => (
+              <div
+                key={job.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-200">
+                    {formatDate(job.period_start)}–{formatDate(job.period_end)}
+                  </p>
+                  <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
+                    {job.status === "completed" ? (
+                      <CheckCircle2 className="h-3 w-3 text-amber-400" />
+                    ) : job.status === "failed" ? (
+                      <XCircle className="h-3 w-3 text-rose-400" />
+                    ) : (
+                      <LoaderCircle className="h-3 w-3 animate-spin text-amber-400" />
+                    )}
+                    {job.status === "scheduled"
+                      ? "Menunggu worker"
+                      : job.status === "processing"
+                        ? "Sedang dibuat"
+                        : job.status === "completed"
+                          ? `${Math.max(1, Math.round((job.file_size_bytes ?? 0) / 1024))} KB`
+                          : job.last_error ?? "Ekspor gagal"}
+                  </p>
+                </div>
+                {job.status === "completed" ? (
+                  <button
+                    type="button"
+                    disabled={downloadExport.isPending}
+                    onClick={async () => {
+                      try {
+                        await downloadExport.mutateAsync(job);
+                      } catch (error) {
+                        showToast(
+                          error instanceof Error
+                            ? error.message
+                            : "File belum dapat diunduh.",
+                          "warning"
+                        );
+                      }
+                    }}
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[10px] font-bold text-amber-300 disabled:opacity-50"
+                  >
+                    <Download className="h-3 w-3" />
+                    Unduh
+                  </button>
+                ) : job.status === "failed" && job.attempt_count < 3 ? (
+                  <button
+                    type="button"
+                    disabled={retryExport.isPending}
+                    onClick={async () => {
+                      try {
+                        await retryExport.mutateAsync(job.id);
+                        showToast("Ekspor dijadwalkan ulang.", "success");
+                      } catch (error) {
+                        showToast(
+                          error instanceof Error
+                            ? error.message
+                            : "Ekspor belum dapat diulang.",
+                          "warning"
+                        );
+                      }
+                    }}
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-2 text-[10px] font-bold text-slate-300 disabled:opacity-50"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Ulangi
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          !exportJobs.isLoading && (
+            <p className="rounded-lg border border-dashed border-slate-800 p-4 text-center text-[10px] text-slate-500">
+              Belum ada ekspor periode panjang.
+            </p>
+          )
+        )}
       </section>
 
       {report.isError && (
@@ -451,6 +520,57 @@ export function LiveReportsPage() {
         XLSX memuat ringkasan, presensi, cuti, lembur, dan distribusi shift
         sesuai filter aktif.
       </div>
+
+      <Modal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title="Buat Ekspor Periode Panjang"
+        icon={Archive}
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-100">
+            Pilih maksimal 366 hari. Permintaan langsung masuk antrean; halaman
+            boleh ditutup setelah status muncul.
+          </div>
+          <DateRangePicker
+            label="Periode ekspor"
+            startDate={exportStart}
+            endDate={exportEnd}
+            onChange={(start, end) => {
+              setExportStart(start);
+              setExportEnd(end);
+            }}
+          />
+          <p className="text-[10px] text-slate-400">
+            Scope:{" "}
+            {outletOptions.find((option) => option.value === outletId)?.label ??
+              "Semua outlet"}{" "}
+            ·{" "}
+            {employeeOptions.find((option) => option.value === employeeId)
+              ?.label ?? "Semua karyawan"}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setExportModalOpen(false)}
+              className="rounded-xl bg-slate-800 py-3 text-sm font-bold text-slate-300"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={requestExport.isPending}
+              onClick={() => void handleRequestExport()}
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-black text-slate-950 disabled:opacity-50"
+            >
+              {requestExport.isPending && (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              )}
+              Jadwalkan
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -9,4 +9,5 @@ export const reportKeys = {
   all: ["reports"] as const,
   workspace: (filters: ReportFilters) =>
     [...reportKeys.all, "workspace", filters] as const,
+  exports: () => [...reportKeys.all, "exports"] as const,
 };

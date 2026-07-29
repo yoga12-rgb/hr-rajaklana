@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh sembilan migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 289/289 pada
+- Tiga puluh migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 299/299 pada
   29 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -90,8 +90,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   role-aware dengan filter periode maksimal 92 hari, outlet, dan karyawan.
   Ringkasan mencakup presensi, keterlambatan/pulang awal, cuti, lembur,
   distribusi shift, dan perbandingan outlet. Ekspor XLSX multi-sheet dibuat
-  lokal dari snapshot query yang sama; PDF memakai print browser. Jalur export
-  besar asynchronous masih menjadi pekerjaan M8.
+  lokal dari snapshot query yang sama; PDF memakai print browser. Ekspor
+  periode panjang hingga 366 hari memakai job asynchronous, worker server-only,
+  private Storage, checksum, retry terbatas, dan signed URL singkat.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -141,6 +142,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 src/
 ├── app/                  # Next.js App Router Pages
 │   ├── api/roster/generate/ # Route server-side generator roster supervisor
+│   ├── api/reports/exports/ # Route antrean worker ekspor laporan server-only
 │   ├── template.tsx      # Global Page Transition wrapper (Framer Motion)
 │   ├── layout.tsx        # App layout with Header, Sidebar & BottomNav
 │   ├── page.tsx          # Mobile HR Dashboard (Home)
@@ -204,7 +206,9 @@ src/
 ├── lib/reports/
 │   ├── query-keys.ts     # Filter dan query key laporan
 │   ├── queries.ts        # Query workspace laporan live
-│   └── repository.ts     # RPC laporan bertipe dan role-aware
+│   ├── repository.ts     # RPC laporan bertipe dan role-aware
+│   ├── workbook.ts       # Sheet XLSX bersama untuk browser/worker
+│   └── export-worker.ts  # Worker server-only, checksum, dan private upload
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
