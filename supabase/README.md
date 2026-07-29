@@ -142,3 +142,15 @@ Jangan menjalankan reset terhadap production.
   scheduler yang tidak tercatat lebih dari 26 jam.
 - Modul yang belum dimigrasikan tetap memakai `HRContext`; modul live tidak
   boleh melakukan fallback atau dual-write ke data prototype.
+- Dashboard dan komunikasi live memakai `get_communication_workspace` serta
+  DAL modul yang sudah dimigrasikan. Pengumuman hanya dibuat melalui
+  `create_announcement`; target penerima (`all`, `outlet`, atau `employee`),
+  announcement receipt, notification, dan notification receipt dibuat dalam
+  satu transaksi.
+- Read receipt hanya boleh diubah pemilik melalui `mark_notification_read`
+  atau `mark_all_notifications_read`. Acknowledgement memakai
+  `acknowledge_announcement`. Management tetap hanya-baca, sedangkan direct
+  write ke tabel komunikasi dicabut untuk role `authenticated`.
+- Tabel `announcements` dan `notifications` berada pada publication realtime.
+  Client tetap polling setiap 60 detik sebagai fallback ketika websocket
+  terputus.

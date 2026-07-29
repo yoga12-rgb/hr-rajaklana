@@ -22,6 +22,8 @@ import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { StatCard } from "@/components/ui/StatCard";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
+import { LiveDashboardPage } from "@/components/dashboard/LiveDashboardPage";
+import { useDataSource } from "@/context/DataSourceContext";
 
 const miniChartData = [
   { day: "Senin", hadir: 40 },
@@ -47,6 +49,16 @@ const isAnnouncementCategory = (
   announcementCategoryOptions.some((option) => option.value === value);
 
 export default function MobileHRDashboard() {
+  const dataSource = useDataSource();
+
+  return dataSource.mode === "supabase" ? (
+    <LiveDashboardPage />
+  ) : (
+    <DemoDashboard />
+  );
+}
+
+function DemoDashboard() {
   const { 
     userClockedIn, 
     currentUserClockInTime, 

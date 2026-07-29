@@ -17,6 +17,7 @@ import {
 import { useHR } from "@/context/HRContext";
 import { useDataSource } from "@/context/DataSourceContext";
 import { Modal } from "@/components/ui/Modal";
+import { LiveNotificationBell } from "@/components/communications/LiveNotificationBell";
 import { signOutAction } from "@/lib/auth/actions";
 
 export default function Header() {
@@ -149,18 +150,22 @@ export default function Header() {
         </Link>
 
         {/* Notification Bell Button */}
-        <button
-          onClick={() => setShowNotifModal(true)}
-          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 relative transition-colors cursor-pointer"
-          title="Pusat Notifikasi HR"
-        >
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="min-w-4 h-4 px-1 text-[9px] font-extrabold text-slate-950 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5 flex items-center justify-center border-2 border-slate-900 shadow-sm animate-pulse">
-              {unreadCount}
-            </span>
-          )}
-        </button>
+        {dataSource.mode === "supabase" ? (
+          <LiveNotificationBell />
+        ) : (
+          <button
+            onClick={() => setShowNotifModal(true)}
+            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 relative transition-colors cursor-pointer"
+            title="Pusat Notifikasi HR"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="min-w-4 h-4 px-1 text-[9px] font-extrabold text-slate-950 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5 flex items-center justify-center border-2 border-slate-900 shadow-sm animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Profile Avatar */}
         <Link href="/profile" className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold text-xs hover:border-amber-400 transition-colors">
@@ -181,7 +186,7 @@ export default function Header() {
 
       {/* Notification Center Modal / Bottom Sheet */}
       <Modal
-        isOpen={showNotifModal}
+        isOpen={dataSource.mode !== "supabase" && showNotifModal}
         onClose={() => setShowNotifModal(false)}
         title="Pusat Notifikasi HRD"
         icon={Bell}

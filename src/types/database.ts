@@ -93,6 +93,7 @@ export type Database = {
         Row: {
           acknowledgement_required: boolean
           body: string
+          category: string
           created_at: string
           created_by: string
           expires_at: string | null
@@ -105,6 +106,7 @@ export type Database = {
         Insert: {
           acknowledgement_required?: boolean
           body: string
+          category?: string
           created_at?: string
           created_by: string
           expires_at?: string | null
@@ -117,6 +119,7 @@ export type Database = {
         Update: {
           acknowledgement_required?: boolean
           body?: string
+          category?: string
           created_at?: string
           created_by?: string
           expires_at?: string | null
@@ -2154,6 +2157,10 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_announcement: {
+        Args: { p_announcement_id: string }
+        Returns: Json
+      }
       acknowledge_monthly_roster: {
         Args: { p_month_start: string }
         Returns: Json
@@ -2432,6 +2439,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_announcement: {
+        Args: {
+          p_acknowledgement_required: boolean
+          p_body: string
+          p_category: string
+          p_expires_at?: string
+          p_is_pinned: boolean
+          p_target_id?: string
+          p_target_type: string
+          p_title: string
+        }
+        Returns: Json
+      }
       create_employee_master: {
         Args: {
           p_change_reason?: string
@@ -2596,6 +2616,7 @@ export type Database = {
         Returns: string
       }
       get_attendance_workspace: { Args: never; Returns: Json }
+      get_communication_workspace: { Args: never; Returns: Json }
       get_leave_workspace: { Args: never; Returns: Json }
       get_monthly_roster: { Args: { p_month_start: string }; Returns: Json }
       get_overtime_workspace: { Args: never; Returns: Json }
@@ -2612,6 +2633,11 @@ export type Database = {
         Returns: Json
       }
       is_supervisor: { Args: never; Returns: boolean }
+      mark_all_notifications_read: { Args: never; Returns: Json }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: Json
+      }
       preview_attendance_geofence: {
         Args: {
           p_accuracy_m: number

@@ -6,7 +6,7 @@
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
 | Terakhir diverifikasi | 29 Juli 2026                                                    |
-| Fase saat ini         | M7 selesai; M8 menunggu penutupan verifikasi waktu M6           |
+| Fase saat ini         | M8 berjalan; gate pilot menunggu verifikasi waktu M6            |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan dua puluh empat migration berikut identik antara
+- Project hosted sudah terhubung dan dua puluh delapan migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                          | Fungsi                                    |
@@ -105,21 +105,22 @@ Sudah tersedia:
 | `20260729130000_add_leave_schedule_status.sql`                     | Status cuti pada assignment roster        |
 | `20260729131000_auto_roster_generation_workflow.sql`               | Snapshot dan commit optimizer roster      |
 | `20260729150000_support_cross_month_off_days.sql`                  | Carry-over off pekan terakhir lintas bulan |
+| `20260729160000_m8_communication_workflow.sql`                    | Notifikasi dan pengumuman bertarget live    |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `251/251`.
+- pgTAP lulus `275/275`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
 Fondasi backend dan autentikasi sudah aktif, tetapi aplikasi belum sepenuhnya
 menjadi aplikasi multi-user:
 
-- Halaman karyawan, Jadwal, Cuti/Izin, dan Lembur pada mode live tidak membaca
-  atau memutasi data bisnis `HRContext`; modul bisnis lain masih memakai data
-  prototype.
+- Dashboard, komunikasi, halaman karyawan, Jadwal, Cuti/Izin, Lembur, dan
+  Presensi pada mode live tidak membaca atau memutasi data bisnis `HRContext`;
+  Laporan dan sebagian modul pendukung masih memakai data prototype.
 - Halaman login, logout, perubahan kata sandi pertama, proteksi route, dan
   operasi akun server-only sudah tersedia.
 - Supervisor pertama sudah dibuat dan alur login pertama lokal telah lulus.
@@ -793,16 +794,19 @@ diedit supervisor.
 
 ---
 
-## M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi (`BLOCKED`)
+## M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi (`IN PROGRESS`)
 
 ### Tujuan
 
 Menutup MVP dengan komunikasi, laporan operasional, ketahanan jaringan, dan
 observability yang layak dipakai pilot.
 
-### Gate sebelum mulai
+### Gate pilot dan pengecualian implementasi
 
-M7 sudah selesai, tetapi M8 belum boleh dimulai sampai M6 membuktikan:
+M7 sudah selesai. Pada 29 Juli 2026 pemilik produk menyetujui implementasi
+bagian non-pilot M8 dilanjutkan sementara koreksi/verifikasi cron ditunda.
+Pengecualian ini tidak menghapus gate: M8 tidak boleh berstatus `DONE` dan
+pilot produksi tidak boleh dinyatakan siap sampai M6 membuktikan:
 
 1. invocation otomatis Vercel Cron tercatat oleh audit persisten; dan
 2. satu selfie nyata yang melewati tujuh hari benar-benar hilang dari Storage,
@@ -810,6 +814,25 @@ M7 sudah selesai, tetapi M8 belum boleh dimulai sampai M6 membuktikan:
    objek.
 
 Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
+
+### Progres terverifikasi
+
+- Migration `20260729160000_m8_communication_workflow.sql` identik lokal dan
+  hosted.
+- Pusat komunikasi live memakai RPC security-definer yang role-aware,
+  target penerima termaterialisasi, read receipt tahan-refresh,
+  acknowledgement, audit, dan Supabase Realtime dengan polling fallback.
+- Supervisor dapat membuat pengumuman untuk seluruh perusahaan, satu outlet,
+  atau satu karyawan. Management dapat melihat agregat tetapi seluruh mutasi
+  komunikasi tetap ditolak.
+- Header live memakai notifikasi Supabase; dashboard live membaca identitas,
+  scope karyawan, status/riwayat presensi, pengajuan, dan validasi dari DAL
+  Supabase tanpa fallback ke mock.
+- Lint schema lokal/hosted bersih; pgTAP lokal/hosted `275/275`, lint,
+  typecheck, build live/demo, delapan unit test, dan 18 E2E desktop/mobile
+  lulus.
+- Pekerjaan berikutnya: migrasi Laporan, export job besar, offline read yang
+  menjaga privasi perangkat, observability/SOP, lalu pilot setelah gate M6.
 
 ### Pekerjaan
 
@@ -957,8 +980,10 @@ Prompt singkat yang dapat diberikan kepada agent baru:
 
 > Pelajari `AGENTS.md`, `PRD.md`, `ERD.md`,
 > `IMPLEMENTATION_ROADMAP.md`, dan `supabase/README.md`. Periksa kondisi repo
-> dan mulai dengan menutup dua verifikasi waktu M6. Ubah M8 dari `BLOCKED`
-> menjadi `NEXT` hanya setelah keduanya lulus. Pertahankan
-> data prototype sampai modul tersebut benar-benar dimigrasikan, jangan
-> mengekspos secret, jangan reset Supabase hosted, jalankan seluruh quality
-> gate milestone, lalu perbarui status handoff.
+> dan lanjutkan M8 dari migrasi Laporan/export serta rancangan offline read
+> yang menjaga privasi perangkat. Implementasi non-pilot boleh berjalan,
+> tetapi jangan nyatakan M6/M8 `DONE` atau mulai pilot sampai invocation cron
+> otomatis dan penghapusan evidence nyata tujuh hari terverifikasi.
+> Pertahankan data prototype sampai modul tersebut benar-benar dimigrasikan,
+> jangan mengekspos secret, jangan reset Supabase hosted, jalankan seluruh
+> quality gate milestone, lalu perbarui status handoff.

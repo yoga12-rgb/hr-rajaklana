@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Dua puluh tujuh migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 251/251 pada
+- Dua puluh delapan migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 275/275 pada
   29 Juli 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -35,8 +35,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Tab kebijakan kerja/cuti dan template shift outlet sudah memakai Supabase.
   Kebijakan diterbitkan sebagai versi baru; penggantian template shift
   mempertahankan record lama untuk referensi jadwal historis.
-- Modul selain data karyawan, Jadwal, Cuti/Izin, Lembur, dan Pengaturan master
-  data masih memakai `HRContext` dan `localStorage`.
+- Modul selain Dashboard, komunikasi, data karyawan, Jadwal, Cuti/Izin,
+  Lembur, Presensi, dan Pengaturan master data masih memakai `HRContext` dan
+  `localStorage`.
 - Login, logout, route protection, wajib ganti password, operasi akun
   server-only, UI akun pada halaman Karyawan, dan script bootstrap supervisor
   sudah diimplementasikan.
@@ -78,6 +79,13 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   hasil invalid hanya menyimpan konflik. UI supervisor menampilkan preview
   konflik dan fairness sebelum publikasi, shortcut koreksi off, serta pilihan
   cepat tanggal carry-over untuk pekan terakhir.
+- Dashboard live tidak lagi membaca data demo. Ringkasan identitas, presensi,
+  karyawan sesuai scope RLS, pengajuan, validasi, dan riwayat memakai DAL
+  Supabase. Pusat notifikasi live memiliki unread badge tahan-refresh,
+  realtime dengan polling fallback, read receipt milik pengguna, serta tautan
+  kontekstual. Pengumuman mendukung target seluruh perusahaan/outlet/karyawan,
+  pin, kategori, acknowledgement wajib, dan statistik penerima untuk
+  supervisor/management; management tetap hanya-baca.
 - Milestone **M1 — Environment, Authentication, dan Supervisor Pertama**
   sudah selesai.
 - Milestone **M2 — Data Access Layer dan Master Data** sudah selesai.
@@ -89,8 +97,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   `DEFERRED VERIFICATION`; invocation otomatis dan penghapusan evidence nyata
   masih menunggu waktu eksekusi scheduler/retensi.
 - **M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi** berstatus
-  `BLOCKED` sampai dua bukti waktu M6 tersebut lulus. Jangan mengklaim M6 atau
-  M8 selesai berdasarkan implementasi kode saja.
+  `IN PROGRESS` berdasarkan keputusan pemilik produk untuk menunda koreksi cron.
+  Implementasi non-pilot boleh dilanjutkan, tetapi pilot produksi dan status
+  `DONE` tetap dilarang sampai dua bukti waktu M6 tersebut lulus.
 
 ---
 
@@ -140,6 +149,11 @@ src/
 ├── components/
 │   ├── employees/
 │   │   └── EmployeeImportModal.tsx # Template, parsing lokal, dry-run, dan commit impor XLSX
+│   ├── communications/
+│   │   ├── LiveAnnouncementBoard.tsx # Pengumuman bertarget dan acknowledgement live
+│   │   └── LiveNotificationBell.tsx # Pusat notifikasi, read receipt, realtime/polling
+│   ├── dashboard/
+│   │   └── LiveDashboardPage.tsx # Dashboard live sesuai scope RLS tanpa data mock
 │   ├── schedule/
 │   │   └── LiveSchedulePage.tsx # Roster live, publish, acknowledgement, dan tukar shift
 │   ├── leaves/
@@ -175,6 +189,10 @@ src/
 │   ├── repository.ts     # RPC presensi, validasi, dan selfie private
 │   ├── actions.ts        # Pemicu cleanup segera setelah keputusan
 │   └── retention-worker.ts # Worker idempotent penghapusan bukti
+├── lib/communications/
+│   ├── query-keys.ts     # Query key factory komunikasi
+│   ├── queries.ts        # Query/mutation dan invalidasi realtime
+│   └── repository.ts     # RPC workspace, publish, read, dan acknowledgement
 ├── lib/roster/
 │   ├── query-keys.ts     # Query key factory roster
 │   ├── queries.ts        # TanStack Query hooks roster dan tukar shift
