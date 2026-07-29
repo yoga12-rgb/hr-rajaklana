@@ -8,13 +8,15 @@ test("form login berada di tengah viewport", async ({ page }) => {
 
   const section = page.locator("main > section");
   await expect(section).toBeVisible();
-  const sectionBox = await section.boundingBox();
+  const sectionBox = await section.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x, width: rect.width };
+  });
   const viewport = page.viewportSize();
 
-  expect(sectionBox).not.toBeNull();
   expect(viewport).not.toBeNull();
 
-  if (!sectionBox || !viewport) {
+  if (!viewport) {
     return;
   }
 
