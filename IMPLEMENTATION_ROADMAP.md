@@ -76,40 +76,40 @@ Sudah tersedia:
 - Project hosted sudah terhubung dan tiga puluh dua migration berikut identik antara
   lokal dan remote:
 
-| Migration                                                          | Fungsi                                    |
-| ------------------------------------------------------------------ | ----------------------------------------- |
-| `20260724104032_initial_workforce_schema.sql`                      | Schema inti workforce                     |
-| `20260724104038_secure_storage_and_rls.sql`                        | RLS, private Storage, RPC, dan keamanan   |
-| `20260724183617_enable_database_testing.sql`                       | Mengaktifkan pgTAP                        |
-| `20260724183900_grant_cli_database_testing_access.sql`             | Akses minimum role CLI untuk tes          |
-| `20260726153000_complete_password_change.sql`                      | Aktivasi akun dan audit password atomik   |
-| `20260726193000_harden_auth_role_helper_privileges.sql`            | Hardening hak eksekusi helper role        |
-| `20260726213000_employee_master_data_rpcs.sql`                     | CRUD/arsip karyawan dan penempatan atomik |
-| `20260726230000_outlet_master_data_rpcs.sql`                       | CRUD/status outlet dan geofence atomik    |
-| `20260727003000_policy_and_shift_template_rpcs.sql`                | Kebijakan versioned dan template shift    |
-| `20260727013000_harden_policy_shift_write_paths.sql`               | Tutup jalur tulis langsung tabel historis |
-| `20260727130000_employee_import_workflow.sql`                      | Dry-run dan commit atomik impor XLSX      |
-| `20260727210000_manual_roster_workflow.sql`                        | Roster manual, off, publish, dan tukar    |
-| `20260727223000_harden_roster_function_privileges.sql`             | Hardening hak eksekusi RPC roster         |
-| `20260728003000_leave_overtime_workflow.sql`                       | Cuti, dokumen privat, saldo, dan lembur   |
-| `20260728150000_attendance_clock_workflow.sql`                     | Clock-in/out, geofence server, dan selfie |
-| `20260728153000_harden_attendance_function_privileges.sql`         | Hardening hak RPC presensi                |
-| `20260728160000_attendance_geofence_preview.sql`                   | Preview jarak geofence server untuk UI    |
-| `20260728170000_fix_get_monthly_roster_empty_period.sql`           | Karyawan tersedia sebelum periode roster  |
-| `20260728190000_harden_attendance_retention_access.sql`            | Hardening akses selfie dan retention job  |
-| `20260728200000_atomic_attendance_deletion_completion.sql`         | Finalisasi retensi dan audit atomik       |
-| `20260728210000_bulk_manual_roster_fill.sql`                       | Isi rentang roster manual secara atomik   |
-| `20260728220000_update_active_placement_effective_date.sql`        | Koreksi tanggal efektif penempatan aktif  |
-| `20260728230000_assign_partial_week_to_starting_month.sql`         | Kepemilikan pekan parsial untuk jatah off |
-| `20260729003000_preview_clock_in_and_retain_selfie_seven_days.sql` | Preview clock-in dan retensi tujuh hari   |
-| `20260729130000_add_leave_schedule_status.sql`                     | Status cuti pada assignment roster        |
-| `20260729131000_auto_roster_generation_workflow.sql`               | Snapshot dan commit optimizer roster      |
+| Migration                                                          | Fungsi                                     |
+| ------------------------------------------------------------------ | ------------------------------------------ |
+| `20260724104032_initial_workforce_schema.sql`                      | Schema inti workforce                      |
+| `20260724104038_secure_storage_and_rls.sql`                        | RLS, private Storage, RPC, dan keamanan    |
+| `20260724183617_enable_database_testing.sql`                       | Mengaktifkan pgTAP                         |
+| `20260724183900_grant_cli_database_testing_access.sql`             | Akses minimum role CLI untuk tes           |
+| `20260726153000_complete_password_change.sql`                      | Aktivasi akun dan audit password atomik    |
+| `20260726193000_harden_auth_role_helper_privileges.sql`            | Hardening hak eksekusi helper role         |
+| `20260726213000_employee_master_data_rpcs.sql`                     | CRUD/arsip karyawan dan penempatan atomik  |
+| `20260726230000_outlet_master_data_rpcs.sql`                       | CRUD/status outlet dan geofence atomik     |
+| `20260727003000_policy_and_shift_template_rpcs.sql`                | Kebijakan versioned dan template shift     |
+| `20260727013000_harden_policy_shift_write_paths.sql`               | Tutup jalur tulis langsung tabel historis  |
+| `20260727130000_employee_import_workflow.sql`                      | Dry-run dan commit atomik impor XLSX       |
+| `20260727210000_manual_roster_workflow.sql`                        | Roster manual, off, publish, dan tukar     |
+| `20260727223000_harden_roster_function_privileges.sql`             | Hardening hak eksekusi RPC roster          |
+| `20260728003000_leave_overtime_workflow.sql`                       | Cuti, dokumen privat, saldo, dan lembur    |
+| `20260728150000_attendance_clock_workflow.sql`                     | Clock-in/out, geofence server, dan selfie  |
+| `20260728153000_harden_attendance_function_privileges.sql`         | Hardening hak RPC presensi                 |
+| `20260728160000_attendance_geofence_preview.sql`                   | Preview jarak geofence server untuk UI     |
+| `20260728170000_fix_get_monthly_roster_empty_period.sql`           | Karyawan tersedia sebelum periode roster   |
+| `20260728190000_harden_attendance_retention_access.sql`            | Hardening akses selfie dan retention job   |
+| `20260728200000_atomic_attendance_deletion_completion.sql`         | Finalisasi retensi dan audit atomik        |
+| `20260728210000_bulk_manual_roster_fill.sql`                       | Isi rentang roster manual secara atomik    |
+| `20260728220000_update_active_placement_effective_date.sql`        | Koreksi tanggal efektif penempatan aktif   |
+| `20260728230000_assign_partial_week_to_starting_month.sql`         | Kepemilikan pekan parsial untuk jatah off  |
+| `20260729003000_preview_clock_in_and_retain_selfie_seven_days.sql` | Preview clock-in dan retensi tujuh hari    |
+| `20260729130000_add_leave_schedule_status.sql`                     | Status cuti pada assignment roster         |
+| `20260729131000_auto_roster_generation_workflow.sql`               | Snapshot dan commit optimizer roster       |
 | `20260729150000_support_cross_month_off_days.sql`                  | Carry-over off pekan terakhir lintas bulan |
-| `20260729160000_m8_communication_workflow.sql`                    | Notifikasi dan pengumuman bertarget live    |
-| `20260729173000_m8_live_reports_workspace.sql`                   | Laporan operasional live role-aware         |
-| `20260729190000_m8_async_report_exports.sql`                     | Antrean ekspor XLSX besar dan akses privat   |
-| `20260729203000_m8_operational_health_workspace.sql`             | Agregat observability dan audit tersensor    |
-| `20260729210000_harden_operational_health_role_check.sql`        | Gate role NULL-safe workspace operasional    |
+| `20260729160000_m8_communication_workflow.sql`                     | Notifikasi dan pengumuman bertarget live   |
+| `20260729173000_m8_live_reports_workspace.sql`                     | Laporan operasional live role-aware        |
+| `20260729190000_m8_async_report_exports.sql`                       | Antrean ekspor XLSX besar dan akses privat |
+| `20260729203000_m8_operational_health_workspace.sql`               | Agregat observability dan audit tersensor  |
+| `20260729210000_harden_operational_health_role_check.sql`          | Gate role NULL-safe workspace operasional  |
 
 Verifikasi terakhir terhadap hosted project:
 
@@ -961,7 +961,7 @@ Untuk perubahan hosted:
 - [x] Project ref diperiksa: `ttbogurultjbporryylb`.
 - [x] `migration list --linked` diperiksa sebelum dan sesudah push.
 - [x] Dua migration M7 dan satu koreksi carry-over diterapkan tanpa reset
-  production.
+      production.
 - [x] Dua migration observability M8 diterapkan tanpa reset production.
 - [x] Hosted lint dan pgTAP `310/310` lulus.
 - [x] Tidak pernah melakukan reset production.
@@ -979,7 +979,7 @@ Input berikut diminta hanya ketika milestone terkait dimulai:
 | M3        | Template shift per outlet, pengecualian outlet, off day awal, aturan perubahan/publish    |
 | M4        | Daftar final jenis cuti dan dokumen wajib                                                 |
 | M5        | Hasil uji accuracy GPS perangkat nyata dan toleransi pilot                                |
-| M6        | Bukti scheduler otomatis dan evidence nyata pascajatuh tempo tujuh hari                    |
+| M6        | Bukti scheduler otomatis dan evidence nyata pascajatuh tempo tujuh hari                   |
 | M8        | Pengguna pilot, SOP dukungan, kebutuhan laporan/export final                              |
 
 Jangan mengarang data perusahaan nyata. Gunakan fixture sintetis sampai data

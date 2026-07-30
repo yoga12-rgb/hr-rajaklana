@@ -43,18 +43,28 @@ export function OfflineReadProvider({
   queryClient: QueryClient;
   dataSource: DataSourceConfig;
 }) {
-  const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine
-  );
+  // Selalu mulai dengan true di server; di-sync ulang setelah mount agar
+  // tidak terjadi hydration mismatch yang menyebabkan banner Offline palsu.
+  const [isOnline, setIsOnline] = useState(true);
   const [hasCachedRoster, setHasCachedRoster] = useState(false);
 
+  // Sinkronisasi status online segera setelah mount dan pasang listener
+  // agar perubahan koneksi selalu ter-update, terlepas dari mode data.
   useEffect(() => {
-    if (dataSource.mode !== "supabase") return;
+    setIsOnline(navigator.onLine);
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (dataSource.mode !== "supabase") return;
 
     let unsubscribe = () => {};
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -159,14 +169,12 @@ export function OfflineReadProvider({
       disposed = true;
       clearTimeout(saveTimer);
       unsubscribe();
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
     };
   }, [dataSource.mode, queryClient]);
 
   return (
     <>
-      {!isOnline && (
+      {dataSource.mode === "supabase" && !isOnline && (
         <div
           role="status"
           className="fixed inset-x-3 top-[calc(4.25rem+env(safe-area-inset-top))] z-40 mx-auto flex max-w-md items-center gap-2 rounded-xl border border-amber-500/30 bg-slate-900/95 px-3 py-2 text-[10px] font-semibold text-amber-200 shadow-xl backdrop-blur-xl"
