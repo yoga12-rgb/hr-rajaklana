@@ -68,6 +68,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   berisi tanggal/outlet/shift dan membuka formulir backup manual yang sudah
   terisi konteks. Approval lama sudah direkonsiliasi secara idempotent dan
   publikasi ditolak bila jadwal kerja masih bertabrakan dengan cuti approved.
+  UI supervisor membedakan saldo akun sendiri dari saldo pemohon, menandai
+  jenis yang mengurangi saldo tahunan, dan memproyeksikan ledger sebelum
+  keputusan dikonfirmasi.
   Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
@@ -250,6 +253,7 @@ src/
 ├── lib/workforce-requests/
 │   ├── query-keys.ts     # Query key factory cuti dan lembur
 │   ├── queries.ts        # Query/mutation hooks dengan optimistic rollback
+│   ├── leave-balance.ts  # Proyeksi ledger saldo saat keputusan cuti
 │   └── repository.ts     # Repository RPC cuti, dokumen privat, dan lembur
 ├── lib/supabase/
 │   ├── client.ts         # Supabase client untuk Client Components

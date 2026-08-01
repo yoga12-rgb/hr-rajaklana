@@ -307,6 +307,9 @@ Perubahan setelah publikasi:
    tujuan terisi; supervisor tetap memilih karyawan dari outlet lain.
 9. Roster tidak dapat dipublikasikan selama masih ada assignment kerja pada
    tanggal cuti yang sudah disetujui.
+10. Workspace supervisor menampilkan dampak jenis cuti, saldo milik pemohon,
+    serta proyeksi `Tersedia`, `Direservasi`, dan `Terpakai` sebelum keputusan
+    dikonfirmasi. Saldo akun supervisor harus diberi label terpisah.
 
 ### 7.7 Pertukaran shift
 

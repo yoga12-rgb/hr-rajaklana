@@ -15,6 +15,7 @@ import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Modal } from "@/components/ui/Modal";
 import { useHR } from "@/context/HRContext";
 import { createClient } from "@/lib/supabase/client";
+import { projectLeaveBalanceDecision } from "@/lib/workforce-requests/leave-balance";
 import {
   useCancelLeaveRequest,
   useDecideLeaveRequest,
@@ -117,6 +118,20 @@ export function LiveLeavesPage() {
     () => data?.requests.filter((request) => request.status === "pending") ?? [],
     [data]
   );
+  const leaveTypesById = useMemo(
+    () => new Map(data?.leave_types.map((leaveType) => [leaveType.id, leaveType])),
+    [data]
+  );
+  const balancesByEmployeeTypeYear = useMemo(
+    () =>
+      new Map(
+        data?.balances.map((balance) => [
+          `${balance.employee_id}:${balance.leave_type_id}:${balance.year}`,
+          balance,
+        ])
+      ),
+    [data]
+  );
   const annualBalance = data?.balances.find(
     (balance) =>
       balance.employee_id === data.current_employee_id &&
@@ -136,6 +151,24 @@ export function LiveLeavesPage() {
     selectedType?.requires_document ||
     (selectedType?.document_required_after_days != null &&
       requestedDays > selectedType.document_required_after_days);
+  const decisionLeaveType = decisionState
+    ? leaveTypesById.get(decisionState.request.leave_type_id)
+    : undefined;
+  const decisionBalance = decisionState
+    ? balancesByEmployeeTypeYear.get(
+        `${decisionState.request.employee_id}:${decisionState.request.leave_type_id}:${Number(
+          decisionState.request.starts_on.slice(0, 4)
+        )}`
+      )
+    : undefined;
+  const decisionProjection =
+    decisionState && decisionLeaveType?.deducts_annual_balance && decisionBalance
+      ? projectLeaveBalanceDecision(
+          decisionBalance,
+          decisionState.request.requested_days,
+          decisionState.decision
+        )
+      : null;
 
   const closeRequest = () => {
     setRequestOpen(false);
@@ -311,24 +344,39 @@ export function LiveLeavesPage() {
         )}
       </div>
 
-      <section className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-4 text-center">
-        {[
-          ["Tersedia", annualBalance?.available_days ?? 0],
-          ["Terpakai", annualBalance?.used_days ?? 0],
-          ["Direservasi", annualBalance?.reserved_days ?? 0],
-        ].map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase text-slate-500">
-              {label}
+      <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold text-slate-200">
+              Saldo Cuti Tahunan Saya
             </p>
-            <p className="mt-1 text-xl font-black text-amber-400">
-              {value}
-              <span className="ml-1 text-[10px] font-medium text-slate-400">
-                hari
-              </span>
+            <p className="mt-0.5 text-[10px] text-slate-500">
+              Tahun {annualBalance?.year ?? new Date().getFullYear()}
             </p>
           </div>
-        ))}
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
+            Akun aktif
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ["Tersedia", annualBalance?.available_days ?? 0],
+            ["Terpakai", annualBalance?.used_days ?? 0],
+            ["Direservasi", annualBalance?.reserved_days ?? 0],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0 rounded-xl bg-slate-950/70 p-2">
+              <p className="text-[10px] font-semibold uppercase text-slate-500">
+                {label}
+              </p>
+              <p className="mt-1 text-xl font-black text-amber-400">
+                {value}
+                <span className="ml-1 text-[10px] font-medium text-slate-400">
+                  hari
+                </span>
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <div className="flex gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1">
@@ -358,6 +406,13 @@ export function LiveLeavesPage() {
           ))}
       </div>
 
+      {tab === "approval" && (
+        <p className="rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-[11px] text-sky-200">
+          Saldo di atas adalah milik akun Anda. Saldo pemohon ditampilkan pada
+          masing-masing kartu persetujuan.
+        </p>
+      )}
+
       {tab === "types" ? (
         <div className="space-y-3">
           <button
@@ -384,6 +439,11 @@ export function LiveLeavesPage() {
                     Notice {leaveType.minimum_notice_days} hari
                     {leaveType.requires_document ? " · Dokumen wajib" : ""}
                   </p>
+                  <p className="mt-1 text-[10px] font-semibold text-amber-300">
+                    {leaveType.deducts_annual_balance
+                      ? "Mengurangi saldo tahunan"
+                      : "Tidak mengurangi saldo tahunan"}
+                  </p>
                 </div>
                 <span
                   className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
@@ -405,11 +465,19 @@ export function LiveLeavesPage() {
               Belum ada pengajuan pada bagian ini.
             </div>
           )}
-          {visibleRequests.map((request) => (
-            <article
-              key={request.id}
-              className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4"
-            >
+          {visibleRequests.map((request) => {
+            const requestType = leaveTypesById.get(request.leave_type_id);
+            const requestBalance = balancesByEmployeeTypeYear.get(
+              `${request.employee_id}:${request.leave_type_id}:${Number(
+                request.starts_on.slice(0, 4)
+              )}`
+            );
+
+            return (
+              <article
+                key={request.id}
+                className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4"
+              >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   {tab === "approval" && (
@@ -433,9 +501,54 @@ export function LiveLeavesPage() {
                   {statusLabel(request.status)}
                 </span>
               </div>
-              <p className="rounded-lg bg-slate-950 p-3 text-xs text-slate-300">
-                {request.reason}
-              </p>
+                <span
+                  className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${
+                    requestType?.deducts_annual_balance
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                      : "border-slate-700 bg-slate-950 text-slate-400"
+                  }`}
+                >
+                  {requestType?.deducts_annual_balance
+                    ? "Mengurangi saldo tahunan"
+                    : "Tidak mengurangi saldo tahunan"}
+                </span>
+                {tab === "approval" &&
+                  requestType?.deducts_annual_balance && (
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+                      <p className="text-[11px] font-bold text-slate-200">
+                        Saldo {request.employee_name}
+                      </p>
+                      {requestBalance ? (
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                          {[
+                            ["Tersedia", requestBalance.available_days],
+                            ["Terpakai", requestBalance.used_days],
+                            ["Direservasi", requestBalance.reserved_days],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-lg bg-slate-950/70 p-2"
+                            >
+                              <p className="text-[9px] uppercase text-slate-500">
+                                {label}
+                              </p>
+                              <p className="mt-1 text-sm font-black text-amber-300">
+                                {value} hari
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-[10px] text-rose-300">
+                          Ledger saldo tahun pengajuan belum tersedia. Database
+                          akan menolak persetujuan sampai saldo konsisten.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                <p className="rounded-lg bg-slate-950 p-3 text-xs text-slate-300">
+                  {request.reason}
+                </p>
               {request.decision_note && (
                 <p className="text-[11px] text-slate-400">
                   Catatan: {request.decision_note}
@@ -490,8 +603,9 @@ export function LiveLeavesPage() {
                   </button>
                 </div>
               )}
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 
@@ -509,7 +623,11 @@ export function LiveLeavesPage() {
               .map((leaveType) => ({
                 value: leaveType.id,
                 label: leaveType.name,
-                subtext: `Minimal ${leaveType.minimum_notice_days} hari sebelumnya`,
+                subtext: `${
+                  leaveType.deducts_annual_balance
+                    ? "Mengurangi saldo tahunan"
+                    : "Tidak mengurangi saldo tahunan"
+                } · Minimal ${leaveType.minimum_notice_days} hari sebelumnya`,
               }))}
             value={leaveTypeId}
             onChange={setLeaveTypeId}
@@ -523,6 +641,19 @@ export function LiveLeavesPage() {
               setEndsOn(end);
             }}
           />
+          {selectedType && (
+            <div
+              className={`rounded-xl border p-3 text-xs ${
+                selectedType.deducts_annual_balance
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                  : "border-slate-700 bg-slate-950 text-slate-300"
+              }`}
+            >
+              {selectedType.deducts_annual_balance
+                ? `${requestedDays} hari akan direservasi dari saldo Cuti Tahunan saat pengajuan dikirim.`
+                : "Jenis ini tidak mengurangi saldo Cuti Tahunan."}
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-300">Alasan</label>
             <textarea
@@ -578,6 +709,64 @@ export function LiveLeavesPage() {
             {decisionState?.request.employee_name} ·{" "}
             {decisionState?.request.leave_type_name}
           </p>
+          {decisionState && (
+            <div
+              className={`rounded-xl border p-3 ${
+                decisionLeaveType?.deducts_annual_balance
+                  ? "border-amber-500/30 bg-amber-500/10"
+                  : "border-slate-700 bg-slate-950"
+              }`}
+            >
+              <p className="text-xs font-bold text-slate-100">
+                {decisionLeaveType?.deducts_annual_balance
+                  ? "Dampak pada saldo Cuti Tahunan"
+                  : "Tidak mengurangi saldo Cuti Tahunan"}
+              </p>
+              {decisionProjection ? (
+                <>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    {[
+                      [
+                        "Tersedia",
+                        decisionProjection.availableBefore,
+                        decisionProjection.availableAfter,
+                      ],
+                      [
+                        "Terpakai",
+                        decisionProjection.usedBefore,
+                        decisionProjection.usedAfter,
+                      ],
+                      [
+                        "Direservasi",
+                        decisionProjection.reservedBefore,
+                        decisionProjection.reservedAfter,
+                      ],
+                    ].map(([label, before, after]) => (
+                      <div key={label} className="rounded-lg bg-slate-950/70 p-2">
+                        <p className="text-[9px] uppercase text-slate-500">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-xs font-black text-amber-300">
+                          {before} → {after}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+                    {decisionState.decision === "approved"
+                      ? "Saldo tersedia sudah berkurang saat pengajuan direservasi. Persetujuan memindahkan hari ke Terpakai."
+                      : "Hari yang direservasi akan dikembalikan ke saldo tersedia."}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                  {decisionLeaveType?.deducts_annual_balance
+                    ? "Ledger saldo tahun pengajuan belum tersedia. Persetujuan akan divalidasi oleh database."
+                    : "Keputusan hanya mengubah status pengajuan dan ketersediaan pada roster."}
+                </p>
+              )}
+            </div>
+          )}
           <textarea
             rows={3}
             value={decisionNote}
