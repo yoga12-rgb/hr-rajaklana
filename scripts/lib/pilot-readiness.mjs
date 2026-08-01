@@ -50,20 +50,6 @@ export function countPilotCapableOutlets(snapshot) {
   const activeTemplates = snapshot.shiftTemplates.filter(
     (template) => template.is_active
   );
-  const effectiveRequirementTemplateIds = new Set(
-    snapshot.staffingRequirements
-      .filter((requirement) =>
-        isEffectiveOn(
-          {
-            start: requirement.effective_from,
-            end: requirement.effective_until,
-          },
-          snapshot.today
-        )
-      )
-      .map((requirement) => requirement.shift_template_id)
-  );
-
   return snapshot.outlets.filter((outlet) => {
     if (!outlet.is_active) return false;
 
@@ -77,7 +63,19 @@ export function countPilotCapableOutlets(snapshot) {
         .filter(
           (template) =>
             template.outlet_id === outlet.id &&
-            effectiveRequirementTemplateIds.has(template.id)
+            snapshot.staffingRequirements.some(
+              (requirement) =>
+                requirement.outlet_id === outlet.id &&
+                requirement.shift_template_id === template.id &&
+                requirement.cashier_count === employeeCount &&
+                isEffectiveOn(
+                  {
+                    start: requirement.effective_from,
+                    end: requirement.effective_until,
+                  },
+                  snapshot.today
+                )
+            )
         )
         .map((template) => template.shift_type)
     );

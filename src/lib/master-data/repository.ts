@@ -57,6 +57,17 @@ export interface ShiftTemplateInput {
   reason: string;
 }
 
+export interface StaffingRequirementInput {
+  outletId: string;
+  cashierCount: number;
+  effectiveFrom: string;
+  requirements: Array<{
+    shiftType: Database["public"]["Enums"]["shift_type"];
+    minimumStaff: number;
+  }>;
+  reason: string;
+}
+
 export interface EmployeeImportRow {
   nik: string;
   full_name: string;
@@ -278,6 +289,36 @@ export async function listActiveShiftTemplates(client: MasterDataClient) {
   return data;
 }
 
+export async function listStaffingRequirements(client: MasterDataClient) {
+  const { data, error } = await client
+    .from("outlet_staffing_requirements")
+    .select(
+      `
+        id,
+        outlet_id,
+        shift_template_id,
+        cashier_count,
+        minimum_staff,
+        effective_from,
+        effective_until,
+        shift_template:outlet_shift_templates!outlet_staffing_requirements_shift_template_id_fkey (
+          shift_type,
+          starts_at,
+          ends_at
+        )
+      `
+    )
+    .order("effective_from", { ascending: false })
+    .order("cashier_count")
+    .limit(500);
+
+  if (error) {
+    throw new Error(`Gagal memuat kebutuhan staf outlet: ${error.message}`);
+  }
+
+  return data;
+}
+
 export async function getCurrentAccessRole(client: MasterDataClient) {
   const { data, error } = await client.rpc("current_access_role");
 
@@ -464,6 +505,31 @@ export async function replaceOutletShiftTemplate(
   return data;
 }
 
+export async function replaceOutletStaffingRequirements(
+  client: MasterDataClient,
+  input: StaffingRequirementInput
+) {
+  const { data, error } = await client.rpc(
+    "replace_outlet_staffing_requirements",
+    {
+      p_outlet_id: input.outletId,
+      p_cashier_count: input.cashierCount,
+      p_effective_from: input.effectiveFrom,
+      p_requirements: input.requirements.map((requirement) => ({
+        shift_type: requirement.shiftType,
+        minimum_staff: requirement.minimumStaff,
+      })),
+      p_reason: input.reason,
+    }
+  );
+
+  if (error) {
+    throw toMasterDataError("Gagal menyimpan kebutuhan staf outlet", error);
+  }
+
+  return data;
+}
+
 function parseEmployeeImportDryRun(
   value: Json
 ): EmployeeImportDryRunResult {
@@ -549,4 +615,7 @@ export type LivePolicyVersion = Awaited<
 >[number];
 export type LiveShiftTemplate = Awaited<
   ReturnType<typeof listActiveShiftTemplates>
+>[number];
+export type LiveStaffingRequirement = Awaited<
+  ReturnType<typeof listStaffingRequirements>
 >[number];

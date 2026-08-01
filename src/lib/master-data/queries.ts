@@ -22,9 +22,11 @@ import {
   updateOutletMaster,
   listCurrentPolicies,
   listActiveShiftTemplates,
+  listStaffingRequirements,
   publishPolicyVersion,
   publishWorkPolicy,
   replaceOutletShiftTemplate,
+  replaceOutletStaffingRequirements,
   dryRunEmployeeImport,
   commitEmployeeImport,
 } from "./repository";
@@ -35,6 +37,7 @@ import type {
   OutletMasterInput,
   PolicyVersionInput,
   ShiftTemplateInput,
+  StaffingRequirementInput,
   WorkPolicyInput,
   UpdateEmployeeMasterInput,
   UpdateOutletMasterInput,
@@ -93,6 +96,14 @@ export function useActiveShiftTemplates(enabled = true) {
   return useQuery({
     queryKey: masterDataKeys.shiftTemplates(),
     queryFn: () => listActiveShiftTemplates(createClient()),
+    enabled,
+  });
+}
+
+export function useStaffingRequirements(enabled = true) {
+  return useQuery({
+    queryKey: masterDataKeys.staffingRequirements(),
+    queryFn: () => listStaffingRequirements(createClient()),
     enabled,
   });
 }
@@ -207,6 +218,21 @@ export function useReplaceOutletShiftTemplate() {
       queryClient.invalidateQueries({
         queryKey: masterDataKeys.shiftTemplates(),
       }),
+  });
+}
+
+export function useReplaceOutletStaffingRequirements() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: StaffingRequirementInput) =>
+      replaceOutletStaffingRequirements(createClient(), input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: masterDataKeys.staffingRequirements(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["roster"] });
+    },
   });
 }
 

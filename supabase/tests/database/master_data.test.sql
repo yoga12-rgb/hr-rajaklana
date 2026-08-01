@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(49);
+select extensions.plan(62);
 
 select extensions.ok(
   not has_function_privilege(
@@ -77,6 +77,14 @@ select extensions.ok(
   'anonymous cannot replace outlet shift templates'
 );
 select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.replace_outlet_staffing_requirements(uuid,smallint,date,jsonb,text)',
+    'execute'
+  ),
+  'anonymous cannot replace outlet staffing requirements'
+);
+select extensions.ok(
   not has_table_privilege(
     'authenticated',
     'public.policy_versions',
@@ -107,6 +115,30 @@ select extensions.ok(
     'update'
   ),
   'authenticated clients cannot rewrite shift template history directly'
+);
+select extensions.ok(
+  not has_table_privilege(
+    'authenticated',
+    'public.outlet_staffing_requirements',
+    'insert'
+  ),
+  'authenticated clients cannot insert staffing requirements directly'
+);
+select extensions.ok(
+  not has_table_privilege(
+    'authenticated',
+    'public.outlet_staffing_requirements',
+    'update'
+  ),
+  'authenticated clients cannot rewrite staffing requirement history directly'
+);
+select extensions.ok(
+  not has_table_privilege(
+    'authenticated',
+    'public.outlet_staffing_requirements',
+    'delete'
+  ),
+  'authenticated clients cannot delete staffing requirement history directly'
 );
 
 select has_table_privilege(
@@ -316,6 +348,19 @@ select extensions.throws_ok(
   'employee cannot publish policy versions'
 );
 
+select extensions.throws_ok(
+  $$select public.replace_outlet_staffing_requirements(
+    '53000000-0000-0000-0000-000000000001',
+    4::smallint,
+    '2098-04-01',
+    '[{"shift_type":"morning","minimum_staff":1}]'::jsonb,
+    'Blocked staffing update'
+  )$$,
+  '42501',
+  'Aksi ini hanya dapat dilakukan supervisor.',
+  'employee cannot replace outlet staffing requirements'
+);
+
 reset role;
 select set_config(
   'request.jwt.claim.sub',
@@ -338,6 +383,19 @@ select extensions.throws_ok(
   '42501',
   'Aksi ini hanya dapat dilakukan supervisor.',
   'management remains read-only for master data'
+);
+
+select extensions.throws_ok(
+  $$select public.replace_outlet_staffing_requirements(
+    '53000000-0000-0000-0000-000000000001',
+    4::smallint,
+    '2098-04-01',
+    '[{"shift_type":"morning","minimum_staff":1}]'::jsonb,
+    'Blocked management staffing update'
+  )$$,
+  '42501',
+  'Aksi ini hanya dapat dilakukan supervisor.',
+  'management cannot replace outlet staffing requirements'
 );
 
 reset role;
@@ -756,11 +814,119 @@ select extensions.is(
   'shift template replacements write audit events'
 );
 
+select public.replace_outlet_shift_template(
+  '53000000-0000-0000-0000-000000000001',
+  'middle',
+  '12:00',
+  '20:00',
+  15,
+  15,
+  'Template middle pengujian'
+);
+
+select public.replace_outlet_shift_template(
+  '53000000-0000-0000-0000-000000000001',
+  'night',
+  '15:00',
+  '23:00',
+  15,
+  15,
+  'Template malam pengujian'
+);
+
+select extensions.lives_ok(
+  $$select public.replace_outlet_staffing_requirements(
+    '53000000-0000-0000-0000-000000000001',
+    4::smallint,
+    '2098-04-01',
+    '[
+      {"shift_type":"morning","minimum_staff":1},
+      {"shift_type":"middle","minimum_staff":1},
+      {"shift_type":"night","minimum_staff":1}
+    ]'::jsonb,
+    'Kebutuhan awal empat kasir'
+  )$$,
+  'supervisor saves a complete staffing requirement set'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.outlet_staffing_requirements requirement
+    where requirement.outlet_id = '53000000-0000-0000-0000-000000000001'
+      and requirement.cashier_count = 4
+      and requirement.effective_from = '2098-04-01'
+  ),
+  3,
+  'staffing requirement set covers every active shift template'
+);
+select extensions.is(
+  (
+    select sum(requirement.minimum_staff)::integer
+    from public.outlet_staffing_requirements requirement
+    where requirement.outlet_id = '53000000-0000-0000-0000-000000000001'
+      and requirement.cashier_count = 4
+      and requirement.effective_from = '2098-04-01'
+  ),
+  3,
+  'staffing requirement set stores the minimum total'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.audit_logs audit
+    where audit.entity_id = '53000000-0000-0000-0000-000000000001'
+      and audit.action = 'replace_outlet_staffing_requirements'
+  ),
+  1,
+  'staffing requirement replacement writes an audit event'
+);
+select extensions.lives_ok(
+  $$select public.replace_outlet_staffing_requirements(
+    '53000000-0000-0000-0000-000000000001',
+    4::smallint,
+    '2098-05-01',
+    '[
+      {"shift_type":"morning","minimum_staff":1},
+      {"shift_type":"middle","minimum_staff":1},
+      {"shift_type":"night","minimum_staff":2}
+    ]'::jsonb,
+    'Kebutuhan empat kasir periode berikutnya'
+  )$$,
+  'supervisor schedules the next staffing requirement version'
+);
+select extensions.is(
+  (
+    select max(requirement.effective_until)
+    from public.outlet_staffing_requirements requirement
+    where requirement.outlet_id = '53000000-0000-0000-0000-000000000001'
+      and requirement.cashier_count = 4
+      and requirement.effective_from = '2098-04-01'
+  ),
+  '2098-04-30'::date,
+  'next staffing version closes the previous effective range'
+);
+select extensions.throws_ok(
+  $$select public.replace_outlet_staffing_requirements(
+    '53000000-0000-0000-0000-000000000001',
+    4::smallint,
+    '2098-06-01',
+    '[
+      {"shift_type":"morning","minimum_staff":2},
+      {"shift_type":"middle","minimum_staff":2},
+      {"shift_type":"night","minimum_staff":1}
+    ]'::jsonb,
+    'Total kebutuhan tidak valid'
+  )$$,
+  '22023',
+  'Total minimum staf seluruh shift tidak boleh melebihi jumlah kasir.',
+  'staffing requirement rejects an impossible minimum total'
+);
+
 \else
 
 select * from extensions.skip(
   'hosted CLI role cannot seed transactional master data fixtures',
-  36
+  45
 );
 
 \endif

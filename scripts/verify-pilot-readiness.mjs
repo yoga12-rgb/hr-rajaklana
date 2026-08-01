@@ -163,7 +163,7 @@ async function collectFacts() {
       supabase
         .from("outlet_staffing_requirements")
         .select(
-          "shift_template_id,outlet_id,effective_from,effective_until"
+          "shift_template_id,outlet_id,cashier_count,effective_from,effective_until"
         )
     ),
     rows(

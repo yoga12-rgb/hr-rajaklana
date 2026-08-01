@@ -13,4 +13,6 @@ export const masterDataKeys = {
     [...masterDataKeys.all, "employment-statuses"] as const,
   policies: () => [...masterDataKeys.all, "policies"] as const,
   shiftTemplates: () => [...masterDataKeys.all, "shift-templates"] as const,
+  staffingRequirements: () =>
+    [...masterDataKeys.all, "staffing-requirements"] as const,
 };

@@ -40,6 +40,7 @@ function candidateSnapshot() {
       (shift_template_id) => ({
         shift_template_id,
         outlet_id: "outlet",
+        cashier_count: 3,
         effective_from: "2026-01-01",
         effective_until: null,
       })
@@ -54,6 +55,14 @@ test("menghitung outlet kandidat tanpa mengekspos identitas", () => {
 test("menolak kandidat ketika satu akun masih wajib ganti kata sandi", () => {
   const snapshot = candidateSnapshot();
   snapshot.userAccounts[0].must_change_password = true;
+  assert.equal(countPilotCapableOutlets(snapshot), 0);
+});
+
+test("menolak kebutuhan staf untuk jumlah kasir yang berbeda", () => {
+  const snapshot = candidateSnapshot();
+  snapshot.staffingRequirements.forEach((requirement) => {
+    requirement.cashier_count = 4;
+  });
   assert.equal(countPilotCapableOutlets(snapshot), 0);
 });
 

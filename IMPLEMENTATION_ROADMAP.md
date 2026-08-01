@@ -73,8 +73,8 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga puluh tiga migration berikut identik antara
-  lokal dan remote:
+- Project hosted sudah terhubung dan tiga puluh empat migration berikut
+  identik antara lokal dan remote:
 
 | Migration                                                          | Fungsi                                     |
 | ------------------------------------------------------------------ | ------------------------------------------ |
@@ -111,12 +111,13 @@ Sudah tersedia:
 | `20260729203000_m8_operational_health_workspace.sql`               | Agregat observability dan audit tersensor  |
 | `20260729210000_harden_operational_health_role_check.sql`          | Gate role NULL-safe workspace operasional  |
 | `20260801163000_fix_cross_month_publish_pattern.sql`               | Koreksi pola off carry-out saat publish     |
+| `20260801183000_staffing_requirement_management.sql`               | Kebutuhan staf versioned dan jalur tulis aman |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `311/311`.
+- pgTAP lulus `324/324`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -416,8 +417,11 @@ Selesai:
 - Penggantian template shift menonaktifkan template aktif lama lalu membuat
   record baru sehingga jadwal historis tidak berubah. Jam Pagi/Middle/Malam,
   toleransi terlambat, dan toleransi pulang awal dapat berbeda per outlet.
-- Hak tulis langsung client pada tabel kebijakan dan template shift dicabut;
-  seluruh perubahan wajib melewati RPC versioned yang diaudit.
+- Supervisor dapat mengatur minimum staf Pagi/Middle/Malam berdasarkan jumlah
+  kasir dan tanggal efektif langsung dari Pengaturan. Versi berikutnya menutup
+  rentang versi sebelumnya; total minimum yang melebihi jumlah kasir ditolak.
+- Hak tulis langsung client pada tabel kebijakan, template shift, dan kebutuhan
+  staf dicabut; seluruh perubahan wajib melewati RPC versioned yang diaudit.
 - Supervisor dapat mengunduh template XLSX dua sheet, memilih file hingga
   2 MB/500 baris, dan memperoleh laporan dry-run per baris sebelum commit.
   File dibaca di browser dan tidak diunggah ke Storage.
@@ -857,18 +861,22 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   disensor di database sehingga actor ID, payload, error mentah, path Storage,
   dan secret tidak mencapai client.
 - Runbook insiden, panduan backup/restore, dan checklist pilot sudah tersedia.
-  Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 78 fungsi,
-  dan 33 migration identik setelah dipulihkan ke database disposable; dump dan
+  Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 79 fungsi,
+  dan 34 migration identik setelah dipulihkan ke database disposable; dump dan
   database drill dibersihkan otomatis.
-- Local/hosted lint schema bersih dan pgTAP `311/311`; lint, typecheck, build
-  live/demo, empat belas unit test, dan 20 E2E desktop/mobile lulus.
+- Local/hosted lint schema bersih dan pgTAP `324/324`; lint, typecheck, build
+  live/demo, lima belas unit test, dan 20 E2E desktop/mobile lulus.
 - Verifier read-only `npm run operations:verify-pilot` memeriksa target hosted,
   akun, outlet, kasir eligible, penempatan, template/kebutuhan shift, policy,
   job operasional, dan audit cron tanpa mencetak PII, UUID, path Storage,
   error mentah, atau secret. Pemeriksaan 1 Agustus 2026 menemukan satu
-  supervisor aktif, satu outlet aktif, empat kasir eligible, seluruh policy
-  aktif, antrean sehat, dan cron sukses; baru dua akun karyawan siap sehingga
-  belum ada outlet kandidat yang memenuhi minimum tiga akun kasir siap.
+  supervisor aktif, satu outlet aktif, empat kasir eligible serta siap login,
+  seluruh policy aktif, antrean sehat, dan cron sukses. Outlet kandidat masih
+  menunggu konfigurasi kebutuhan staf efektif untuk Pagi/Middle/Malam melalui
+  Pengaturan.
+- Pengaturan live menyediakan form kebutuhan staf outlet per jumlah kasir dan
+  tanggal efektif. Nilai disimpan atomik, mempertahankan histori, menulis audit,
+  dan langsung menjadi input generator serta verifier pilot.
 - Validator publish roster tidak lagi mencari assignment bulan berikutnya di
   draft bulan pemilik untuk off carry-out. Kasus Agustus 2026 dengan off pada
   2–3 September kini ditunda ke guard carry-in roster September, yang tetap
@@ -981,8 +989,9 @@ Untuk perubahan hosted:
 - [x] `migration list --linked` diperiksa sebelum dan sesudah push.
 - [x] Dua migration M7 dan satu koreksi carry-over diterapkan tanpa reset
       production.
-- [x] Dua migration observability M8 diterapkan tanpa reset production.
-- [x] Hosted lint dan pgTAP `311/311` lulus.
+- [x] Dua migration observability dan satu migration kebutuhan staf M8
+      diterapkan tanpa reset production.
+- [x] Hosted lint dan pgTAP `324/324` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---

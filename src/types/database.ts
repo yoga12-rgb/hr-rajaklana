@@ -2800,6 +2800,16 @@ export type Database = {
         }
         Returns: string
       }
+      replace_outlet_staffing_requirements: {
+        Args: {
+          p_cashier_count: number
+          p_effective_from: string
+          p_outlet_id: string
+          p_reason: string
+          p_requirements: Json
+        }
+        Returns: Json
+      }
       request_report_export: {
         Args: {
           p_employee_id?: string

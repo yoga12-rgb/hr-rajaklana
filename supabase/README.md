@@ -58,6 +58,11 @@ Jangan menjalankan reset terhadap production.
   aktif lama dinonaktifkan, bukan ditimpa atau dihapus, agar jadwal historis
   tetap dapat diaudit. Client authenticated tidak memiliki hak tulis langsung
   pada kedua tabel historis tersebut.
+- Kebutuhan staf outlet wajib disimpan melalui
+  `replace_outlet_staffing_requirements`. RPC memvalidasi satu set template
+  aktif, jumlah kasir, total minimum staf, dan tanggal efektif; versi baru
+  menutup versi sebelumnya tanpa menghapus histori. Client authenticated hanya
+  mendapat akses baca ke tabel kebutuhan staf.
 - Impor XLSX karyawan wajib melalui `dry_run_employee_import` lalu
   `commit_employee_import`. File dibaca lokal di browser dan tidak disimpan;
   server menyimpan ringkasan, checksum payload, dan kesalahan per baris.

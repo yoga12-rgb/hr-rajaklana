@@ -13,7 +13,9 @@ import {
   usePublishPolicyVersion,
   usePublishWorkPolicy,
   useReplaceOutletShiftTemplate,
+  useReplaceOutletStaffingRequirements,
   useSetOutletActive,
+  useStaffingRequirements,
   useUpdateOutletMaster,
 } from "@/lib/master-data/queries";
 import type { LiveOutlet } from "@/lib/master-data/repository";
@@ -37,6 +39,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { playClickSound, playSuccessHaptic } from "@/utils/clickSound";
 
 export default function SettingsPage() {
@@ -1595,7 +1598,317 @@ function LiveWorkPolicyManager() {
           </div>
         )}
       </form>
+      <LiveStaffingRequirementManager />
     </div>
+  );
+}
+
+const SHIFT_LABELS = {
+  morning: "Pagi",
+  middle: "Middle",
+  night: "Malam",
+} as const;
+const SHIFT_ORDER = { morning: 0, middle: 1, night: 2 } as const;
+
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Pengelola kebutuhan staf outlet yang menyimpan satu set versioned untuk
+ * jumlah kasir tertentu. Set ini menjadi input minimum staffing generator
+ * roster dan tetap mempertahankan konfigurasi periode sebelumnya.
+ */
+function LiveStaffingRequirementManager() {
+  const { showToast } = useHR();
+  const roleQuery = useCurrentAccessRole();
+  const outletQuery = useLiveOutlets(true);
+  const shiftQuery = useActiveShiftTemplates();
+  const staffingQuery = useStaffingRequirements();
+  const mutation = useReplaceOutletStaffingRequirements();
+  const isSupervisor = roleQuery.data === "supervisor";
+  const [selectedOutletOverride, setSelectedOutletOverride] = useState("");
+  const selectedOutletId =
+    selectedOutletOverride || outletQuery.data?.[0]?.id || "";
+  const [cashierCount, setCashierCount] = useState(4);
+  const [effectiveFrom, setEffectiveFrom] = useState(localDateValue);
+  const [reason, setReason] = useState("");
+  const [formError, setFormError] = useState("");
+  const activeTemplates = [...(shiftQuery.data ?? [])]
+    .filter((template) => template.outlet_id === selectedOutletId)
+    .sort(
+      (left, right) =>
+        SHIFT_ORDER[left.shift_type] - SHIFT_ORDER[right.shift_type]
+    );
+  const selectionKey = `${selectedOutletId}:${cashierCount}:${effectiveFrom}`;
+  const effectiveRows = (staffingQuery.data ?? []).filter(
+    (requirement) =>
+      requirement.outlet_id === selectedOutletId &&
+      requirement.cashier_count === cashierCount &&
+      requirement.effective_from <= effectiveFrom &&
+      (!requirement.effective_until ||
+        requirement.effective_until >= effectiveFrom)
+  );
+  const minimumDefaults = Object.fromEntries(
+    activeTemplates.map((template) => [
+      template.shift_type,
+      effectiveRows.find(
+        (requirement) => requirement.shift_template_id === template.id
+      )?.minimum_staff ?? 1,
+    ])
+  ) as Partial<Record<keyof typeof SHIFT_LABELS, number>>;
+  const [staffingDraft, setStaffingDraft] = useState<{
+    key: string;
+    values: Partial<Record<keyof typeof SHIFT_LABELS, number>>;
+  } | null>(null);
+  const minimums =
+    staffingDraft?.key === selectionKey
+      ? staffingDraft.values
+      : minimumDefaults;
+  const totalMinimum = activeTemplates.reduce(
+    (total, template) => total + (minimums[template.shift_type] ?? 1),
+    0
+  );
+  const activeShiftTypes = new Set(
+    activeTemplates.map((template) => template.shift_type)
+  );
+  const configuredTemplateCount = activeTemplates.filter((template) =>
+    effectiveRows.some(
+      (requirement) => requirement.shift_template_id === template.id
+    )
+  ).length;
+  const hasEffectiveConfiguration =
+    activeTemplates.length > 0 &&
+    configuredTemplateCount === activeTemplates.length;
+  const hasCompleteShiftSet = (
+    ["morning", "middle", "night"] as const
+  ).every((shiftType) => activeShiftTypes.has(shiftType));
+
+  const updateMinimum = (
+    shiftType: keyof typeof SHIFT_LABELS,
+    value: number
+  ) => {
+    setStaffingDraft({
+      key: selectionKey,
+      values: { ...minimums, [shiftType]: value },
+    });
+  };
+
+  if (
+    roleQuery.isLoading ||
+    outletQuery.isLoading ||
+    shiftQuery.isLoading ||
+    staffingQuery.isLoading
+  ) {
+    return (
+      <div className="flex min-h-40 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900">
+        <LoaderCircle className="h-5 w-5 animate-spin text-amber-400" />
+      </div>
+    );
+  }
+
+  const queryError =
+    roleQuery.error ??
+    outletQuery.error ??
+    shiftQuery.error ??
+    staffingQuery.error;
+
+  if (queryError) {
+    return (
+      <div
+        role="alert"
+        className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300"
+      >
+        {queryError.message}
+      </div>
+    );
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (!selectedOutletId || !reason.trim()) {
+      setFormError("Pilih outlet dan isi alasan perubahan kebutuhan staf.");
+      return;
+    }
+
+    if (!hasCompleteShiftSet) {
+      setFormError(
+        "Lengkapi template Pagi, Middle, dan Malam sebelum mengatur kebutuhan staf."
+      );
+      return;
+    }
+
+    if (effectiveFrom < localDateValue()) {
+      setFormError("Tanggal efektif tidak boleh sebelum hari ini.");
+      return;
+    }
+
+    if (totalMinimum > cashierCount) {
+      setFormError(
+        `Total minimum ${totalMinimum} orang melebihi ${cashierCount} kasir tersedia.`
+      );
+      return;
+    }
+
+    try {
+      await mutation.mutateAsync({
+        outletId: selectedOutletId,
+        cashierCount,
+        effectiveFrom,
+        requirements: activeTemplates.map((template) => ({
+          shiftType: template.shift_type,
+          minimumStaff: minimums[template.shift_type] ?? 1,
+        })),
+        reason: reason.trim(),
+      });
+      setReason("");
+      setStaffingDraft(null);
+      playSuccessHaptic();
+      showToast("Kebutuhan staf outlet berhasil disimpan.", "success");
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Kebutuhan staf outlet belum dapat disimpan."
+      );
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-md sm:p-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+            Kebutuhan Staf Outlet
+          </h3>
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            Tentukan minimum staf per shift untuk setiap skenario jumlah kasir.
+            Generator memakai skenario dan versi yang efektif pada tanggal roster.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
+          {hasEffectiveConfiguration ? "Terkonfigurasi" : "Belum diatur"}
+        </span>
+      </div>
+
+      {!isSupervisor && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
+          Kebutuhan staf tersedia dalam mode baca. Hanya supervisor yang dapat
+          menyimpan versi baru.
+        </div>
+      )}
+
+      {!hasCompleteShiftSet && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-200">
+          Buat template Pagi, Middle, dan Malam untuk outlet ini terlebih
+          dahulu.
+        </div>
+      )}
+
+      {formError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"
+        >
+          {formError}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label className="text-xs font-medium text-slate-300">
+          Outlet
+          <select
+            value={selectedOutletId}
+            onChange={(event) =>
+              setSelectedOutletOverride(event.target.value)
+            }
+            className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+          >
+            {outletQuery.data?.map((outlet) => (
+              <option key={outlet.id} value={outlet.id}>
+                {outlet.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <PolicyNumberField
+          label="Skenario jumlah kasir"
+          value={cashierCount}
+          min={1}
+          max={100}
+          unit="orang"
+          disabled={!isSupervisor}
+          onChange={setCashierCount}
+        />
+        <DatePicker
+          label="Berlaku mulai"
+          value={effectiveFrom}
+          onChange={setEffectiveFrom}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {activeTemplates.map((template) => (
+          <PolicyNumberField
+            key={template.id}
+            label={`Minimum shift ${SHIFT_LABELS[template.shift_type]}`}
+            value={minimums[template.shift_type] ?? 1}
+            min={1}
+            max={cashierCount}
+            unit="orang"
+            disabled={!isSupervisor}
+            onChange={(value) => updateMinimum(template.shift_type, value)}
+          />
+        ))}
+      </div>
+
+      <div
+        className={`rounded-xl border p-3 text-xs ${
+          totalMinimum <= cashierCount
+            ? "border-slate-800 bg-slate-950 text-slate-300"
+            : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+        }`}
+      >
+        Total minimum harian: <strong>{totalMinimum} orang</strong> dari {" "}
+        <strong>{cashierCount} kasir</strong>. Sisa kasir dapat dipakai untuk
+        pemerataan atau backup.
+      </div>
+
+      {isSupervisor && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Alasan konfigurasi kebutuhan staf"
+            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 sm:text-xs"
+            required
+          />
+          <button
+            type="submit"
+            disabled={
+              mutation.isPending ||
+              !selectedOutletId ||
+              !hasCompleteShiftSet ||
+              totalMinimum > cashierCount
+            }
+            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50"
+          >
+            {mutation.isPending && (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            )}
+            Simpan Kebutuhan
+          </button>
+        </div>
+      )}
+    </form>
   );
 }
 
