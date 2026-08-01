@@ -687,7 +687,8 @@ erDiagram
 6. Lampiran cuti disimpan sampai akhir tahun terkait, kemudian dihapus; metadata tetap disimpan.
 7. Persetujuan cuti menandai karyawan tidak tersedia. Bila roster tersedia,
    sistem memakai/membuat draft, mengubah assignment kerja terdampak menjadi
-   `leave`, dan tidak pernah memutasi versi `published`.
+   `leave`, dan tidak pernah memutasi versi `published`. Publikasi draft ditolak
+   jika assignment `scheduled` masih beririsan dengan cuti `approved`.
 8. Lembur minimal 60 menit, lalu dibulatkan atau disetujui dalam kelipatan 30 menit.
 9. Lembur dapat berasal dari pengajuan karyawan, penugasan supervisor, atau potensi lembur dari clock-out terlambat.
 10. Sistem menyimpan durasi rencana, aktual, dan yang disetujui secara terpisah.

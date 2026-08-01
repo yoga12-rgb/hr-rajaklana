@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(66);
+select extensions.plan(67);
 
 select extensions.ok(
   not has_function_privilege(
@@ -62,6 +62,16 @@ select extensions.ok(
     'execute'
   ),
   'anonymous cannot publish a roster'
+);
+
+select extensions.ok(
+  position(
+    'jadwal kerja pada tanggal cuti approved'
+    in pg_get_functiondef(
+      'public.publish_manual_roster(uuid,text)'::regprocedure
+    )
+  ) > 0,
+  'roster publication rejects scheduled work on approved leave dates'
 );
 select extensions.ok(
   not has_function_privilege(

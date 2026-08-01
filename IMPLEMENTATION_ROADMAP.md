@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga puluh tujuh migration berikut
+- Project hosted sudah terhubung dan tiga puluh delapan migration berikut
   identik antara lokal dan remote:
 
 | Migration                                                          | Fungsi                                     |
@@ -115,12 +115,13 @@ Sudah tersedia:
 | `20260801194500_staffing_availability_and_day_scope.sql`            | Staffing harian dan scope weekday/weekend   |
 | `20260801213000_leave_roster_backup_workflow.sql`                   | Sinkronisasi cuti dan alert backup roster   |
 | `20260801223000_filter_unnecessary_leave_backup_alerts.sql`         | Filter alert backup sesuai staf tersisa     |
+| `20260801233000_reconcile_existing_approved_leave.sql`              | Backfill cuti lama dan guard publish roster |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `336/336`.
+- pgTAP lulus `337/337`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -869,9 +870,9 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   dan secret tidak mencapai client.
 - Runbook insiden, panduan backup/restore, dan checklist pilot sudah tersedia.
   Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 80 fungsi,
-  dan 37 migration identik setelah dipulihkan ke database disposable; dump dan
+  dan 38 migration identik setelah dipulihkan ke database disposable; dump dan
   database drill dibersihkan otomatis.
-- Local/hosted lint schema bersih dan pgTAP `336/336`; lint, typecheck, build
+- Local/hosted lint schema bersih dan pgTAP `337/337`; lint, typecheck, build
   live/demo, enam belas unit test, dan 20 E2E desktop/mobile lulus.
 - Verifier read-only `npm run operations:verify-pilot` memeriksa target hosted,
   akun, outlet, kasir eligible, penempatan, template shift, policy,
@@ -888,7 +889,9 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   versi published. Jadwal kerja terdampak menjadi `Cuti`; supervisor menerima
   notifikasi kebutuhan backup saat outlet tersisa kurang dari dua kasir dan
   dapat membuka formulir yang sudah terisi konteks tujuan, sementara pemilihan
-  karyawan tetap manual.
+  karyawan tetap manual. Approval yang mendahului fitur sinkronisasi sudah
+  direkonsiliasi idempotent pada production; publish kini menolak assignment
+  `scheduled` yang masih bertabrakan dengan tanggal cuti approved.
 - Validator publish roster tidak lagi mencari assignment bulan berikutnya di
   draft bulan pemilik untuk off carry-out. Kasus Agustus 2026 dengan off pada
   2–3 September kini ditunda ke guard carry-in roster September, yang tetap
@@ -1003,8 +1006,9 @@ Untuk perubahan hosted:
       production.
 - [x] Dua migration observability dan dua migration kebutuhan staf M8
       diterapkan tanpa reset production.
-- [x] Migration sinkronisasi cuti/backup diterapkan tanpa reset production.
-- [x] Hosted lint dan pgTAP `336/336` lulus.
+- [x] Migration sinkronisasi cuti/backup serta backfill approval lama diterapkan
+      tanpa reset production.
+- [x] Hosted lint dan pgTAP `337/337` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---

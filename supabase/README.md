@@ -121,7 +121,9 @@ Jangan menjalankan reset terhadap production.
   sebagai `leave`, menghapus metadata backup milik assignment yang cuti, dan
   mengirim notifikasi `roster_backup_required` bila outlet tersisa kurang dari
   dua kasir kerja. Notifikasi membawa konteks tanggal, outlet, serta shift;
-  pemilihan karyawan backup tetap dilakukan supervisor.
+  pemilihan karyawan backup tetap dilakukan supervisor. Approval lama
+  direkonsiliasi idempotent melalui migration, dan publish roster menolak
+  assignment `scheduled` yang bertabrakan dengan cuti approved.
 - Presensi live wajib melalui RPC `clock_in_attendance` dan
   `clock_out_attendance`; jarak Haversine, accuracy GPS, jadwal terbit,
   geofence, dan status waktu dihitung ulang di database.

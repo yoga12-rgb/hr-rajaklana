@@ -305,6 +305,8 @@ Perubahan setelah publikasi:
    notifikasi kebutuhan backup dengan tanggal, outlet, serta shift.
 8. Notifikasi kebutuhan backup membuka formulir penugasan manual dengan konteks
    tujuan terisi; supervisor tetap memilih karyawan dari outlet lain.
+9. Roster tidak dapat dipublikasikan selama masih ada assignment kerja pada
+   tanggal cuti yang sudah disetujui.
 
 ### 7.7 Pertukaran shift
 

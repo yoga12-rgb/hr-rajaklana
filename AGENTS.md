@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tiga puluh tujuh migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 336/336 pada
+- Tiga puluh delapan migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 337/337 pada
   1 Agustus 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -66,7 +66,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   otomatis ditulis ke draft roster tanpa memutasi versi published; jadwal kerja
   yang membuat outlet tersisa kurang dari dua kasir memicu notifikasi backup
   berisi tanggal/outlet/shift dan membuka formulir backup manual yang sudah
-  terisi konteks. Lembur live mendukung
+  terisi konteks. Approval lama sudah direkonsiliasi secara idempotent dan
+  publikasi ditolak bila jadwal kerja masih bertabrakan dengan cuti approved.
+  Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
   UI menampilkan preview jarak server, status proses, kondisi offline, serta
