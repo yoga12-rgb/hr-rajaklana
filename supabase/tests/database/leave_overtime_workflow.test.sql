@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(70);
+select extensions.plan(112);
 
 select extensions.ok(
   not has_function_privilege('anon', 'public.get_leave_workspace()', 'execute'),
@@ -47,6 +47,56 @@ select extensions.ok(
     'execute'
   ),
   'authenticated clients cannot invoke leave-roster synchronization directly'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.amend_pending_leave_request(uuid,integer,date,date,text)',
+    'execute'
+  ),
+  'anonymous cannot amend pending leave'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.submit_leave_change_request(uuid,integer,text,date,date,text)',
+    'execute'
+  ),
+  'anonymous cannot request an approved leave change'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.cancel_leave_change_request(uuid,integer,text)',
+    'execute'
+  ),
+  'anonymous cannot cancel a leave change request'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.decide_leave_change_request(uuid,integer,text,text)',
+    'execute'
+  ),
+  'anonymous cannot decide a leave change request'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.reconcile_changed_leave_roster(uuid,date,date,date,date)',
+    'execute'
+  ),
+  'authenticated clients cannot invoke leave roster reconciliation directly'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from pg_catalog.pg_constraint constraint_row
+    where constraint_row.conrelid = 'public.leave_requests'::regclass
+      and constraint_row.conname = 'leave_requests_no_active_overlap'
+      and constraint_row.contype = 'x'
+  ),
+  'database exclusion constraint closes concurrent active leave overlap races'
 );
 select extensions.ok(
   not has_function_privilege(
@@ -125,6 +175,27 @@ select has_table_privilege(
 \gset
 
 \if :can_seed_workforce_fixtures
+
+create function pg_temp.workspace_leave_change_id(
+  p_leave_request_id uuid,
+  p_status text default null
+)
+returns uuid
+language sql
+stable
+as $$
+  select (change_request->>'id')::uuid
+  from jsonb_array_elements(
+    public.get_leave_workspace()->'change_requests'
+  ) change_request
+  where change_request->>'leave_request_id' = p_leave_request_id::text
+    and (
+      p_status is null
+      or change_request->>'status' = p_status
+    )
+  order by change_request->>'created_at' desc
+  limit 1
+$$;
 
 insert into public.employees (
   id,
@@ -301,6 +372,47 @@ select extensions.throws_ok(
   '42501',
   'Pengguna tidak dapat membuat pengajuan cuti.',
   'management cannot submit leave'
+);
+
+select extensions.throws_ok(
+  $$select public.cancel_leave_request(
+    '73000000-0000-0000-0000-000000000099',
+    1,
+    'Management cancellation'
+  )$$,
+  '42501',
+  'Pengguna tidak dapat membatalkan pengajuan cuti.',
+  'management cannot cancel a pending leave'
+);
+
+select extensions.throws_ok(
+  $$select public.cancel_leave_change_request(
+    '73000000-0000-0000-0000-000000000099',
+    1,
+    'Management cancellation'
+  )$$,
+  '42501',
+  'Pengguna tidak dapat membatalkan permintaan perubahan cuti.',
+  'management cannot cancel an approved leave change request'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000099',
+  true
+);
+set local role authenticated;
+
+select extensions.throws_ok(
+  $$select public.cancel_leave_change_request(
+    '73000000-0000-0000-0000-000000000099',
+    1,
+    'Missing profile cancellation'
+  )$$,
+  '42501',
+  'Pengguna tidak dapat membatalkan permintaan perubahan cuti.',
+  'authenticated claim without an employee profile cannot cancel a leave change'
 );
 
 reset role;
@@ -871,6 +983,551 @@ select set_config(
 set local role authenticated;
 
 select extensions.lives_ok(
+  $$select public.submit_leave_change_request(
+    '74000000-0000-0000-0000-000000000007',
+    2,
+    'reschedule',
+    date_trunc('month', current_date + interval '2 months')::date + 11,
+    date_trunc('month', current_date + interval '2 months')::date + 11,
+    'Tanggal operasional berubah'
+  )$$,
+  'employee can request a future approved leave reschedule'
+);
+
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      change_request->>'change_type',
+      change_request->>'status',
+      change_request->>'proposed_days',
+      change_request->>'source_leave_version'
+    )
+    from jsonb_array_elements(
+      public.get_leave_workspace()->'change_requests'
+    ) change_request
+    where change_request->>'leave_request_id' =
+      '74000000-0000-0000-0000-000000000007'
+      and change_request->>'status' = 'pending'
+  ),
+  'reschedule:pending:1.00:2',
+  'approved leave change stores an immutable source snapshot'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000004',
+  true
+);
+set local role authenticated;
+
+select extensions.throws_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '74000000-0000-0000-0000-000000000007',
+      'pending'
+    ),
+    1,
+    'approved',
+    'Management decision'
+  )$$,
+  '42501',
+  'Hanya supervisor yang dapat memutuskan perubahan cuti.',
+  'management cannot decide an approved leave change'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '74000000-0000-0000-0000-000000000007',
+      'pending'
+    ),
+    1,
+    'approved',
+    'Roster lama dipulihkan dan tanggal baru diterapkan'
+  )$$,
+  'another supervisor can approve a future leave reschedule'
+);
+
+reset role;
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      request.status,
+      request.request_version,
+      request.starts_on,
+      request.ends_on
+    )
+    from public.leave_requests request
+    where request.id = '74000000-0000-0000-0000-000000000007'
+  ),
+  concat_ws(
+    ':',
+    'approved',
+    '3',
+    date_trunc('month', current_date + interval '2 months')::date + 11,
+    date_trunc('month', current_date + interval '2 months')::date + 11
+  ),
+  'approved leave keeps its identity and advances to the replacement dates'
+);
+
+select extensions.is(
+  (
+    select assignment.status::text
+    from public.schedule_assignments assignment
+    where assignment.id = '74000000-0000-0000-0000-000000000006'
+  ),
+  'scheduled',
+  'published assignment stays immutable after approved leave reschedule'
+);
+
+select extensions.is(
+  (
+    select string_agg(
+      assignment.work_date::text || ':' || assignment.status::text,
+      ','
+      order by assignment.work_date
+    )
+    from public.schedule_assignments assignment
+    join public.roster_versions version
+      on version.id = assignment.roster_version_id
+    where version.roster_period_id =
+      '74000000-0000-0000-0000-000000000004'
+      and version.status = 'draft'
+      and assignment.employee_id =
+        '71000000-0000-0000-0000-000000000001'
+      and assignment.work_date in (
+        date_trunc('month', current_date + interval '2 months')::date + 10,
+        date_trunc('month', current_date + interval '2 months')::date + 11
+      )
+  ),
+  concat_ws(
+    ',',
+    (
+      date_trunc('month', current_date + interval '2 months')::date + 10
+    )::text || ':scheduled',
+    (
+      date_trunc('month', current_date + interval '2 months')::date + 11
+    )::text || ':leave'
+  ),
+  'draft restores the old shift and marks the replacement date as leave'
+);
+
+select extensions.is(
+  (
+    select string_agg(
+      impact.work_date::text || ':' || impact.state,
+      ','
+      order by impact.work_date
+    )
+    from public.leave_roster_impacts impact
+    where impact.leave_request_id =
+      '74000000-0000-0000-0000-000000000007'
+      and impact.work_date in (
+        date_trunc('month', current_date + interval '2 months')::date + 10,
+        date_trunc('month', current_date + interval '2 months')::date + 11
+      )
+  ),
+  concat_ws(
+    ',',
+    (
+      date_trunc('month', current_date + interval '2 months')::date + 10
+    )::text || ':reverted',
+    (
+      date_trunc('month', current_date + interval '2 months')::date + 11
+    )::text || ':applied'
+  ),
+  'roster provenance records reverted and newly applied leave dates'
+);
+
+select extensions.ok(
+  exists (
+    select 1
+    from public.notifications notification
+    join public.leave_change_requests change_request
+      on change_request.leave_request_id = notification.subject_id
+      and change_request.id::text =
+        notification.payload->>'change_request_id'
+    where notification.notification_type = 'roster_backup_required'
+      and notification.subject_id =
+        '74000000-0000-0000-0000-000000000007'
+      and notification.payload->>'work_date' = (
+        date_trunc('month', current_date + interval '2 months')::date + 10
+      )::text
+      and notification.payload->>'superseded' = 'true'
+      and notification.title = 'Kebutuhan backup perlu ditinjau ulang'
+      and change_request.status = 'approved'
+  ),
+  'approved reschedule preserves and supersedes the old actionable backup alert'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.throws_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '74000000-0000-0000-0000-000000000007'
+    ),
+    1,
+    'rejected',
+    'Keputusan kedua terlambat'
+  )$$,
+  '40001',
+  'Permintaan perubahan sudah diputuskan atau berubah.',
+  'first approved leave change decision wins'
+);
+
+reset role;
+select extensions.ok(
+  exists (
+    select 1
+    from public.notifications notification
+    where notification.employee_id =
+      '71000000-0000-0000-0000-000000000001'
+      and notification.notification_type = 'leave_change_decided'
+      and notification.subject_type = 'leave_change_request'
+  ),
+  'leave change decision creates an employee notification'
+);
+
+update public.leave_types
+set is_active = false
+where code = 'sick';
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.submit_leave_change_request(
+    '74000000-0000-0000-0000-000000000007',
+    3,
+    'cancel',
+    null,
+    null,
+    'Membatalkan cuti lama'
+  )$$,
+  'future approved leave can still request cancellation after its type is inactive'
+);
+
+select extensions.lives_ok(
+  $$select public.cancel_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '74000000-0000-0000-0000-000000000007',
+      'pending'
+    ),
+    1,
+    'Pembatalan tidak jadi'
+  )$$,
+  'owner can withdraw the inactive-type cancellation request'
+);
+
+reset role;
+update public.leave_types
+set is_active = true
+where code = 'sick';
+
+insert into public.roster_periods (
+  id,
+  month_start,
+  status,
+  publish_deadline
+)
+values (
+  '74000000-0000-0000-0000-000000000099',
+  date_trunc('month', current_date + interval '3 months')::date,
+  'closed',
+  date_trunc('month', current_date + interval '3 months')::date - 7
+);
+
+insert into public.leave_change_requests (
+  id,
+  leave_request_id,
+  employee_id,
+  leave_type_id,
+  change_type,
+  source_leave_version,
+  old_starts_on,
+  old_ends_on,
+  old_requested_days,
+  proposed_starts_on,
+  proposed_ends_on,
+  proposed_days,
+  reason
+)
+values (
+  '74000000-0000-0000-0000-000000000098',
+  '74000000-0000-0000-0000-000000000007',
+  '71000000-0000-0000-0000-000000000001',
+  (select id from public.leave_types where code = 'sick'),
+  'reschedule',
+  3,
+  date_trunc('month', current_date + interval '2 months')::date + 11,
+  date_trunc('month', current_date + interval '2 months')::date + 11,
+  1,
+  date_trunc('month', current_date + interval '3 months')::date + 10,
+  date_trunc('month', current_date + interval '3 months')::date + 10,
+  1,
+  'Closed roster decision fixture'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.throws_ok(
+  $$select public.decide_leave_change_request(
+    '74000000-0000-0000-0000-000000000098',
+    1,
+    'approved',
+    'Mencoba periode tertutup'
+  )$$,
+  '23514',
+  'Tanggal cuti pengganti berada pada periode roster yang sudah ditutup.',
+  'approved reschedule cannot silently skip a closed replacement roster period'
+);
+
+reset role;
+delete from public.leave_change_requests
+where id = '74000000-0000-0000-0000-000000000098';
+delete from public.roster_periods
+where id = '74000000-0000-0000-0000-000000000099';
+
+update public.leave_entitlements
+set
+  used_days = 1,
+  reserved_days = 1
+where employee_id = '71000000-0000-0000-0000-000000000002'
+  and leave_type_id = (select id from public.leave_types where code = 'annual')
+  and year = extract(year from current_date)::integer;
+
+insert into public.leave_requests (
+  id,
+  employee_id,
+  leave_type_id,
+  starts_on,
+  ends_on,
+  requested_days,
+  reason,
+  status,
+  decided_by,
+  decided_at
+)
+values (
+  '74000000-0000-0000-0000-000000000096',
+  '71000000-0000-0000-0000-000000000002',
+  (select id from public.leave_types where code = 'annual'),
+  current_date,
+  current_date,
+  1,
+  'Stale approved leave fixture',
+  'approved',
+  '72000000-0000-0000-0000-000000000003',
+  now()
+);
+
+insert into public.leave_change_requests (
+  id,
+  leave_request_id,
+  employee_id,
+  leave_type_id,
+  change_type,
+  source_leave_version,
+  old_starts_on,
+  old_ends_on,
+  old_requested_days,
+  proposed_starts_on,
+  proposed_ends_on,
+  proposed_days,
+  reason,
+  reserved_delta_days,
+  reserved_year
+)
+values (
+  '74000000-0000-0000-0000-000000000095',
+  '74000000-0000-0000-0000-000000000096',
+  '71000000-0000-0000-0000-000000000002',
+  (select id from public.leave_types where code = 'annual'),
+  'reschedule',
+  1,
+  current_date,
+  current_date,
+  1,
+  current_date + 1,
+  current_date + 2,
+  2,
+  'Stale change reservation fixture',
+  1,
+  extract(year from current_date)::integer
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.decide_leave_change_request(
+    '74000000-0000-0000-0000-000000000095',
+    1,
+    'rejected',
+    'Tanggal perubahan sudah lewat'
+  )$$,
+  'supervisor can reject a stale leave change to release its reservation'
+);
+
+reset role;
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      entitlement.used_days,
+      entitlement.reserved_days,
+      change_request.status
+    )
+    from public.leave_entitlements entitlement
+    join public.leave_change_requests change_request
+      on change_request.employee_id = entitlement.employee_id
+      and change_request.leave_type_id = entitlement.leave_type_id
+    where change_request.id =
+      '74000000-0000-0000-0000-000000000095'
+      and entitlement.year = extract(year from current_date)::integer
+  ),
+  '1.00:0.00:rejected',
+  'stale rejection releases delta reservation without altering used balance'
+);
+
+insert into public.outlets (
+  id,
+  code,
+  name,
+  address,
+  latitude,
+  longitude,
+  geofence_radius_m
+)
+values (
+  '74000000-0000-0000-0000-000000000097',
+  'LEAVE-MANUAL',
+  'Leave Manual Edit Outlet',
+  'Manual provenance fixture',
+  -7.510000,
+  112.210000,
+  100
+);
+
+update public.schedule_assignments assignment
+set outlet_id = '74000000-0000-0000-0000-000000000097'
+from public.roster_versions version
+where version.id = assignment.roster_version_id
+  and version.roster_period_id =
+    '74000000-0000-0000-0000-000000000004'
+  and version.status = 'draft'
+  and assignment.employee_id =
+    '71000000-0000-0000-0000-000000000001'
+  and assignment.work_date =
+    date_trunc('month', current_date + interval '2 months')::date + 11
+  and assignment.status = 'leave';
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.submit_leave_change_request(
+    '74000000-0000-0000-0000-000000000007',
+    3,
+    'cancel',
+    null,
+    null,
+    'Membatalkan setelah koreksi manual roster'
+  )$$,
+  'employee can request cancellation after a manual draft edit'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '74000000-0000-0000-0000-000000000007',
+      'pending'
+    ),
+    1,
+    'approved',
+    'Jadwal manual harus dipertahankan untuk review'
+  )$$,
+  'supervisor can approve cancellation without overwriting a manual draft edit'
+);
+
+reset role;
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      outlet.code,
+      assignment.status,
+      impact.state
+    )
+    from public.schedule_assignments assignment
+    join public.roster_versions version
+      on version.id = assignment.roster_version_id
+    join public.outlets outlet on outlet.id = assignment.outlet_id
+    join public.leave_roster_impacts impact
+      on impact.leave_request_id =
+        '74000000-0000-0000-0000-000000000007'
+      and impact.roster_period_id = version.roster_period_id
+      and impact.work_date = assignment.work_date
+    where version.status = 'draft'
+      and assignment.employee_id =
+        '71000000-0000-0000-0000-000000000001'
+      and assignment.work_date =
+        date_trunc('month', current_date + interval '2 months')::date + 11
+  ),
+  'LEAVE-MANUAL:leave:review_required',
+  'semantic provenance mismatch preserves manual assignment and requires review'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
   $$select public.submit_leave_request(
     '73000000-0000-0000-0000-000000000006',
     (select id from public.leave_types where code = 'annual'),
@@ -913,6 +1570,279 @@ select extensions.is(
   ),
   '3.00:0.00',
   'rejection releases reservation without changing used balance'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.submit_leave_change_request(
+    '73000000-0000-0000-0000-000000000004',
+    2,
+    'reschedule',
+    current_date + 20,
+    current_date + 23,
+    'Menambah satu hari cuti'
+  )$$,
+  'annual leave reschedule can reserve a positive day delta'
+);
+
+reset role;
+select extensions.is(
+  (
+    select used_days::text || ':' || reserved_days::text
+    from public.leave_entitlements
+    where employee_id = '71000000-0000-0000-0000-000000000001'
+      and leave_type_id = (
+        select id from public.leave_types where code = 'annual'
+      )
+      and year = extract(year from current_date)::integer
+  ),
+  '3.00:1.00',
+  'longer approved leave change reserves only the positive delta'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.cancel_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '73000000-0000-0000-0000-000000000004',
+      'pending'
+    ),
+    1,
+    'Tanggal lama tetap digunakan'
+  )$$,
+  'employee can withdraw a pending approved-leave change'
+);
+
+reset role;
+select extensions.is(
+  (
+    select used_days::text || ':' || reserved_days::text
+    from public.leave_entitlements
+    where employee_id = '71000000-0000-0000-0000-000000000001'
+      and leave_type_id = (
+        select id from public.leave_types where code = 'annual'
+      )
+      and year = extract(year from current_date)::integer
+  ),
+  '3.00:0.00',
+  'withdrawing a leave change releases its delta reservation'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.submit_leave_change_request(
+    '73000000-0000-0000-0000-000000000004',
+    2,
+    'reschedule',
+    current_date + 20,
+    current_date + 23,
+    'Mengajukan kembali tanggal baru'
+  )$$,
+  'employee can submit a replacement change after withdrawing the first'
+);
+
+reset role;
+insert into public.leave_requests (
+  id,
+  employee_id,
+  leave_type_id,
+  starts_on,
+  ends_on,
+  requested_days,
+  reason
+)
+values (
+  '73000000-0000-0000-0000-000000000098',
+  '71000000-0000-0000-0000-000000000001',
+  (select id from public.leave_types where code = 'sick'),
+  current_date + 23,
+  current_date + 23,
+  1,
+  'Conflict created after change submission'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.throws_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '73000000-0000-0000-0000-000000000004',
+      'pending'
+    ),
+    1,
+    'approved',
+    'Konflik belum terlihat saat submit'
+  )$$,
+  '23P01',
+  'Tanggal cuti pengganti kini berbenturan dengan pengajuan aktif lain.',
+  'leave change approval rechecks overlap under the decision lock'
+);
+
+reset role;
+delete from public.leave_requests
+where id = '73000000-0000-0000-0000-000000000098';
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '73000000-0000-0000-0000-000000000004',
+      'pending'
+    ),
+    1,
+    'approved',
+    'Saldo tambahan tersedia'
+  )$$,
+  'supervisor can approve a longer annual leave change atomically'
+);
+
+reset role;
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      entitlement.used_days,
+      entitlement.reserved_days,
+      request.request_version,
+      request.requested_days
+    )
+    from public.leave_entitlements entitlement
+    join public.leave_requests request
+      on request.employee_id = entitlement.employee_id
+      and request.leave_type_id = entitlement.leave_type_id
+    where request.id = '73000000-0000-0000-0000-000000000004'
+      and entitlement.year = extract(year from current_date)::integer
+  ),
+  '4.00:0.00:3:4.00',
+  'approval moves the delta reservation to used balance and versions the leave'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.submit_leave_change_request(
+    '73000000-0000-0000-0000-000000000004',
+    3,
+    'cancel',
+    null,
+    null,
+    'Rencana cuti dibatalkan'
+  )$$,
+  'employee can request cancellation of future approved leave'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.decide_leave_change_request(
+    pg_temp.workspace_leave_change_id(
+      '73000000-0000-0000-0000-000000000004',
+      'pending'
+    ),
+    1,
+    'approved',
+    'Pembatalan disetujui'
+  )$$,
+  'supervisor can approve cancellation of future approved leave'
+);
+
+reset role;
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      entitlement.used_days,
+      entitlement.reserved_days,
+      request.status,
+      request.request_version
+    )
+    from public.leave_entitlements entitlement
+    join public.leave_requests request
+      on request.employee_id = entitlement.employee_id
+      and request.leave_type_id = entitlement.leave_type_id
+    where request.id = '73000000-0000-0000-0000-000000000004'
+      and entitlement.year = extract(year from current_date)::integer
+  ),
+  '0.00:0.00:cancelled:4',
+  'approved cancellation releases used balance and preserves versioned history'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.amend_pending_leave_request(
+    '73000000-0000-0000-0000-000000000005',
+    1,
+    current_date + 41,
+    current_date + 42,
+    'Menggeser cuti supervisor'
+  )$$,
+  'owner can amend dates of a pending leave request'
+);
+
+reset role;
+select extensions.is(
+  (
+    select concat_ws(
+      ':',
+      request.request_version,
+      request.requested_days,
+      entitlement.reserved_days
+    )
+    from public.leave_requests request
+    join public.leave_entitlements entitlement
+      on entitlement.employee_id = request.employee_id
+      and entitlement.leave_type_id = request.leave_type_id
+      and entitlement.year = extract(year from request.starts_on)::integer
+    where request.id = '73000000-0000-0000-0000-000000000005'
+  ),
+  '2:2.00:2.00',
+  'pending amendment atomically versions dates and adjusts reservation'
 );
 
 select set_config(
@@ -1391,6 +2321,24 @@ select set_config(
 );
 set local role authenticated;
 
+select extensions.throws_ok(
+  $$select public.save_leave_type(
+    (select id from public.leave_types where code = 'sick'),
+    'sick',
+    'Sakit',
+    true,
+    0,
+    true,
+    false,
+    1,
+    true,
+    'Mengubah dampak saldo historis'
+  )$$,
+  '23514',
+  'Jenis cuti yang sudah dipakai tidak dapat mengubah aturan saldo tahunan.',
+  'used leave type cannot change historical annual-balance semantics'
+);
+
 select extensions.lives_ok(
   $$select public.save_leave_type(
     null,
@@ -1423,7 +2371,7 @@ select extensions.ok(
 
 select extensions.skip(
   'Hosted role cannot seed workforce fixtures; transactional workflow tests run locally.',
-  53
+  89
 );
 
 \endif

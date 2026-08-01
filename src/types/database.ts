@@ -1040,6 +1040,103 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_change_requests: {
+        Row: {
+          change_type: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          leave_request_id: string
+          leave_type_id: string
+          old_ends_on: string
+          old_requested_days: number
+          old_starts_on: string
+          proposed_days: number | null
+          proposed_ends_on: string | null
+          proposed_starts_on: string | null
+          reason: string
+          request_version: number
+          reserved_delta_days: number
+          reserved_year: number | null
+          source_leave_version: number
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          employee_id: string
+          id?: string
+          leave_request_id: string
+          leave_type_id: string
+          old_ends_on: string
+          old_requested_days: number
+          old_starts_on: string
+          proposed_days?: number | null
+          proposed_ends_on?: string | null
+          proposed_starts_on?: string | null
+          reason: string
+          request_version?: number
+          reserved_delta_days?: number
+          reserved_year?: number | null
+          source_leave_version: number
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          employee_id?: string
+          id?: string
+          leave_request_id?: string
+          leave_type_id?: string
+          old_ends_on?: string
+          old_requested_days?: number
+          old_starts_on?: string
+          proposed_days?: number | null
+          proposed_ends_on?: string | null
+          proposed_starts_on?: string | null
+          reason?: string
+          request_version?: number
+          reserved_delta_days?: number
+          reserved_year?: number | null
+          source_leave_version?: number
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_change_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_change_requests_leave_request_id_fkey"
+            columns: ["leave_request_id"]
+            isOneToOne: false
+            referencedRelation: "leave_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_change_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_entitlements: {
         Row: {
           created_at: string
@@ -1156,6 +1253,89 @@ export type Database = {
             columns: ["leave_type_id"]
             isOneToOne: false
             referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_roster_impacts: {
+        Row: {
+          applied_assignment: Json | null
+          applied_at: string
+          applied_roster_version_id: string | null
+          applied_schedule_assignment_id: string | null
+          created_at: string
+          id: string
+          leave_request_id: string
+          original_assignment: Json | null
+          original_backup: Json | null
+          reverted_at: string | null
+          reverted_by: string | null
+          roster_period_id: string
+          state: string
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          applied_assignment?: Json | null
+          applied_at?: string
+          applied_roster_version_id?: string | null
+          applied_schedule_assignment_id?: string | null
+          created_at?: string
+          id?: string
+          leave_request_id: string
+          original_assignment?: Json | null
+          original_backup?: Json | null
+          reverted_at?: string | null
+          reverted_by?: string | null
+          roster_period_id: string
+          state?: string
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          applied_assignment?: Json | null
+          applied_at?: string
+          applied_roster_version_id?: string | null
+          applied_schedule_assignment_id?: string | null
+          created_at?: string
+          id?: string
+          leave_request_id?: string
+          original_assignment?: Json | null
+          original_backup?: Json | null
+          reverted_at?: string | null
+          reverted_by?: string | null
+          roster_period_id?: string
+          state?: string
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_roster_impacts_applied_roster_version_id_fkey"
+            columns: ["applied_roster_version_id"]
+            isOneToOne: false
+            referencedRelation: "roster_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_roster_impacts_applied_schedule_assignment_id_fkey"
+            columns: ["applied_schedule_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_roster_impacts_leave_request_id_fkey"
+            columns: ["leave_request_id"]
+            isOneToOne: false
+            referencedRelation: "leave_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_roster_impacts_roster_period_id_fkey"
+            columns: ["roster_period_id"]
+            isOneToOne: false
+            referencedRelation: "roster_periods"
             referencedColumns: ["id"]
           },
         ]
@@ -2207,6 +2387,37 @@ export type Database = {
         Args: { p_month_start: string }
         Returns: Json
       }
+      amend_pending_leave_request: {
+        Args: {
+          p_ends_on: string
+          p_expected_version: number
+          p_reason: string
+          p_request_id: string
+          p_starts_on: string
+        }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          ends_on: string
+          id: string
+          leave_type_id: string
+          reason: string
+          request_version: number
+          requested_days: number
+          starts_on: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       archive_employee_master: {
         Args: { p_employee_id: string; p_reason: string }
         Returns: boolean
@@ -2273,6 +2484,43 @@ export type Database = {
         Returns: boolean
       }
       can_view_sensitive_operations: { Args: never; Returns: boolean }
+      cancel_leave_change_request: {
+        Args: {
+          p_change_request_id: string
+          p_expected_version: number
+          p_reason: string
+        }
+        Returns: {
+          change_type: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          leave_request_id: string
+          leave_type_id: string
+          old_ends_on: string
+          old_requested_days: number
+          old_starts_on: string
+          proposed_days: number | null
+          proposed_ends_on: string | null
+          proposed_starts_on: string | null
+          reason: string
+          request_version: number
+          reserved_delta_days: number
+          reserved_year: number | null
+          source_leave_version: number
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_change_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_leave_request: {
         Args: {
           p_expected_version: number
@@ -2593,6 +2841,44 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decide_leave_change_request: {
+        Args: {
+          p_change_request_id: string
+          p_decision: string
+          p_expected_version: number
+          p_note: string
+        }
+        Returns: {
+          change_type: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          leave_request_id: string
+          leave_type_id: string
+          old_ends_on: string
+          old_requested_days: number
+          old_starts_on: string
+          proposed_days: number | null
+          proposed_ends_on: string | null
+          proposed_starts_on: string | null
+          reason: string
+          request_version: number
+          reserved_delta_days: number
+          reserved_year: number | null
+          source_leave_version: number
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_change_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decide_leave_request: {
         Args: {
           decision: string
@@ -2761,6 +3047,16 @@ export type Database = {
         }
         Returns: Json
       }
+      reconcile_changed_leave_roster: {
+        Args: {
+          p_leave_request_id: string
+          p_new_ends_on?: string
+          p_new_starts_on?: string
+          p_old_ends_on: string
+          p_old_starts_on: string
+        }
+        Returns: Json
+      }
       refresh_overtime_actual: {
         Args: { p_request_id: string }
         Returns: {
@@ -2895,6 +3191,46 @@ export type Database = {
       set_outlet_active: {
         Args: { p_is_active: boolean; p_outlet_id: string; p_reason: string }
         Returns: undefined
+      }
+      submit_leave_change_request: {
+        Args: {
+          p_change_type: string
+          p_leave_request_id: string
+          p_proposed_ends_on: string
+          p_proposed_starts_on: string
+          p_reason: string
+          p_source_leave_version: number
+        }
+        Returns: {
+          change_type: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: string
+          id: string
+          leave_request_id: string
+          leave_type_id: string
+          old_ends_on: string
+          old_requested_days: number
+          old_starts_on: string
+          proposed_days: number | null
+          proposed_ends_on: string | null
+          proposed_starts_on: string | null
+          reason: string
+          request_version: number
+          reserved_delta_days: number
+          reserved_year: number | null
+          source_leave_version: number
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_change_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       submit_leave_request: {
         Args: {
@@ -3106,6 +3442,7 @@ export type Database = {
     }
   }
 }
+
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]

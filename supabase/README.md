@@ -107,15 +107,28 @@ Jangan menjalankan reset terhadap production.
 - Pengajuan cuti wajib melalui RPC. Cuti Tahunan otomatis memperoleh saldo
   sesuai kebijakan aktif, submission mereservasi saldo, dan approve/reject/
   cancel memindahkan atau melepaskan reservasi secara atomik.
+- Pemilik dapat mengubah rentang atau membatalkan pengajuan cuti `pending`
+  melalui RPC. Expected version, validasi tanggal/notice/benturan/dokumen, dan
+  penyesuaian `reserved_days` dijalankan ulang dalam satu transaksi.
+- Cuti `approved` dikoreksi melalui aktivitas baru di
+  `leave_change_requests`, bukan direct update. Hanya cuti yang belum dimulai
+  yang dapat diminta batal atau ganti tanggal, dan rentang pengganti harus
+  berada pada masa mendatang. Satu cuti hanya boleh mempunyai satu permintaan
+  terbuka.
 - Dokumen cuti diunggah ke bucket private `leave-documents` dengan path UUID.
   Metadata hanya didaftarkan bersama pengajuan setelah objek diverifikasi;
   signed URL berlaku singkat dan file dijadwalkan retensi sampai akhir tahun.
 - Pengajuan serta penugasan lembur menyimpan waktu dan durasi rencana.
   Durasi aktual dihitung dari clock-out terhadap akhir jadwal, minimal satu
   jam dan dibulatkan ke bawah dalam kelipatan 30 menit.
-- Client tidak memiliki hak tulis langsung ke tabel cuti, saldo, attachment,
-  atau lembur. Semua keputusan memakai expected version, first-write-wins,
-  larangan self-approval, notifikasi, dan audit.
+- Client tidak memiliki hak tulis langsung ke tabel cuti, perubahan cuti,
+  provenance roster, saldo, attachment, atau lembur. Semua keputusan memakai
+  expected version, first-write-wins, larangan self-approval, notifikasi, dan
+  audit.
+- `leave_change_requests` wajib diputus supervisor lain. Persetujuan
+  menyesuaikan status/rentang efektif, `used_days`, draft roster, notifikasi,
+  approval event, dan audit before/after secara atomik; penolakan tidak
+  mengubah cuti sumber.
 - Persetujuan cuti menyelaraskan roster secara atomik. Versi published tidak
   disentuh; sistem membuat atau memakai draft, menandai assignment terkait
   sebagai `leave`, menghapus metadata backup milik assignment yang cuti, dan
@@ -124,6 +137,12 @@ Jangan menjalankan reset terhadap production.
   pemilihan karyawan backup tetap dilakukan supervisor. Approval lama
   direkonsiliasi idempotent melalui migration, dan publish roster menolak
   assignment `scheduled` yang bertabrakan dengan cuti approved.
+- `leave_roster_impacts` menyimpan provenance assignment before/after untuk
+  approval maupun koreksi cuti. Pembatalan atau ganti tanggal hanya memulihkan
+  dampak otomatis yang belum diubah manual; konflik ditandai untuk review.
+  Versi roster `published` selalu immutable, sedangkan notifikasi kebutuhan
+  backup lama/baru diperbarui sesuai hasil staffing dan backup tetap dipilih
+  manual oleh supervisor.
 - Presensi live wajib melalui RPC `clock_in_attendance` dan
   `clock_out_attendance`; jarak Haversine, accuracy GPS, jadwal terbit,
   geofence, dan status waktu dihitung ulang di database.

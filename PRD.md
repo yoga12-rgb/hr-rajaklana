@@ -72,6 +72,10 @@ Karyawan dapat:
 - Melakukan clock-in dan clock-out.
 - Mengajukan koreksi presensi.
 - Mengajukan cuti dan lembur.
+- Mengubah tanggal atau membatalkan pengajuan cuti sendiri yang masih
+  `pending`.
+- Mengajukan perubahan tanggal atau pembatalan untuk cuti sendiri yang sudah
+  disetujui tetapi belum dimulai.
 - Menerima penugasan lembur.
 - Mengajukan pertukaran shift dengan kasir dari outlet yang sama.
 - Mengonfirmasi bahwa perubahan roster sudah dibaca.
@@ -89,6 +93,7 @@ Ketiga jenis supervisor memiliki hak akses sistem yang setara. Supervisor dapat:
 - Membuat, meninjau, memublikasikan, dan mengubah roster.
 - Menetapkan kasir sebagai backup outlet lain secara manual.
 - Memutuskan pengajuan, validasi presensi, dan koreksi.
+- Memutuskan permintaan perubahan atau pembatalan cuti pengguna lain.
 - Membuat pengumuman.
 - Melihat seluruh laporan dan audit trail.
 - Mengimpor data awal dan mengunduh arsip.
@@ -123,6 +128,8 @@ Manajemen tidak dapat mengubah data atau memutuskan pengajuan.
 | Clock-in/clock-out | Ya | Ya | Tidak |
 | Memvalidasi presensi orang lain | Tidak | Ya | Tidak |
 | Mengajukan cuti/lembur/koreksi | Ya | Ya | Tidak |
+| Mengubah/membatalkan cuti pending milik sendiri | Ya | Ya | Tidak |
+| Mengajukan perubahan cuti approved yang belum dimulai | Ya | Ya | Tidak |
 | Memutuskan pengajuan orang lain | Tidak | Ya | Tidak |
 | Menyetujui pengajuan sendiri | Tidak | Tidak | Tidak |
 | Membuat pengumuman | Tidak | Ya | Tidak |
@@ -409,6 +416,34 @@ Alur:
 6. Sistem menyusun ulang jadwal terdampak.
 7. Supervisor meninjau dan mengonfirmasi hasil penjadwalan ulang.
 
+Perubahan tanggal dan pembatalan:
+
+1. Pemilik dapat langsung mengubah rentang tanggal atau membatalkan
+   pengajuan yang masih `pending`. Sistem menghitung ulang jumlah hari,
+   notice period, benturan, lampiran, serta reservasi saldo dalam satu
+   transaksi.
+2. Cuti yang sudah `approved` tidak dapat diedit atau dibatalkan langsung.
+   Pemilik membuat aktivitas baru `leave_change_request` dengan jenis
+   `reschedule` atau `cancel` dan alasan wajib.
+3. Permintaan terhadap cuti approved hanya dapat dibuat sebelum cuti dimulai.
+   Untuk `reschedule`, seluruh rentang pengganti juga harus berada pada masa
+   mendatang dan kembali melewati validasi pengajuan cuti.
+4. Supervisor lain menyetujui atau menolak permintaan perubahan. Pembuat
+   permintaan maupun pemilik cuti tidak dapat memutuskan permintaannya sendiri.
+5. Jika disetujui, sistem secara atomik memperbarui rentang/status efektif
+   cuti, saldo `used_days`, draft roster, notifikasi, approval event, dan
+   audit before/after. Jika ditolak, cuti approved tetap tidak berubah.
+6. Versi roster `published` selalu immutable. Sistem membuat atau memakai
+   draft berikutnya untuk melepas penanda cuti lama dan menerapkan rentang
+   baru.
+7. Setiap perubahan roster otomatis menyimpan provenance pada
+   `leave_roster_impacts`. Pemulihan hanya membalik dampak yang masih identik
+   dengan perubahan otomatis sebelumnya dan tidak menimpa koreksi manual
+   supervisor.
+8. Perubahan kecukupan staf memperbarui notifikasi kebutuhan backup. Backup
+   lintas outlet tetap dipilih dan ditinjau manual oleh supervisor sebelum
+   roster dipublikasikan.
+
 ### 7.13 Lembur
 
 Lembur dapat berasal dari:
@@ -449,6 +484,7 @@ Pemicu minimum:
 - Penugasan backup.
 - Permintaan pertukaran shift.
 - Keputusan pengajuan.
+- Permintaan serta keputusan perubahan/pembatalan cuti approved.
 - Presensi menunggu validasi atau melewati tenggat.
 - GPS/presensi bermasalah.
 - Pengingat perubahan yang belum dibaca.
@@ -509,6 +545,9 @@ Ekspor:
 4. Keputusan menyimpan supervisor, waktu, status, catatan, dan versi data.
 5. Supervisor tidak dapat menyetujui pengajuan, koreksi, lembur, cuti, atau presensinya sendiri.
 6. Koreksi terhadap keputusan terkunci harus dibuat sebagai aktivitas baru dan tidak menghapus riwayat.
+7. Perubahan atau pembatalan cuti approved mengikuti aturan keputusan pertama
+   mengunci, expected version, larangan self-approval, dan transaksi atomik
+   yang sama.
 
 ## 9. Kebutuhan nonfungsional
 
@@ -713,6 +752,22 @@ Ekspor:
 - **Given** pengguna berperan sebagai manajemen,
 - **when** mencoba mengubah data,
 - **then** server menolak semua mutasi.
+
+### AC-23 — Ubah atau batalkan pengajuan cuti pending
+
+- **Given** pengajuan cuti milik pengguna masih `pending`,
+- **when** pengguna mengubah tanggal atau membatalkannya,
+- **then** sistem memvalidasi ulang ketentuan cuti dan menyesuaikan reservasi
+  saldo secara atomik tanpa membuat keputusan supervisor palsu.
+
+### AC-24 — Koreksi cuti yang sudah disetujui
+
+- **Given** cuti `approved` belum dimulai dan pemilik membuat
+  `leave_change_request`,
+- **when** supervisor lain menyetujui perubahan tanggal atau pembatalan,
+- **then** saldo, rentang/status efektif, draft roster, provenance,
+  notifikasi, dan audit diperbarui atomik; versi published tetap immutable dan
+  kebutuhan backup ditandai untuk ditinjau manual.
 
 ## 11. Ukuran keberhasilan
 

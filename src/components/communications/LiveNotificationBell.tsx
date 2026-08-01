@@ -31,6 +31,9 @@ function notificationRoute(notification: CommunicationNotification) {
     !Array.isArray(notification.payload)
   ) {
     const payload = notification.payload;
+    if (payload.superseded === true) {
+      return "/schedule";
+    }
     const monthStart =
       typeof payload.month_start === "string" ? payload.month_start : null;
     const workDate =

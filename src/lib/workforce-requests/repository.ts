@@ -64,8 +64,41 @@ export interface LiveLeaveRequest {
   decision_note: string | null;
   created_at: string;
   decided_at: string | null;
+  can_amend: boolean;
+  can_cancel: boolean;
+  can_request_change: boolean;
   can_decide: boolean;
   attachments: LeaveAttachment[];
+}
+
+export type LeaveChangeType = "cancel" | "reschedule";
+
+export interface LiveLeaveChangeRequest {
+  id: string;
+  leave_request_id: string;
+  employee_id: string;
+  employee_name: string;
+  leave_type_id: string;
+  leave_type_name: string;
+  change_type: LeaveChangeType;
+  old_starts_on: string;
+  old_ends_on: string;
+  old_requested_days: number;
+  proposed_starts_on: string | null;
+  proposed_ends_on: string | null;
+  proposed_days: number | null;
+  reason: string;
+  status: RequestStatus;
+  request_version: number;
+  source_leave_version: number;
+  reserved_delta_days: number;
+  reserved_year: number | null;
+  decision_note: string | null;
+  created_at: string;
+  decided_at: string | null;
+  can_cancel: boolean;
+  can_decide: boolean;
+  is_stale: boolean;
 }
 
 export interface LeaveWorkspace {
@@ -74,6 +107,7 @@ export interface LeaveWorkspace {
   leave_types: LeaveType[];
   balances: LeaveBalance[];
   requests: LiveLeaveRequest[];
+  change_requests: LiveLeaveChangeRequest[];
 }
 
 export interface SaveLeaveTypeInput {
@@ -96,6 +130,23 @@ export interface SubmitLeaveInput {
   endsOn: string;
   reason: string;
   attachment?: File | null;
+}
+
+export interface AmendPendingLeaveInput {
+  requestId: string;
+  expectedVersion: number;
+  startsOn: string;
+  endsOn: string;
+  reason: string;
+}
+
+export interface SubmitLeaveChangeInput {
+  leaveRequestId: string;
+  sourceLeaveVersion: number;
+  changeType: LeaveChangeType;
+  proposedStartsOn?: string | null;
+  proposedEndsOn?: string | null;
+  reason: string;
 }
 
 export interface OvertimeEmployee {
@@ -259,6 +310,77 @@ export async function cancelLeaveRequest(
     p_reason: reason,
   });
   if (error) throw workforceError("Pengajuan cuti belum dapat dibatalkan", error);
+  return data;
+}
+
+export async function amendPendingLeaveRequest(
+  client: WorkforceClient,
+  input: AmendPendingLeaveInput
+) {
+  const args = {
+    p_request_id: input.requestId,
+    p_expected_version: input.expectedVersion,
+    p_starts_on: input.startsOn,
+    p_ends_on: input.endsOn,
+    p_reason: input.reason,
+  } as Database["public"]["Functions"]["amend_pending_leave_request"]["Args"];
+  const { data, error } = await client.rpc("amend_pending_leave_request", args);
+  if (error) throw workforceError("Tanggal cuti belum dapat diubah", error);
+  return data;
+}
+
+export async function submitLeaveChangeRequest(
+  client: WorkforceClient,
+  input: SubmitLeaveChangeInput
+) {
+  const args = {
+    p_leave_request_id: input.leaveRequestId,
+    p_source_leave_version: input.sourceLeaveVersion,
+    p_change_type: input.changeType,
+    p_proposed_starts_on: input.proposedStartsOn ?? null,
+    p_proposed_ends_on: input.proposedEndsOn ?? null,
+    p_reason: input.reason,
+  } as Database["public"]["Functions"]["submit_leave_change_request"]["Args"];
+  const { data, error } = await client.rpc("submit_leave_change_request", args);
+  if (error) {
+    throw workforceError("Permintaan perubahan cuti belum dapat dikirim", error);
+  }
+  return data;
+}
+
+export async function cancelLeaveChangeRequest(
+  client: WorkforceClient,
+  changeRequestId: string,
+  expectedVersion: number,
+  reason: string
+) {
+  const { data, error } = await client.rpc("cancel_leave_change_request", {
+    p_change_request_id: changeRequestId,
+    p_expected_version: expectedVersion,
+    p_reason: reason,
+  });
+  if (error) {
+    throw workforceError("Permintaan perubahan belum dapat dibatalkan", error);
+  }
+  return data;
+}
+
+export async function decideLeaveChangeRequest(
+  client: WorkforceClient,
+  changeRequestId: string,
+  expectedVersion: number,
+  decision: "approved" | "rejected",
+  note: string
+) {
+  const { data, error } = await client.rpc("decide_leave_change_request", {
+    p_change_request_id: changeRequestId,
+    p_expected_version: expectedVersion,
+    p_decision: decision,
+    p_note: note,
+  });
+  if (error) {
+    throw workforceError("Keputusan perubahan cuti belum dapat disimpan", error);
+  }
   return data;
 }
 

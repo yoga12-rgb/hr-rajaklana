@@ -492,6 +492,13 @@ erDiagram
     LEAVE_TYPES ||--o{ LEAVE_REQUESTS : "menentukan jenis"
     LEAVE_REQUESTS ||--o{ REQUEST_ATTACHMENTS : "memiliki lampiran"
     LEAVE_REQUESTS ||--o{ APPROVAL_EVENTS : "diputuskan"
+    LEAVE_REQUESTS ||--o{ LEAVE_CHANGE_REQUESTS : "dikoreksi melalui aktivitas baru"
+    EMPLOYEES ||--o{ LEAVE_CHANGE_REQUESTS : "meminta perubahan"
+    LEAVE_CHANGE_REQUESTS ||--o{ APPROVAL_EVENTS : "diputuskan"
+    LEAVE_REQUESTS ||--o{ LEAVE_ROSTER_IMPACTS : "memiliki provenance roster"
+    ROSTER_PERIODS ||--o{ LEAVE_ROSTER_IMPACTS : "mengelompokkan dampak"
+    ROSTER_VERSIONS o|--o{ LEAVE_ROSTER_IMPACTS : "menerima dampak pada draft"
+    SCHEDULE_ASSIGNMENTS o|--o{ LEAVE_ROSTER_IMPACTS : "dilacak sebelum/sesudah"
     EMPLOYEES ||--o{ OVERTIME_REQUESTS : "mengajukan atau ditugaskan"
     ATTENDANCE_RECORDS ||--o| OVERTIME_REQUESTS : "menjadi realisasi"
     OVERTIME_REQUESTS ||--o{ APPROVAL_EVENTS : "diputuskan"
@@ -541,6 +548,44 @@ erDiagram
         uuid decided_by FK
         timestamptz decided_at
         text decision_note
+    }
+
+    LEAVE_CHANGE_REQUESTS {
+        uuid id PK
+        uuid leave_request_id FK
+        uuid employee_id FK
+        uuid leave_type_id FK
+        text change_type
+        int source_leave_version
+        date old_starts_on
+        date old_ends_on
+        numeric old_requested_days
+        date proposed_starts_on
+        date proposed_ends_on
+        numeric proposed_days
+        text reason
+        text status
+        int request_version
+        numeric reserved_delta_days
+        int reserved_year
+        uuid decided_by FK
+        timestamptz decided_at
+        text decision_note
+    }
+
+    LEAVE_ROSTER_IMPACTS {
+        uuid id PK
+        uuid leave_request_id FK
+        uuid roster_period_id FK
+        date work_date
+        jsonb original_assignment
+        jsonb original_backup
+        jsonb applied_assignment
+        uuid applied_roster_version_id FK
+        uuid applied_schedule_assignment_id FK
+        text state
+        timestamptz reverted_at
+        uuid reverted_by FK
     }
 
     REQUEST_ATTACHMENTS {
@@ -749,6 +794,8 @@ erDiagram
 | `leave_types` | Jenis cuti dinamis | Seed sesuai kebutuhan awal; dapat dinonaktifkan |
 | `leave_entitlements` | Saldo cuti per tahun | Unik per karyawan, jenis cuti, dan tahun |
 | `leave_requests` | Transaksi pengajuan cuti | Rentang tanggal valid; keputusan pertama mengunci |
+| `leave_change_requests` | Aktivitas perubahan/pembatalan cuti approved | Future-only; jenis `reschedule`/`cancel`; expected version dan keputusan pertama mengunci |
+| `leave_roster_impacts` | Provenance dampak cuti pada draft roster | Menyimpan before/after per tanggal agar pemulihan tidak menimpa perubahan manual |
 | `request_attachments` | Metadata surat dokter/dokumen | Bucket privat; retensi sampai akhir tahun |
 | `overtime_requests` | Permintaan/penugasan/realisasi lembur | Durasi rencana, aktual, dan disetujui dipisahkan |
 
@@ -757,6 +804,19 @@ Implementasi transaksi cuti/lembur juga menetapkan:
 - Cuti Tahunan dibuat otomatis per karyawan/tahun dari kebijakan aktif.
 - Pengajuan Cuti Tahunan mereservasi saldo sebelum diputuskan; approve
   memindahkannya ke `used_days`, sedangkan reject/cancel melepaskannya.
+- Pemilik dapat mengubah atau membatalkan pengajuan `pending` secara langsung;
+  transaksi menghitung ulang rentang, notice, benturan, dokumen, dan
+  `reserved_days`.
+- Keputusan cuti `approved` tidak ditimpa diam-diam. Perubahan tanggal atau
+  pembatalan dibuat sebagai `leave_change_requests`, hanya sebelum cuti
+  dimulai, lalu diputus oleh supervisor lain.
+- Persetujuan perubahan menyesuaikan saldo, draft roster, notifikasi,
+  approval event, dan audit before/after dalam transaksi yang sama. Versi
+  published tidak pernah dimutasi.
+- `leave_roster_impacts` mencatat assignment yang dibuat, diubah, atau
+  dipulihkan. Rollback hanya diterapkan bila nilai saat ini masih cocok dengan
+  dampak otomatis; override manual supervisor tetap dipertahankan dan
+  kebutuhan backup ditandai untuk review.
 - Metadata dokumen hanya dibuat setelah objek private Storage diverifikasi.
 - Lembur menyimpan waktu mulai/selesai rencana. Durasi aktual dihitung dari
   presensi terhadap akhir jadwal dan dibulatkan ke bawah per 30 menit.
@@ -787,6 +847,7 @@ Implementasi transaksi cuti/lembur juga menetapkan:
 | Presensi | `open`, `completed`, `missing_checkout`, `corrected` |
 | Validasi presensi | `pending`, `approved`, `rejected`, `needs_correction` |
 | Pengajuan | `draft`, `pending`, `approved`, `rejected`, `cancelled` |
+| Perubahan cuti approved | `pending`, `approved`, `rejected`, `cancelled` |
 | Risiko | `open`, `cleared`, `confirmed` |
 | Pekerjaan penghapusan | `scheduled`, `processing`, `completed`, `failed`, `cancelled` |
 
@@ -817,6 +878,11 @@ on employee_off_day_allocations (employee_id, source_week_start);
 create unique index shift_swap_one_open_request_per_assignment
 on shift_swap_requests (requester_assignment_id)
 where status in ('pending_colleague', 'pending_supervisor');
+
+-- Satu cuti approved tidak boleh mempunyai dua koreksi yang masih terbuka.
+create unique index leave_change_one_open_request
+on leave_change_requests (leave_request_id)
+where status = 'pending';
 
 -- Satu sesi presensi yang belum clock-out.
 create unique index attendance_one_open_session
@@ -851,6 +917,9 @@ Constraint tambahan:
 - `outlets.geofence_radius_m between 50 and 500`;
 - `clock_out_at >= clock_in_at`;
 - `ends_on >= starts_on`;
+- `proposed_ends_on >= proposed_starts_on` untuk perubahan tanggal cuti;
+- `leave_change_requests` hanya dapat menargetkan cuti `approved` yang belum
+  dimulai;
 - durasi lembur yang disetujui adalah `0` atau minimal 60 menit dan kelipatan 30 menit;
 - `planned_duration_min > 0`;
 - pengguna keputusan harus berbeda dari pemilik subjek untuk proses yang melarang self-approval;
@@ -875,7 +944,43 @@ Persetujuan harus dilakukan melalui database function/RPC dalam satu transaksi:
 
 Jika dua supervisor memutuskan bersamaan, hanya transaksi pertama yang memenuhi kondisi status/versi. Transaksi kedua menerima informasi bahwa pengajuan telah diputuskan.
 
-### 11.2 Publikasi roster
+### 11.2 Perubahan dan pembatalan cuti
+
+Pengajuan `pending` dapat diubah atau dibatalkan langsung oleh pemilik:
+
+1. lock `leave_requests` dan cocokkan owner, status, serta expected version;
+2. validasi ulang tanggal, notice period, benturan, lampiran, dan saldo;
+3. hitung selisih hari lalu sesuaikan `reserved_days` tanpa sempat membuat
+   saldo tersedia negatif;
+4. perbarui pengajuan atau tandai `cancelled`, naikkan versi, perbarui
+   notifikasi antrean supervisor, dan tulis audit;
+5. commit.
+
+Cuti `approved` menggunakan `leave_change_requests` agar keputusan lama tetap
+terkunci dan dapat dijelaskan:
+
+1. saat submit, lock cuti sumber; pastikan cuti masih `approved`, belum
+   dimulai, tidak memiliki permintaan terbuka, dan target `reschedule` berada
+   pada masa mendatang;
+2. supervisor lain mengambil keputusan dengan expected version dan
+   first-write-wins;
+3. bila disetujui, sesuaikan `used_days`, status/rentang efektif cuti, serta
+   versi sumber;
+4. buat atau gunakan draft roster tanpa mengubah versi `published`;
+5. gunakan `leave_roster_impacts` untuk memulihkan assignment lama hanya bila
+   nilai sekarang masih sama dengan dampak otomatis, kemudian terapkan
+   rentang baru bila jenisnya `reschedule`;
+6. tandai kebutuhan backup lama sebagai terselesaikan atau perlu review dan
+   buat notifikasi baru sesuai hasil staffing; pemilihan backup tetap manual;
+7. tulis approval event, notifikasi pemilik dan supervisor, serta audit
+   before/after;
+8. commit.
+
+Penolakan hanya menyelesaikan `leave_change_requests`; cuti, saldo, dan roster
+tetap seperti sebelum permintaan. Konflik versi atau perubahan manual roster
+tidak boleh ditimpa diam-diam dan harus dikembalikan sebagai item review.
+
+### 11.3 Publikasi roster
 
 Publikasi roster dilakukan secara atomik:
 
@@ -892,8 +997,12 @@ baru dengan menyalin assignment dan data backup dari versi aktif.
 Persetujuan cuti menggunakan jalur versi yang sama: assignment published tetap
 utuh, sementara salinannya pada draft menjadi `leave`. Penugasan backup tetap
 dipilih manual oleh supervisor melalui tautan kontekstual pada notifikasi.
+Pembatalan atau perubahan tanggal cuti approved juga hanya mengoreksi draft.
+Provenance `leave_roster_impacts` menentukan assignment yang aman dipulihkan;
+perubahan manual tetap dipertahankan dan ditampilkan sebagai review sebelum
+backup atau roster berikutnya dipublikasikan.
 
-### 11.3 Tukar shift
+### 11.4 Tukar shift
 
 Pertukaran shift menggunakan dua keputusan berurutan:
 
@@ -904,7 +1013,7 @@ Pertukaran shift menggunakan dua keputusan berurutan:
    kembali batas Middle, mempublikasikan versi baru, lalu menulis notifikasi
    dan audit secara atomik.
 
-### 11.4 Validasi presensi dan penghapusan selfie
+### 11.5 Validasi presensi dan penghapusan selfie
 
 Sejak metadata selfie dibuat:
 
@@ -922,8 +1031,8 @@ RLS wajib aktif untuk seluruh tabel pada schema aplikasi.
 
 | Peran | Akses yang diizinkan |
 |---|---|
-| Karyawan | Membaca profil pribadi, presensi sendiri, saldo dan pengajuan sendiri, notifikasi sendiri; membaca roster seluruh kasir hanya pada kolom yang diizinkan; membuat presensi/pengajuan/koreksi milik sendiri |
-| Supervisor | Membaca dan mengelola data operasional; membuat akun; mengatur roster; memberi keputusan, kecuali terhadap data/pengajuan sendiri |
+| Karyawan | Membaca profil pribadi, presensi sendiri, saldo dan pengajuan sendiri, notifikasi sendiri; membaca roster seluruh kasir hanya pada kolom yang diizinkan; membuat presensi/pengajuan/koreksi milik sendiri; mengubah/membatalkan cuti pending dan meminta koreksi cuti approved milik sendiri |
+| Supervisor | Membaca dan mengelola data operasional; membuat akun; mengatur roster; memberi keputusan termasuk perubahan cuti approved, kecuali terhadap data/pengajuan sendiri |
 | Management | Membaca dashboard, laporan, roster, dan data operasional yang diperlukan; tidak dapat melakukan mutasi |
 | Service role | Worker terjadwal untuk notifikasi, regenerasi roster, retensi file, impor, backup, dan tugas sistem |
 

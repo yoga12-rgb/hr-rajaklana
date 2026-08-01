@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
@@ -15,6 +15,12 @@ interface DateRangePickerProps {
   label?: string;
   /** Penyesuai kelas wrapper Tailwind opsional */
   className?: string;
+  /** Batas tanggal paling awal yang dapat dipilih (YYYY-MM-DD) */
+  minDate?: string;
+  /** Batas tanggal paling akhir yang dapat dipilih (YYYY-MM-DD) */
+  maxDate?: string;
+  /** Menonaktifkan seluruh pemilih tanggal */
+  disabled?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -23,6 +29,13 @@ const MONTH_NAMES = [
 ];
 
 const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+
+function parseLocalDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 /**
  * Komponen Reusable Custom DateRangePicker (Pemilih Rentang Tanggal Mulai s/d Selesai)
@@ -35,13 +48,19 @@ export function DateRangePicker({
   endDate,
   onChange,
   label,
-  className = ""
+  className = "",
+  minDate,
+  maxDate,
+  disabled = false,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const calendarId = useId();
 
-  const start = startDate ? new Date(startDate) : null;
-  const end = endDate ? new Date(endDate) : null;
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
+  const minimumDate = minDate ? parseLocalDate(minDate) : null;
+  const maximumDate = maxDate ? parseLocalDate(maxDate) : null;
 
   const initialDate = start && !isNaN(start.getTime()) ? start : new Date();
 
@@ -51,6 +70,19 @@ export function DateRangePicker({
   // Transient selection state when user is clicking dates
   const [selectingStart, setSelectingStart] = useState<Date | null>(start);
   const [selectingEnd, setSelectingEnd] = useState<Date | null>(end);
+
+  useEffect(() => {
+    const nextStart = parseLocalDate(startDate);
+    const nextEnd = parseLocalDate(endDate);
+    // Sinkronisasi diperlukan ketika komponen dipakai ulang untuk record lain.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectingStart(nextStart);
+    setSelectingEnd(nextEnd);
+    if (nextStart) {
+      setViewYear(nextStart.getFullYear());
+      setViewMonth(nextStart.getMonth());
+    }
+  }, [endDate, startDate]);
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
@@ -75,6 +107,13 @@ export function DateRangePicker({
 
   const handleDayClick = (day: number) => {
     const clickedDate = new Date(viewYear, viewMonth, day);
+    if (
+      disabled ||
+      (minimumDate && clickedDate < minimumDate) ||
+      (maximumDate && clickedDate > maximumDate)
+    ) {
+      return;
+    }
 
     if (!selectingStart || (selectingStart && selectingEnd)) {
       // Step 1: First click sets start date, clears end date
@@ -129,13 +168,24 @@ export function DateRangePicker({
 
   return (
     <div className={`space-y-1 ${className}`} ref={containerRef}>
-      {label && <label className="text-xs font-medium text-slate-300">{label}</label>}
+      {label && (
+        <label
+          htmlFor={`${calendarId}-trigger`}
+          className="text-xs font-medium text-slate-300"
+        >
+          {label}
+        </label>
+      )}
 
       {/* Trigger Button */}
       <button
+        id={`${calendarId}-trigger`}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2.5 text-xs bg-slate-950 border border-slate-700 hover:border-amber-500/50 rounded-xl text-slate-200 flex items-center justify-between transition-all cursor-pointer text-left focus:outline-none focus:border-amber-500"
+        disabled={disabled}
+        aria-expanded={isOpen}
+        aria-controls={`${calendarId}-calendar`}
+        className="flex min-h-11 w-full cursor-pointer items-center justify-between rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-left text-xs text-slate-200 transition-all hover:border-amber-500/50 focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
       >
         <div className="flex items-center gap-1.5 truncate">
           <span>{formatShort(startDate) || "Tgl Mulai"}</span>
@@ -161,6 +211,7 @@ export function DateRangePicker({
             className="overflow-hidden"
           >
             <div className="mt-2 bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-3 w-full text-slate-200 shadow-inner">
+              <div id={`${calendarId}-calendar`} className="contents">
               {/* Range Instruction Note */}
               <div className="text-[10px] text-amber-400 font-medium bg-amber-500/10 p-1.5 rounded-lg border border-amber-500/20 text-center">
                 {!selectingStart
@@ -234,6 +285,10 @@ export function DateRangePicker({
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                   const day = i + 1;
                   const currentDate = new Date(viewYear, viewMonth, day);
+                  const isDisabled =
+                    disabled ||
+                    Boolean(minimumDate && currentDate < minimumDate) ||
+                    Boolean(maximumDate && currentDate > maximumDate);
 
                   const isStart =
                     selectingStart &&
@@ -258,7 +313,18 @@ export function DateRangePicker({
                       key={day}
                       type="button"
                       onClick={() => handleDayClick(day)}
-                      className={`h-9 w-full rounded-lg text-xs font-medium flex items-center justify-center transition-colors cursor-pointer ${
+                      disabled={isDisabled}
+                      aria-label={currentDate.toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                      aria-pressed={Boolean(isStart || isEnd)}
+                      className={`flex h-9 w-full items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                        isDisabled
+                          ? "cursor-not-allowed text-slate-700"
+                          : "cursor-pointer"
+                      } ${
                         isStart || isEnd
                           ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30"
                           : isInRange
@@ -270,6 +336,7 @@ export function DateRangePicker({
                     </button>
                   );
                 })}
+              </div>
               </div>
             </div>
           </motion.div>

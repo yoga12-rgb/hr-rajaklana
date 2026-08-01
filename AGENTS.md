@@ -19,7 +19,7 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tiga puluh delapan migration sudah diterapkan dan cocok antara lokal/remote.
+- Tiga puluh sembilan migration sudah diterapkan dan cocok antara lokal/remote.
 - Local/hosted lint schema `public` bersih dan pgTAP lulus 337/337 pada
   1 Agustus 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
@@ -71,6 +71,14 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   UI supervisor membedakan saldo akun sendiri dari saldo pemohon, menandai
   jenis yang mengurangi saldo tahunan, dan memproyeksikan ledger sebelum
   keputusan dikonfirmasi.
+  Pemilik dapat mengubah tanggal atau membatalkan cuti pending secara langsung
+  dengan validasi dan penyesuaian reservasi atomik. Cuti approved yang belum
+  dimulai hanya dapat dibatalkan atau dijadwalkan ulang melalui
+  `leave_change_requests` dan keputusan supervisor lain. Persetujuan koreksi
+  memperbarui saldo, draft roster, notifikasi, approval event, serta audit
+  atomik tanpa memutasi roster published. `leave_roster_impacts` menyimpan
+  provenance before/after agar pemulihan tidak menimpa perubahan manual;
+  konflik staffing dan kebutuhan backup tetap masuk review supervisor.
   Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.
 - Presensi live GPS/geofence dan upload selfie private sudah diimplementasikan.
@@ -195,7 +203,7 @@ src/
 │   ├── schedule/
 │   │   └── LiveSchedulePage.tsx # Roster live, publish, acknowledgement, dan tukar shift
 │   ├── leaves/
-│   │   └── LiveLeavesPage.tsx # Saldo, dokumen privat, pengajuan, dan keputusan cuti
+│   │   └── LiveLeavesPage.tsx # Saldo, dokumen, pengajuan, perubahan/pembatalan, dan keputusan cuti
 │   ├── overtime/
 │   │   └── LiveOvertimePage.tsx # Pengajuan, penugasan, durasi, dan keputusan lembur
 │   ├── providers/
@@ -252,9 +260,9 @@ src/
 │   └── generation.ts     # Snapshot parser dan commit atomik server-side
 ├── lib/workforce-requests/
 │   ├── query-keys.ts     # Query key factory cuti dan lembur
-│   ├── queries.ts        # Query/mutation hooks dengan optimistic rollback
+│   ├── queries.ts        # Query/mutation cuti, koreksi approved, lembur, dan optimistic rollback
 │   ├── leave-balance.ts  # Proyeksi ledger saldo saat keputusan cuti
-│   └── repository.ts     # Repository RPC cuti, dokumen privat, dan lembur
+│   └── repository.ts     # Repository RPC cuti, koreksi approved, dokumen privat, dan lembur
 ├── lib/supabase/
 │   ├── client.ts         # Supabase client untuk Client Components
 │   ├── server.ts         # Supabase client berbasis cookies untuk server
