@@ -19,9 +19,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tiga puluh dua migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 310/310 pada
-  29 Juli 2026.
+- Tiga puluh tiga migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 311/311 pada
+  1 Agustus 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
   query key factory, dan repository bertipe data master sudah tersedia.
@@ -54,6 +54,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   pekan berada sehingga pekan parsial tidak dihitung ulang. Off pekan terakhir
   boleh jatuh pada awal bulan berikutnya, tetapi ledger tetap dimiliki bulan
   asal dan dibaca sebagai carry-in oleh generator bulan berikutnya.
+  Validator publish bulan pemilik hanya memeriksa pola shift untuk off yang
+  tanggal aktualnya berada dalam bulan tersebut; off carry-out diperiksa oleh
+  guard carry-in saat roster bulan berikutnya dipublikasikan.
 - Cuti/Izin live sudah mendukung saldo tahunan, reservasi, dokumen privat,
   pembatalan, jenis cuti dinamis, serta keputusan atomik. Lembur live mendukung
   pengajuan, penugasan, durasi rencana/aktual/disetujui, dan keputusan atomik.

@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga puluh dua migration berikut identik antara
+- Project hosted sudah terhubung dan tiga puluh tiga migration berikut identik antara
   lokal dan remote:
 
 | Migration                                                          | Fungsi                                     |
@@ -110,12 +110,13 @@ Sudah tersedia:
 | `20260729190000_m8_async_report_exports.sql`                       | Antrean ekspor XLSX besar dan akses privat |
 | `20260729203000_m8_operational_health_workspace.sql`               | Agregat observability dan audit tersensor  |
 | `20260729210000_harden_operational_health_role_check.sql`          | Gate role NULL-safe workspace operasional  |
+| `20260801163000_fix_cross_month_publish_pattern.sql`               | Koreksi pola off carry-out saat publish     |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `310/310`.
+- pgTAP lulus `311/311`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -856,10 +857,10 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   disensor di database sehingga actor ID, payload, error mentah, path Storage,
   dan secret tidak mencapai client.
 - Runbook insiden, panduan backup/restore, dan checklist pilot sudah tersedia.
-  Restore drill lokal nyata lulus pada 29 Juli 2026: 42 tabel, 78 fungsi, dan
-  32 migration identik setelah dipulihkan ke database disposable; dump dan
+  Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 78 fungsi,
+  dan 33 migration identik setelah dipulihkan ke database disposable; dump dan
   database drill dibersihkan otomatis.
-- Local/hosted lint schema bersih dan pgTAP `310/310`; lint, typecheck, build
+- Local/hosted lint schema bersih dan pgTAP `311/311`; lint, typecheck, build
   live/demo, empat belas unit test, dan 20 E2E desktop/mobile lulus.
 - Verifier read-only `npm run operations:verify-pilot` memeriksa target hosted,
   akun, outlet, kasir eligible, penempatan, template/kebutuhan shift, policy,
@@ -868,6 +869,10 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   supervisor aktif, satu outlet aktif, empat kasir eligible, seluruh policy
   aktif, antrean sehat, dan cron sukses; baru dua akun karyawan siap sehingga
   belum ada outlet kandidat yang memenuhi minimum tiga akun kasir siap.
+- Validator publish roster tidak lagi mencari assignment bulan berikutnya di
+  draft bulan pemilik untuk off carry-out. Kasus Agustus 2026 dengan off pada
+  2–3 September kini ditunda ke guard carry-in roster September, yang tetap
+  menegakkan pola Pagi sebelum off dan Malam setelah off pada bulan aktual.
 - Seluruh pekerjaan non-pilot M8 sudah siap. Pilot tetap menunggu gate M6,
   verifikasi backup hosted, pilihan outlet/pengguna pilot, dan persetujuan
   checklist oleh pemilik produk.
@@ -977,7 +982,7 @@ Untuk perubahan hosted:
 - [x] Dua migration M7 dan satu koreksi carry-over diterapkan tanpa reset
       production.
 - [x] Dua migration observability M8 diterapkan tanpa reset production.
-- [x] Hosted lint dan pgTAP `310/310` lulus.
+- [x] Hosted lint dan pgTAP `311/311` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---

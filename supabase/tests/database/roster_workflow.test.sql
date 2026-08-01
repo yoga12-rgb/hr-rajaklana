@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(63);
+select extensions.plan(64);
 
 select extensions.ok(
   not has_function_privilege(
@@ -617,6 +617,13 @@ select extensions.ok(
       and assignment.work_date = '2097-05-01'
   ),
   'owner-month draft does not receive an out-of-period assignment'
+);
+
+select extensions.ok(
+  pg_get_functiondef(
+    'public.publish_manual_roster(uuid,text)'::regprocedure
+  ) like '%and off_day.off_date >= period_row.month_start%and off_day.off_date%< (period_row.month_start + interval ''1 month'')::date%',
+  'owner-month publish validates off patterns only inside its calendar month'
 );
 
 select set_config(
@@ -1339,7 +1346,7 @@ select extensions.throws_ok(
 
 select extensions.skip(
   'fixture creation requires local postgres privileges',
-  45
+  46
 );
 
 \endif

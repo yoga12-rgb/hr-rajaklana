@@ -57,3 +57,9 @@ publik, atau perangkat yang tidak terenkripsi.
 - Pemilik operasi dan teknis memahami runbook insiden.
 - Gate retensi selfie M6 tetap lulus secara terpisah; backup tidak menggantikan
   bukti cron otomatis dan penghapusan selfie tujuh hari.
+
+## Hasil terbaru
+
+Drill lokal 1 Agustus 2026 lulus setelah migration koreksi publish roster
+lintas bulan: 42 tabel, 78 fungsi, dan 33 ledger migration identik pada
+database disposable. Artefak dump dan database drill sudah dibersihkan.

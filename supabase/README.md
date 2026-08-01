@@ -89,6 +89,10 @@ Jangan menjalankan reset terhadap production.
   hari Minggu di awal bulan berikutnya melalui
   `save_cross_month_roster_off_day`; ledger tetap berada pada bulan pemilik,
   sementara snapshot dan commit bulan berikutnya membacanya sebagai carry-in.
+  Publish bulan pemilik mengabaikan pemeriksaan pola shift untuk tanggal off
+  yang jatuh di bulan berikutnya karena assignment tersebut belum menjadi
+  bagian versinya. Guard publish bulan aktual tetap mewajibkan assignment off,
+  Pagi sebelum off, dan Malam setelah off untuk carry-in.
   Backup outlet
   serta minimum staffing divalidasi sebelum publikasi.
 - Tukar shift dibatasi untuk kasir pada outlet dan versi roster yang sama.
