@@ -299,6 +299,12 @@ Perubahan setelah publikasi:
 4. Izin geofence sementara hanya aktif untuk tanggal dan shift backup.
 5. Karyawan menerima notifikasi dan wajib mengonfirmasi telah membaca.
 6. Penugasan backup diperhitungkan dalam laporan serta skor keseimbangan.
+7. Jika cuti disetujui meniadakan jadwal kerja, sistem membuat draft roster
+   baru bila versi aktif sudah published dan menandai tanggal sebagai `Cuti`.
+   Bila setelah cuti tersisa kurang dari dua kasir kerja, sistem mengirim
+   notifikasi kebutuhan backup dengan tanggal, outlet, serta shift.
+8. Notifikasi kebutuhan backup membuka formulir penugasan manual dengan konteks
+   tujuan terisi; supervisor tetap memilih karyawan dari outlet lain.
 
 ### 7.7 Pertukaran shift
 
@@ -680,7 +686,10 @@ Ekspor:
 
 - **Given** saldo dan notice period memenuhi syarat,
 - **when** supervisor lain menyetujui cuti,
-- **then** saldo berkurang dan sistem membuat usulan jadwal ulang untuk tanggal terdampak.
+- **then** saldo berkurang, versi published tetap immutable, draft roster
+  otomatis menandai tanggal sebagai `Cuti`, dan bila outlet tersisa kurang dari
+  dua kasir supervisor menerima notifikasi kebutuhan backup yang membuka
+  formulir penugasan manual.
 
 ### AC-20 — Lembur aktual
 

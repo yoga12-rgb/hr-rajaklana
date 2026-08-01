@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Fragment } from "react";
+import React, { useState, Fragment, Suspense } from "react";
 import { useHR, WorkShift } from "@/context/HRContext";
 import { useDataSource } from "@/context/DataSourceContext";
 import { LiveSchedulePage } from "@/components/schedule/LiveSchedulePage";
@@ -31,7 +31,20 @@ const daysOfWeek = [
 export default function SchedulePage() {
   const { mode } = useDataSource();
 
-  return mode === "supabase" ? <LiveSchedulePage /> : <DemoSchedulePage />;
+  return mode === "supabase" ? (
+    <Suspense
+      fallback={
+        <div className="flex min-h-64 items-center justify-center text-xs text-slate-400">
+          <RefreshCw className="mr-2 h-4 w-4 animate-spin text-amber-400" />
+          Memuat roster...
+        </div>
+      }
+    >
+      <LiveSchedulePage />
+    </Suspense>
+  ) : (
+    <DemoSchedulePage />
+  );
 }
 
 function DemoSchedulePage() {

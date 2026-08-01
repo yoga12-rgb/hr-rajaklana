@@ -48,7 +48,9 @@ output berada di
 3. Susun/generate draft roster, koreksi konflik, publish, dan acknowledgement.
 4. Clock-in employee dengan GPS+selfie, preview supervisor, clock-out, dan
    validasi.
-5. Ajukan dan putuskan cuti/izin serta lembur dengan akun berbeda.
+5. Ajukan dan setujui cuti dengan akun berbeda; pastikan draft roster berubah
+   menjadi `Cuti`, versi published tetap utuh, notifikasi backup muncul, dan
+   tautannya membuka formulir backup pada tanggal/outlet/shift yang benar.
 6. Terima notifikasi/pengumuman dan simpan acknowledgement.
 7. Buka dashboard/laporan live, ekspor pendek dan panjang.
 8. Buka roster saat offline; pastikan mutasi ditolak dengan pesan jelas.

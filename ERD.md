@@ -685,7 +685,9 @@ erDiagram
 4. Cuti sakit dan keadaan darurat boleh diajukan pada hari yang sama.
 5. Cuti sakit lebih dari satu hari wajib mempunyai surat dokter.
 6. Lampiran cuti disimpan sampai akhir tahun terkait, kemudian dihapus; metadata tetap disimpan.
-7. Persetujuan cuti menandai karyawan tidak tersedia dan memicu regenerasi bagian roster yang terdampak.
+7. Persetujuan cuti menandai karyawan tidak tersedia. Bila roster tersedia,
+   sistem memakai/membuat draft, mengubah assignment kerja terdampak menjadi
+   `leave`, dan tidak pernah memutasi versi `published`.
 8. Lembur minimal 60 menit, lalu dibulatkan atau disetujui dalam kelipatan 30 menit.
 9. Lembur dapat berasal dari pengajuan karyawan, penugasan supervisor, atau potensi lembur dari clock-out terlambat.
 10. Sistem menyimpan durasi rencana, aktual, dan yang disetujui secara terpisah.
@@ -864,8 +866,11 @@ Persetujuan harus dilakukan melalui database function/RPC dalam satu transaksi:
 3. pastikan pemutus bukan pemilik pengajuan;
 4. ubah status dan naikkan versi;
 5. tulis `APPROVAL_EVENTS` serta `AUDIT_LOGS`;
-6. buat notifikasi;
-7. commit.
+6. selaraskan tanggal cuti ke draft roster dan tulis `SCHEDULE_OVERRIDES`;
+7. bila outlet tersisa kurang dari dua kasir kerja, buat notifikasi backup yang
+   membawa bulan, tanggal, outlet, dan shift assignment terdampak;
+8. buat notifikasi keputusan untuk karyawan;
+9. commit.
 
 Jika dua supervisor memutuskan bersamaan, hanya transaksi pertama yang memenuhi kondisi status/versi. Transaksi kedua menerima informasi bahwa pengajuan telah diputuskan.
 
@@ -883,6 +888,9 @@ Publikasi roster dilakukan secara atomik:
 
 Versi `published` tidak dapat diubah. Penyuntingan berikutnya membuat draft
 baru dengan menyalin assignment dan data backup dari versi aktif.
+Persetujuan cuti menggunakan jalur versi yang sama: assignment published tetap
+utuh, sementara salinannya pada draft menjadi `leave`. Penugasan backup tetap
+dipilih manual oleh supervisor melalui tautan kontekstual pada notifikasi.
 
 ### 11.3 Tukar shift
 

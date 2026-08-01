@@ -201,7 +201,12 @@ export function LiveLeavesPage() {
           decision: decisionState.decision,
           note: decisionNote.trim(),
         });
-        showToast("Keputusan cuti berhasil disimpan.", "success");
+        showToast(
+          decisionState.decision === "approved"
+            ? "Cuti disetujui. Draft roster diperbarui; alert backup muncul bila staf kurang."
+            : "Keputusan cuti berhasil disimpan.",
+          "success"
+        );
       }
       playClickSound();
       setDecisionState(null);

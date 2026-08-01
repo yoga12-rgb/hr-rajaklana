@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga puluh lima migration berikut
+- Project hosted sudah terhubung dan tiga puluh tujuh migration berikut
   identik antara lokal dan remote:
 
 | Migration                                                          | Fungsi                                     |
@@ -113,12 +113,14 @@ Sudah tersedia:
 | `20260801163000_fix_cross_month_publish_pattern.sql`               | Koreksi pola off carry-out saat publish     |
 | `20260801183000_staffing_requirement_management.sql`               | Kebutuhan staf versioned dan jalur tulis aman |
 | `20260801194500_staffing_availability_and_day_scope.sql`            | Staffing harian dan scope weekday/weekend   |
+| `20260801213000_leave_roster_backup_workflow.sql`                   | Sinkronisasi cuti dan alert backup roster   |
+| `20260801223000_filter_unnecessary_leave_backup_alerts.sql`         | Filter alert backup sesuai staf tersisa     |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `328/328`.
+- pgTAP lulus `336/336`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -559,8 +561,11 @@ Selesai:
   diaudit. Cuti Tahunan dilindungi sebagai jenis sistem dan tidak dapat
   dinonaktifkan atau diubah menjadi non-deducting.
 - Persetujuan cuti memakai expected version, first-write-wins, dan larangan
-  self-approval. Keputusan membuat audit/notifikasi; jadwal published yang
-  terdampak menghasilkan notifikasi peninjauan roster dengan daftar assignment.
+  self-approval. Keputusan otomatis memakai/membuat draft roster, menandai
+  assignment terdampak sebagai `leave`, mempertahankan versi published, dan
+  membuat notifikasi backup kontekstual bila outlet tersisa kurang dari dua
+  kasir kerja. Tautan notifikasi membuka formulir backup manual dengan bulan,
+  tanggal, outlet, shift, serta alasan terisi.
 - Lembur mendukung pengajuan karyawan, penugasan supervisor, pembatalan,
   durasi rencana, aktual, dan disetujui. Tidak ada perhitungan pembayaran.
 - Durasi aktual dihitung dari presensi selesai terhadap waktu akhir jadwal,
@@ -863,10 +868,10 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   disensor di database sehingga actor ID, payload, error mentah, path Storage,
   dan secret tidak mencapai client.
 - Runbook insiden, panduan backup/restore, dan checklist pilot sudah tersedia.
-  Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 79 fungsi,
-  dan 35 migration identik setelah dipulihkan ke database disposable; dump dan
+  Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 80 fungsi,
+  dan 37 migration identik setelah dipulihkan ke database disposable; dump dan
   database drill dibersihkan otomatis.
-- Local/hosted lint schema bersih dan pgTAP `328/328`; lint, typecheck, build
+- Local/hosted lint schema bersih dan pgTAP `336/336`; lint, typecheck, build
   live/demo, enam belas unit test, dan 20 E2E desktop/mobile lulus.
 - Verifier read-only `npm run operations:verify-pilot` memeriksa target hosted,
   akun, outlet, kasir eligible, penempatan, template shift, policy,
@@ -879,6 +884,11 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   weekday/weekend, dan tanggal efektif. Nilai `0` didukung, perubahan disimpan
   atomik, mempertahankan histori, dan menulis audit. Generator serta validator
   publish menghitung kasir harian setelah off, cuti, dan backup.
+- Persetujuan cuti kini menyelaraskan draft roster secara atomik tanpa memutasi
+  versi published. Jadwal kerja terdampak menjadi `Cuti`; supervisor menerima
+  notifikasi kebutuhan backup saat outlet tersisa kurang dari dua kasir dan
+  dapat membuka formulir yang sudah terisi konteks tujuan, sementara pemilihan
+  karyawan tetap manual.
 - Validator publish roster tidak lagi mencari assignment bulan berikutnya di
   draft bulan pemilik untuk off carry-out. Kasus Agustus 2026 dengan off pada
   2–3 September kini ditunda ke guard carry-in roster September, yang tetap
@@ -993,7 +1003,8 @@ Untuk perubahan hosted:
       production.
 - [x] Dua migration observability dan dua migration kebutuhan staf M8
       diterapkan tanpa reset production.
-- [x] Hosted lint dan pgTAP `328/328` lulus.
+- [x] Migration sinkronisasi cuti/backup diterapkan tanpa reset production.
+- [x] Hosted lint dan pgTAP `336/336` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---

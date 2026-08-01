@@ -2963,6 +2963,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sync_approved_leave_to_roster: {
+        Args: { p_leave_request_id: string }
+        Returns: Json
+      }
       update_employee_master: {
         Args: {
           p_change_reason: string
@@ -3102,7 +3106,6 @@ export type Database = {
     }
   }
 }
-
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]

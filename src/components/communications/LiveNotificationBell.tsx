@@ -24,6 +24,35 @@ import { playClickSound, playSuccessHaptic } from "@/utils/clickSound";
 type NotificationTab = "Semua" | "Jadwal" | "Pengajuan" | "Pengumuman";
 
 function notificationRoute(notification: CommunicationNotification) {
+  if (
+    notification.notification_type === "roster_backup_required" &&
+    notification.payload &&
+    typeof notification.payload === "object" &&
+    !Array.isArray(notification.payload)
+  ) {
+    const payload = notification.payload;
+    const monthStart =
+      typeof payload.month_start === "string" ? payload.month_start : null;
+    const workDate =
+      typeof payload.work_date === "string" ? payload.work_date : null;
+    const outletId =
+      typeof payload.outlet_id === "string" ? payload.outlet_id : null;
+    const shiftType =
+      typeof payload.shift_type === "string" ? payload.shift_type : null;
+
+    if (monthStart && workDate && outletId && shiftType) {
+      const params = new URLSearchParams({
+        action: "assign-backup",
+        month: monthStart,
+        date: workDate,
+        outlet: outletId,
+        shift: shiftType,
+      });
+      const leaveName = payload.leave_employee_name;
+      if (typeof leaveName === "string") params.set("leave", leaveName);
+      return `/schedule?${params.toString()}`;
+    }
+  }
   if (notification.subject_type?.includes("roster")) return "/schedule";
   if (notification.subject_type?.includes("leave")) return "/leaves";
   if (notification.subject_type?.includes("overtime")) return "/overtime";

@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(62);
+select extensions.plan(70);
 
 select extensions.ok(
   not has_function_privilege('anon', 'public.get_leave_workspace()', 'execute'),
@@ -39,6 +39,14 @@ select extensions.ok(
     'execute'
   ),
   'anonymous cannot decide leave'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.sync_approved_leave_to_roster(uuid)',
+    'execute'
+  ),
+  'authenticated clients cannot invoke leave-roster synchronization directly'
 );
 select extensions.ok(
   not has_function_privilege(
@@ -549,6 +557,312 @@ select extensions.ok(
   'leave decision creates an employee notification'
 );
 
+insert into public.outlets (
+  id,
+  code,
+  name,
+  address,
+  latitude,
+  longitude,
+  geofence_radius_m
+)
+values (
+  '74000000-0000-0000-0000-000000000001',
+  'LEAVE-ROSTER',
+  'Leave Roster Outlet',
+  'Test address',
+  -7.500000,
+  112.200000,
+  100
+);
+
+insert into public.employee_placements (
+  id,
+  employee_id,
+  outlet_id,
+  start_date,
+  is_primary,
+  change_reason
+)
+values (
+  '74000000-0000-0000-0000-000000000002',
+  '71000000-0000-0000-0000-000000000001',
+  '74000000-0000-0000-0000-000000000001',
+  current_date - 365,
+  true,
+  'Leave roster fixture'
+);
+
+insert into public.outlet_shift_templates (
+  id,
+  outlet_id,
+  shift_type,
+  starts_at,
+  ends_at,
+  is_active
+)
+values (
+  '74000000-0000-0000-0000-000000000003',
+  '74000000-0000-0000-0000-000000000001',
+  'night',
+  '14:00',
+  '22:00',
+  true
+);
+
+insert into public.roster_periods (
+  id,
+  month_start,
+  status,
+  publish_deadline
+)
+values (
+  '74000000-0000-0000-0000-000000000004',
+  date_trunc('month', current_date + interval '2 months')::date,
+  'preparing',
+  date_trunc('month', current_date + interval '2 months')::date - 7
+);
+
+insert into public.roster_versions (
+  id,
+  roster_period_id,
+  version_number,
+  status,
+  created_by
+)
+values (
+  '74000000-0000-0000-0000-000000000005',
+  '74000000-0000-0000-0000-000000000004',
+  1,
+  'draft',
+  '72000000-0000-0000-0000-000000000003'
+);
+
+insert into public.schedule_assignments (
+  id,
+  roster_version_id,
+  employee_id,
+  outlet_id,
+  shift_template_id,
+  work_date,
+  assignment_type,
+  planned_start,
+  planned_end,
+  planned_duration_min,
+  status
+)
+values (
+  '74000000-0000-0000-0000-000000000006',
+  '74000000-0000-0000-0000-000000000005',
+  '71000000-0000-0000-0000-000000000001',
+  '74000000-0000-0000-0000-000000000001',
+  '74000000-0000-0000-0000-000000000003',
+  date_trunc('month', current_date + interval '2 months')::date + 10,
+  'primary',
+  '14:00',
+  '22:00',
+  480,
+  'scheduled'
+);
+
+update public.roster_versions
+set
+  status = 'published',
+  published_at = now(),
+  published_by = '72000000-0000-0000-0000-000000000003'
+where id = '74000000-0000-0000-0000-000000000005';
+
+update public.roster_periods
+set
+  status = 'published',
+  active_version_id = '74000000-0000-0000-0000-000000000005'
+where id = '74000000-0000-0000-0000-000000000004';
+
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.submit_leave_request(
+    '74000000-0000-0000-0000-000000000007',
+    (select id from public.leave_types where code = 'sick'),
+    date_trunc('month', current_date + interval '2 months')::date + 10,
+    date_trunc('month', current_date + interval '2 months')::date + 10,
+    'Cuti dengan dampak roster',
+    null
+  )$$,
+  'employee can submit leave that overlaps a published roster'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '72000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select extensions.lives_ok(
+  $$select public.decide_leave_request(
+    '74000000-0000-0000-0000-000000000007',
+    'approved',
+    'Disetujui dan membutuhkan backup',
+    1
+  )$$,
+  'leave approval synchronizes the affected roster atomically'
+);
+
+reset role;
+select extensions.is(
+  (
+    select assignment.status::text
+    from public.schedule_assignments assignment
+    where assignment.id = '74000000-0000-0000-0000-000000000006'
+  ),
+  'scheduled',
+  'published roster assignment remains immutable'
+);
+select extensions.is(
+  (
+    select assignment.status::text
+    from public.schedule_assignments assignment
+    join public.roster_versions version
+      on version.id = assignment.roster_version_id
+    where version.roster_period_id = '74000000-0000-0000-0000-000000000004'
+      and version.status = 'draft'
+      and assignment.employee_id = '71000000-0000-0000-0000-000000000001'
+      and assignment.work_date =
+        date_trunc('month', current_date + interval '2 months')::date + 10
+  ),
+  'leave',
+  'editable roster draft is automatically marked as leave'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from public.notifications notification
+    where notification.notification_type = 'roster_backup_required'
+      and notification.subject_id = '74000000-0000-0000-0000-000000000007'
+      and notification.payload->>'action' = 'assign_backup'
+      and notification.payload->>'outlet_id' =
+        '74000000-0000-0000-0000-000000000001'
+      and notification.payload->>'shift_type' = 'night'
+  ),
+  'leave approval creates an actionable backup notification'
+);
+
+insert into public.employees (
+  id,
+  nik,
+  full_name,
+  joined_at,
+  employment_status_id,
+  job_position_id
+)
+values (
+  '71000000-0000-0000-0000-000000000005',
+  'RK-2098-005',
+  'Leave Backup Fixture',
+  current_date - 365,
+  (select id from public.employment_statuses where code = 'permanent'),
+  (select id from public.job_positions where code = 'cashier')
+);
+
+insert into public.employee_placements (
+  employee_id,
+  outlet_id,
+  start_date,
+  is_primary,
+  change_reason
+)
+values
+  (
+    '71000000-0000-0000-0000-000000000002',
+    '74000000-0000-0000-0000-000000000001',
+    current_date - 365,
+    true,
+    'Backup alert threshold fixture'
+  ),
+  (
+    '71000000-0000-0000-0000-000000000005',
+    '74000000-0000-0000-0000-000000000001',
+    current_date - 365,
+    true,
+    'Backup alert threshold fixture'
+  );
+
+insert into public.schedule_assignments (
+  roster_version_id,
+  employee_id,
+  outlet_id,
+  shift_template_id,
+  work_date,
+  planned_start,
+  planned_end,
+  planned_duration_min,
+  status
+)
+select
+  version.id,
+  employee_id,
+  '74000000-0000-0000-0000-000000000001',
+  '74000000-0000-0000-0000-000000000003',
+  date_trunc('month', current_date + interval '2 months')::date + 10,
+  '14:00',
+  '22:00',
+  480,
+  'scheduled'
+from public.roster_versions version
+cross join (
+  values
+    ('71000000-0000-0000-0000-000000000002'::uuid),
+    ('71000000-0000-0000-0000-000000000005'::uuid)
+) employee(employee_id)
+where version.roster_period_id = '74000000-0000-0000-0000-000000000004'
+  and version.status = 'draft';
+
+select public.workforce_notify_supervisors(
+  'roster_backup_required',
+  'Backup tidak diperlukan',
+  'Dua kasir masih tersedia.',
+  'roster_backup_need',
+  '74000000-0000-0000-0000-000000000008',
+  jsonb_build_object(
+    'roster_version_id', (
+      select version.id
+      from public.roster_versions version
+      where version.roster_period_id =
+        '74000000-0000-0000-0000-000000000004'
+        and version.status = 'draft'
+    ),
+    'outlet_id', '74000000-0000-0000-0000-000000000001',
+    'work_date',
+      date_trunc('month', current_date + interval '2 months')::date + 10
+  )
+);
+
+select extensions.ok(
+  not exists (
+    select 1
+    from public.notifications notification
+    where notification.subject_id = '74000000-0000-0000-0000-000000000008'
+  ),
+  'backup notification is suppressed when two cashiers remain available'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from public.audit_logs audit
+    where audit.action = 'sync_approved_leave_to_roster'
+      and audit.entity_id = '74000000-0000-0000-0000-000000000007'
+      and (audit.after_values->>'affected_schedule_count')::integer = 1
+  ),
+  'leave-roster synchronization is audited'
+);
+
 select set_config(
   'request.jwt.claim.sub',
   '72000000-0000-0000-0000-000000000001',
@@ -672,7 +986,7 @@ insert into public.outlets (
   longitude
 )
 values (
-  '74000000-0000-0000-0000-000000000001',
+  '7e000000-0000-0000-0000-000000000001',
   'LEAVE-TEST',
   'Leave Test Outlet',
   'Leave Test Address',
@@ -689,7 +1003,7 @@ insert into public.outlet_shift_templates (
 )
 values (
   '75000000-0000-0000-0000-000000000001',
-  '74000000-0000-0000-0000-000000000001',
+  '7e000000-0000-0000-0000-000000000001',
   'morning',
   '09:00',
   '17:00'
@@ -741,7 +1055,7 @@ values (
   '78000000-0000-0000-0000-000000000001',
   '77000000-0000-0000-0000-000000000001',
   '71000000-0000-0000-0000-000000000001',
-  '74000000-0000-0000-0000-000000000001',
+  '7e000000-0000-0000-0000-000000000001',
   '75000000-0000-0000-0000-000000000001',
   current_date + 50,
   '09:00',
@@ -771,7 +1085,7 @@ values (
   '79000000-0000-0000-0000-000000000001',
   '71000000-0000-0000-0000-000000000001',
   '78000000-0000-0000-0000-000000000001',
-  '74000000-0000-0000-0000-000000000001',
+  '7e000000-0000-0000-0000-000000000001',
   current_date + 50,
   ((current_date + 50 + time '09:00') at time zone 'Asia/Jakarta'),
   ((current_date + 50 + time '19:10') at time zone 'Asia/Jakarta'),
@@ -1109,7 +1423,7 @@ select extensions.ok(
 
 select extensions.skip(
   'Hosted role cannot seed workforce fixtures; transactional workflow tests run locally.',
-  46
+  53
 );
 
 \endif

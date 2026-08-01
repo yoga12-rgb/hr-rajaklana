@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarCheck2,
   CalendarDays,
@@ -123,6 +124,41 @@ type DecisionTarget = {
   decision: "accept" | "reject" | "approve";
 };
 
+type BackupIntent = {
+  monthStart: string;
+  workDate: string;
+  outletId: string;
+  shiftType: Exclude<RosterShiftType, "off" | "leave">;
+  leaveEmployeeName: string | null;
+};
+
+function backupIntentFromParams(params: {
+  get(name: string): string | null;
+}): BackupIntent | null {
+  const monthStart = params.get("month");
+  const workDate = params.get("date");
+  const outletId = params.get("outlet");
+  const shiftType = params.get("shift");
+  if (
+    params.get("action") !== "assign-backup" ||
+    !monthStart?.match(/^\d{4}-\d{2}-01$/) ||
+    !workDate?.match(/^\d{4}-\d{2}-\d{2}$/) ||
+    !outletId ||
+    !shiftType ||
+    !(["morning", "middle", "night"] as string[]).includes(shiftType)
+  ) {
+    return null;
+  }
+
+  return {
+    monthStart,
+    workDate,
+    outletId,
+    shiftType: shiftType as BackupIntent["shiftType"],
+    leaveEmployeeName: params.get("leave"),
+  };
+}
+
 /**
  * Halaman roster Supabase untuk M3 dan generator deterministik M7.
  *
@@ -133,8 +169,15 @@ type DecisionTarget = {
  */
 export function LiveSchedulePage() {
   const { showToast } = useHR();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const backupIntent = useMemo(
+    () => backupIntentFromParams(searchParams),
+    [searchParams]
+  );
   const [monthStart, setMonthStart] = useState(() =>
-    monthStartFromDate(new Date())
+    backupIntent?.monthStart ?? monthStartFromDate(new Date())
   );
   const [showEdit, setShowEdit] = useState(false);
   const [showBulkFill, setShowBulkFill] = useState(false);
@@ -295,6 +338,56 @@ export function LiveSchedulePage() {
   const hasUnreadOwnSchedule = ownAssignments.some(
     (assignment) => !assignment.acknowledged
   );
+
+  useEffect(() => {
+    if (!backupIntent || !canManage || isPending) return;
+
+    if (monthStart !== backupIntent.monthStart) {
+      const monthTimer = window.setTimeout(() => {
+        setMonthStart(backupIntent.monthStart);
+        setWorkDate(backupIntent.workDate);
+      }, 0);
+      return () => window.clearTimeout(monthTimer);
+    }
+
+    const matchingTemplate = (templatesQuery.data ?? []).find(
+      (template) =>
+        template.outlet_id === backupIntent.outletId &&
+        template.shift_type === backupIntent.shiftType
+    );
+    const timer = window.setTimeout(() => {
+      if (!matchingTemplate) {
+        showToast(
+          "Template shift kebutuhan backup sudah tidak aktif. Pilih shift secara manual.",
+          "warning"
+        );
+      }
+
+      setSelectedEmployeeId("");
+      setWorkDate(backupIntent.workDate);
+      setScheduleStatus("scheduled");
+      setAssignmentType("backup");
+      setOutletId(backupIntent.outletId);
+      setShiftType(matchingTemplate?.shift_type ?? backupIntent.shiftType);
+      setChangeReason(
+        backupIntent.leaveEmployeeName
+          ? `Backup karena ${backupIntent.leaveEmployeeName} cuti`
+          : "Backup karena cuti disetujui"
+      );
+      setShowEdit(true);
+      router.replace(pathname, { scroll: false });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    backupIntent,
+    canManage,
+    isPending,
+    monthStart,
+    pathname,
+    router,
+    showToast,
+    templatesQuery.data,
+  ]);
 
   const openAssignment = (
     employeeId: string,
@@ -1152,6 +1245,11 @@ export function LiveSchedulePage() {
               .filter((row): row is typeof row & { id: string } =>
                 Boolean(row.id)
               )
+              .filter(
+                (row) =>
+                  assignmentType !== "backup" ||
+                  row.primaryOutletId !== outletId
+              )
               .map((row) => ({
                 value: row.id,
                 label: row.name,
@@ -1161,12 +1259,19 @@ export function LiveSchedulePage() {
             onChange={(value) => {
               setSelectedEmployeeId(value);
               const employee = rows.find((row) => row.id === value);
-              if (employee?.primaryOutletId) {
+              if (employee?.primaryOutletId && assignmentType !== "backup") {
                 setOutletId(employee.primaryOutletId);
                 selectAvailableShift(employee.primaryOutletId);
               }
             }}
           />
+          {assignmentType === "backup" && scheduleStatus === "scheduled" && (
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-100">
+              Pilih karyawan dari outlet lain. Outlet, tanggal, dan shift tujuan
+              sudah mengikuti kebutuhan backup; alasan tetap dapat dikoreksi
+              sebelum disimpan.
+            </div>
+          )}
           <DatePicker
             label={scheduleStatus === "off" ? "Tanggal off" : "Tanggal jadwal"}
             value={workDate}

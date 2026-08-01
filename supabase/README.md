@@ -116,6 +116,12 @@ Jangan menjalankan reset terhadap production.
 - Client tidak memiliki hak tulis langsung ke tabel cuti, saldo, attachment,
   atau lembur. Semua keputusan memakai expected version, first-write-wins,
   larangan self-approval, notifikasi, dan audit.
+- Persetujuan cuti menyelaraskan roster secara atomik. Versi published tidak
+  disentuh; sistem membuat atau memakai draft, menandai assignment terkait
+  sebagai `leave`, menghapus metadata backup milik assignment yang cuti, dan
+  mengirim notifikasi `roster_backup_required` bila outlet tersisa kurang dari
+  dua kasir kerja. Notifikasi membawa konteks tanggal, outlet, serta shift;
+  pemilihan karyawan backup tetap dilakukan supervisor.
 - Presensi live wajib melalui RPC `clock_in_attendance` dan
   `clock_out_attendance`; jarak Haversine, accuracy GPS, jadwal terbit,
   geofence, dan status waktu dihitung ulang di database.

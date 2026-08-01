@@ -1,6 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { communicationKeys } from "@/lib/communications/query-keys";
+import { rosterKeys } from "@/lib/roster/query-keys";
 import { createClient } from "@/lib/supabase/client";
 import { workforceRequestKeys } from "./query-keys";
 import {
@@ -216,9 +218,13 @@ export function useDecideLeaveRequest() {
       }
     },
     onSettled: () =>
-      queryClient.invalidateQueries({
-        queryKey: workforceRequestKeys.leave(),
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: workforceRequestKeys.leave(),
+        }),
+        queryClient.invalidateQueries({ queryKey: rosterKeys.all }),
+        queryClient.invalidateQueries({ queryKey: communicationKeys.all }),
+      ]),
   });
 }
 
