@@ -2,7 +2,7 @@ begin;
 
 set local search_path = extensions, public, pg_catalog;
 
-select extensions.plan(62);
+select extensions.plan(64);
 
 select extensions.ok(
   not has_function_privilege(
@@ -79,7 +79,7 @@ select extensions.ok(
 select extensions.ok(
   not has_function_privilege(
     'anon',
-    'public.replace_outlet_staffing_requirements(uuid,smallint,date,jsonb,text)',
+    'public.replace_outlet_staffing_requirements(uuid,smallint,date,text,jsonb,text)',
     'execute'
   ),
   'anonymous cannot replace outlet staffing requirements'
@@ -353,6 +353,7 @@ select extensions.throws_ok(
     '53000000-0000-0000-0000-000000000001',
     4::smallint,
     '2098-04-01',
+    'weekday',
     '[{"shift_type":"morning","minimum_staff":1}]'::jsonb,
     'Blocked staffing update'
   )$$,
@@ -390,6 +391,7 @@ select extensions.throws_ok(
     '53000000-0000-0000-0000-000000000001',
     4::smallint,
     '2098-04-01',
+    'weekday',
     '[{"shift_type":"morning","minimum_staff":1}]'::jsonb,
     'Blocked management staffing update'
   )$$,
@@ -839,9 +841,10 @@ select extensions.lives_ok(
     '53000000-0000-0000-0000-000000000001',
     4::smallint,
     '2098-04-01',
+    'weekday',
     '[
       {"shift_type":"morning","minimum_staff":1},
-      {"shift_type":"middle","minimum_staff":1},
+      {"shift_type":"middle","minimum_staff":0},
       {"shift_type":"night","minimum_staff":1}
     ]'::jsonb,
     'Kebutuhan awal empat kasir'
@@ -867,8 +870,8 @@ select extensions.is(
       and requirement.cashier_count = 4
       and requirement.effective_from = '2098-04-01'
   ),
-  3,
-  'staffing requirement set stores the minimum total'
+  2,
+  'staffing requirement set stores an explicit zero Middle minimum'
 );
 select extensions.is(
   (
@@ -884,7 +887,35 @@ select extensions.lives_ok(
   $$select public.replace_outlet_staffing_requirements(
     '53000000-0000-0000-0000-000000000001',
     4::smallint,
+    '2098-04-01',
+    'weekend',
+    '[
+      {"shift_type":"morning","minimum_staff":1},
+      {"shift_type":"middle","minimum_staff":0},
+      {"shift_type":"night","minimum_staff":1}
+    ]'::jsonb,
+    'Kebutuhan weekend tanpa Middle'
+  )$$,
+  'supervisor saves an independent weekend staffing requirement set'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.outlet_staffing_requirements requirement
+    where requirement.outlet_id = '53000000-0000-0000-0000-000000000001'
+      and requirement.cashier_count = 4
+      and requirement.effective_from = '2098-04-01'
+      and requirement.day_scope in ('weekday', 'weekend')
+  ),
+  6,
+  'weekday and weekend staffing versions coexist'
+);
+select extensions.lives_ok(
+  $$select public.replace_outlet_staffing_requirements(
+    '53000000-0000-0000-0000-000000000001',
+    4::smallint,
     '2098-05-01',
+    'weekday',
     '[
       {"shift_type":"morning","minimum_staff":1},
       {"shift_type":"middle","minimum_staff":1},
@@ -910,6 +941,7 @@ select extensions.throws_ok(
     '53000000-0000-0000-0000-000000000001',
     4::smallint,
     '2098-06-01',
+    'weekday',
     '[
       {"shift_type":"morning","minimum_staff":2},
       {"shift_type":"middle","minimum_staff":2},
@@ -926,7 +958,7 @@ select extensions.throws_ok(
 
 select * from extensions.skip(
   'hosted CLI role cannot seed transactional master data fixtures',
-  45
+  47
 );
 
 \endif

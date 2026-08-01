@@ -1610,6 +1610,30 @@ const SHIFT_LABELS = {
 } as const;
 const SHIFT_ORDER = { morning: 0, middle: 1, night: 2 } as const;
 
+function defaultStaffingMinimum(
+  cashierCount: number,
+  dayScope: "weekday" | "weekend"
+) {
+  if (cashierCount <= 1) {
+    return { morning: 1, middle: 0, night: 0 } as const;
+  }
+  if (cashierCount === 2) {
+    return { morning: 1, middle: 0, night: 1 } as const;
+  }
+  if (cashierCount === 3) {
+    return {
+      morning: 1,
+      middle: dayScope === "weekday" ? 1 : 0,
+      night: 1,
+    } as const;
+  }
+  return {
+    morning: Math.ceil(cashierCount / 2),
+    middle: 0,
+    night: Math.floor(cashierCount / 2),
+  } as const;
+}
+
 function localDateValue(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -1633,7 +1657,10 @@ function LiveStaffingRequirementManager() {
   const [selectedOutletOverride, setSelectedOutletOverride] = useState("");
   const selectedOutletId =
     selectedOutletOverride || outletQuery.data?.[0]?.id || "";
-  const [cashierCount, setCashierCount] = useState(4);
+  const [cashierCount, setCashierCount] = useState(3);
+  const [dayScope, setDayScope] = useState<"weekday" | "weekend">(
+    "weekday"
+  );
   const [effectiveFrom, setEffectiveFrom] = useState(localDateValue);
   const [reason, setReason] = useState("");
   const [formError, setFormError] = useState("");
@@ -1643,21 +1670,23 @@ function LiveStaffingRequirementManager() {
       (left, right) =>
         SHIFT_ORDER[left.shift_type] - SHIFT_ORDER[right.shift_type]
     );
-  const selectionKey = `${selectedOutletId}:${cashierCount}:${effectiveFrom}`;
+  const selectionKey = `${selectedOutletId}:${cashierCount}:${dayScope}:${effectiveFrom}`;
   const effectiveRows = (staffingQuery.data ?? []).filter(
     (requirement) =>
       requirement.outlet_id === selectedOutletId &&
       requirement.cashier_count === cashierCount &&
+      requirement.day_scope === dayScope &&
       requirement.effective_from <= effectiveFrom &&
       (!requirement.effective_until ||
         requirement.effective_until >= effectiveFrom)
   );
+  const recommendedMinimums = defaultStaffingMinimum(cashierCount, dayScope);
   const minimumDefaults = Object.fromEntries(
     activeTemplates.map((template) => [
       template.shift_type,
       effectiveRows.find(
         (requirement) => requirement.shift_template_id === template.id
-      )?.minimum_staff ?? 1,
+      )?.minimum_staff ?? recommendedMinimums[template.shift_type],
     ])
   ) as Partial<Record<keyof typeof SHIFT_LABELS, number>>;
   const [staffingDraft, setStaffingDraft] = useState<{
@@ -1755,14 +1784,22 @@ function LiveStaffingRequirementManager() {
       return;
     }
 
+    if (totalMinimum < 1) {
+      setFormError("Sedikitnya satu shift harus memiliki minimum staf.");
+      return;
+    }
+
     try {
       await mutation.mutateAsync({
         outletId: selectedOutletId,
         cashierCount,
+        dayScope,
         effectiveFrom,
         requirements: activeTemplates.map((template) => ({
           shiftType: template.shift_type,
-          minimumStaff: minimums[template.shift_type] ?? 1,
+          minimumStaff:
+            minimums[template.shift_type] ??
+            recommendedMinimums[template.shift_type],
         })),
         reason: reason.trim(),
       });
@@ -1790,12 +1827,12 @@ function LiveStaffingRequirementManager() {
             Kebutuhan Staf Outlet
           </h3>
           <p className="text-[11px] leading-relaxed text-slate-400">
-            Tentukan minimum staf per shift untuk setiap skenario jumlah kasir.
-            Generator memakai skenario dan versi yang efektif pada tanggal roster.
+            Jumlah kasir dihitung setelah off, cuti, dan backup. Override dapat
+            dibedakan untuk weekday dan weekend.
           </p>
         </div>
         <span className="shrink-0 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
-          {hasEffectiveConfiguration ? "Terkonfigurasi" : "Belum diatur"}
+          {hasEffectiveConfiguration ? "Override aktif" : "Default sistem"}
         </span>
       </div>
 
@@ -1822,7 +1859,13 @@ function LiveStaffingRequirementManager() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-400">
+        Default: 2 kasir memakai Pagi dan Malam; 3 kasir memakai Middle hanya
+        Senin–Jumat; 4 kasir dibagi ke Pagi dan Malam. Simpan override hanya
+        bila kebutuhan outlet berbeda.
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs font-medium text-slate-300">
           Outlet
           <select
@@ -1848,6 +1891,20 @@ function LiveStaffingRequirementManager() {
           disabled={!isSupervisor}
           onChange={setCashierCount}
         />
+        <label className="text-xs font-medium text-slate-300">
+          Jenis hari
+          <select
+            value={dayScope}
+            disabled={!isSupervisor}
+            onChange={(event) =>
+              setDayScope(event.target.value as "weekday" | "weekend")
+            }
+            className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none focus:border-amber-500 disabled:opacity-60 sm:text-xs"
+          >
+            <option value="weekday">Weekday (Senin–Jumat)</option>
+            <option value="weekend">Weekend (Sabtu–Minggu)</option>
+          </select>
+        </label>
         <DatePicker
           label="Berlaku mulai"
           value={effectiveFrom}
@@ -1860,8 +1917,11 @@ function LiveStaffingRequirementManager() {
           <PolicyNumberField
             key={template.id}
             label={`Minimum shift ${SHIFT_LABELS[template.shift_type]}`}
-            value={minimums[template.shift_type] ?? 1}
-            min={1}
+            value={
+              minimums[template.shift_type] ??
+              recommendedMinimums[template.shift_type]
+            }
+            min={0}
             max={cashierCount}
             unit="orang"
             disabled={!isSupervisor}
@@ -1904,7 +1964,7 @@ function LiveStaffingRequirementManager() {
             {mutation.isPending && (
               <LoaderCircle className="h-4 w-4 animate-spin" />
             )}
-            Simpan Kebutuhan
+            Simpan Override
           </button>
         </div>
       )}

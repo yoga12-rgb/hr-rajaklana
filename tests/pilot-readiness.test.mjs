@@ -58,12 +58,10 @@ test("menolak kandidat ketika satu akun masih wajib ganti kata sandi", () => {
   assert.equal(countPilotCapableOutlets(snapshot), 0);
 });
 
-test("menolak kebutuhan staf untuk jumlah kasir yang berbeda", () => {
+test("menerima outlet tanpa override kebutuhan staf", () => {
   const snapshot = candidateSnapshot();
-  snapshot.staffingRequirements.forEach((requirement) => {
-    requirement.cashier_count = 4;
-  });
-  assert.equal(countPilotCapableOutlets(snapshot), 0);
+  snapshot.staffingRequirements = [];
+  assert.equal(countPilotCapableOutlets(snapshot), 1);
 });
 
 test("menghasilkan WAIT untuk gate manual setelah prasyarat teknis lulus", () => {

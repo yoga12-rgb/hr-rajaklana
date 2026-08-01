@@ -116,7 +116,6 @@ async function collectFacts() {
     outlets,
     placements,
     shiftTemplates,
-    staffingRequirements,
     policies,
     exhaustedDeletionJobs,
     overdueDeletionJobs,
@@ -157,14 +156,6 @@ async function collectFacts() {
       supabase
         .from("outlet_shift_templates")
         .select("id,outlet_id,shift_type,is_active")
-    ),
-    rows(
-      "Kebutuhan staf",
-      supabase
-        .from("outlet_staffing_requirements")
-        .select(
-          "shift_template_id,outlet_id,cashier_count,effective_from,effective_until"
-        )
     ),
     rows(
       "Kebijakan",
@@ -261,7 +252,6 @@ async function collectFacts() {
     outlets,
     placements,
     shiftTemplates,
-    staffingRequirements,
   };
 
   return {

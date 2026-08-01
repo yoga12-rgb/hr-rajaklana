@@ -27,7 +27,8 @@ supervisor tersedia melalui tombol **Buat Otomatis** pada halaman Jadwal.
 - warning ketika penempatan off menimbulkan lebih dari enam hari kerja
   berturut-turut;
 - Pagi sebelum off dan Malam setelah off;
-- tepat satu Middle saat tiga kasir tersedia, jika kapasitas memungkinkan;
+- tepat satu Middle saat tiga kasir bekerja pada weekday, jika kapasitas
+  memungkinkan; dua kasir atau weekend tidak membutuhkan Middle;
 - maksimum satu Middle per kasir per pekan;
 - kebutuhan minimum dan template shift outlet;
 - perpindahan lintas outlet hanya melalui backup manual;
@@ -36,7 +37,8 @@ supervisor tersedia melalui tombol **Buat Otomatis** pada halaman Jadwal.
 ## Strategi
 
 1. Normalisasi status tetap: off, cuti, dan shift terkunci.
-2. Bentuk kebutuhan per outlet dan tanggal.
+2. Bentuk kebutuhan per outlet dan tanggal setelah off, cuti, dan backup;
+   pilih target weekday/weekend berdasarkan jumlah kasir yang bekerja.
 3. Alokasikan Middle mingguan dengan deterministic bipartite matching.
 4. Terapkan pola wajib di sekitar off day.
 5. Isi Pagi/Malam secara greedy berdasarkan jumlah shift, frekuensi pasangan,
@@ -54,7 +56,7 @@ Jalankan:
 npm run test:unit
 ```
 
-Tujuh fixture memeriksa roster bulanan empat kasir, reproduktibilitas, aturan
+Sembilan fixture memeriksa roster bulanan empat kasir, reproduktibilitas, aturan
 off, warning lebih dari enam hari kerja, batas Middle, keterbatasan kapasitas,
 backup outlet, input yang tidak valid, perubahan penempatan efektif di tengah
 bulan, konsistensi fairness report, serta target performa 200 kasir dalam 30

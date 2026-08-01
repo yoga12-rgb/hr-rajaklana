@@ -19,8 +19,8 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 > `supabase/README.md` sebelum mengerjakan integrasi backend.
 
 - Supabase hosted sudah terhubung ke project ref `ttbogurultjbporryylb`.
-- Tiga puluh empat migration sudah diterapkan dan cocok antara lokal/remote.
-- Local/hosted lint schema `public` bersih dan pgTAP lulus 324/324 pada
+- Tiga puluh lima migration sudah diterapkan dan cocok antara lokal/remote.
+- Local/hosted lint schema `public` bersih dan pgTAP lulus 328/328 pada
   1 Agustus 2026.
 - Client browser/server dan proxy refresh sesi sudah tersedia.
 - Batas sumber data `APP_DATA_SOURCE=demo|supabase`, provider TanStack Query,
@@ -36,8 +36,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   memakai Supabase.
   Kebijakan diterbitkan sebagai versi baru; penggantian template shift
   mempertahankan record lama untuk referensi jadwal historis. Kebutuhan staf
-  disimpan per jumlah kasir dan tanggal efektif dengan histori yang tidak
-  dapat ditulis langsung oleh client.
+  adalah override opsional per jumlah kasir bekerja, weekday/weekend, dan
+  tanggal efektif. Default Middle hanya berlaku weekday saat tepat tiga kasir
+  bekerja; histori tidak dapat ditulis langsung oleh client.
 - Modul selain Dashboard, komunikasi, Laporan, data karyawan, Jadwal,
   Cuti/Izin, Lembur, Presensi, dan Pengaturan master data masih memakai
   `HRContext` dan `localStorage`.

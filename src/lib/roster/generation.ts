@@ -19,6 +19,7 @@ const SHIFT_VALUES = new Set<OptimizerShift>([
   "middle",
   "night",
 ]);
+const DAY_SCOPE_VALUES = new Set(["weekday", "weekend"] as const);
 
 function asRecord(value: unknown, label: string) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -58,6 +59,15 @@ function asShift(value: unknown) {
     throw new Error("Jenis shift dari database tidak didukung optimizer.");
   }
   return shift;
+}
+
+function optionalDayScope(value: unknown) {
+  if (value === undefined || value === null) return undefined;
+  const dayScope = asString(value, "Cakupan hari kebutuhan staf");
+  if (!DAY_SCOPE_VALUES.has(dayScope as "weekday" | "weekend")) {
+    throw new Error("Cakupan hari kebutuhan staf tidak didukung optimizer.");
+  }
+  return dayScope as "weekday" | "weekend";
 }
 
 function parseEmployee(value: unknown): OptimizerEmployee {
@@ -126,6 +136,7 @@ function parseOutlet(value: unknown): OptimizerOutlet {
           requirement.cashierCount,
           "Jumlah kasir kebutuhan staf"
         ),
+        dayScope: optionalDayScope(requirement.dayScope),
         shift: asShift(requirement.shift),
         minimumStaff: asInteger(
           requirement.minimumStaff,

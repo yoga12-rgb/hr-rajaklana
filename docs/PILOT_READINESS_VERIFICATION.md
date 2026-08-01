@@ -12,8 +12,8 @@ Pemeriksaan mengagregasi:
 - supervisor aktif, outlet aktif, dan kasir eligible roster;
 - akun karyawan yang aktif serta sudah menyelesaikan perubahan kata sandi;
 - outlet kandidat dengan minimal tiga kasir siap, penempatan utama efektif,
-  serta template dan kebutuhan staf Pagi/Middle/Malam yang cocok dengan jumlah
-  kasir siap di outlet;
+  serta template Pagi/Middle/Malam; override kebutuhan staf tidak wajib karena
+  generator memiliki default berdasarkan kasir bekerja dan jenis hari;
 - policy attendance, leave, overtime, dan roster yang efektif;
 - job retensi jatuh tempo/retry habis/lease tertahan;
 - job ekspor laporan yang menghabiskan retry; dan
@@ -45,7 +45,7 @@ npm run attendance:verify-retention -- --evidence-id <uuid> --expect-deleted
 - Outlet aktif: 1 (`PASS`).
 - Kasir eligible roster: 4 (`PASS`).
 - Akun karyawan siap: 4 (`PASS`).
-- Outlet kandidat pilot: 0 (`BLOCKED`; kebutuhan staf efektif belum diatur).
+- Outlet kandidat pilot: 1 (`PASS`).
 - Empat policy aktif dan antrean operasional sehat (`PASS`).
 - Cron otomatis tercatat 1 Agustus 2026 pukul 03.59 WIB (`PASS`).
 - Evidence terbaru jatuh tempo 7 Agustus 2026 pukul 11.08 WIB (`WAIT`).
@@ -55,7 +55,8 @@ Jangan menambahkan akun atau memilih pengguna pilot melalui script ini.
 Pembuatan akun tetap dilakukan supervisor dari UI, dan scope pilot tetap
 memerlukan persetujuan pemilik produk.
 
-Kebutuhan staf dapat diatur oleh supervisor melalui **Pengaturan → Kebijakan
-Kerja → Kebutuhan Staf Outlet**. Untuk kondisi empat kasir, konfigurasi awal
-yang aman adalah minimum satu orang pada Pagi, Middle, dan Malam; satu kasir
-tersisa dapat dipakai optimizer untuk pemerataan atau backup.
+Override kebutuhan staf dapat diatur melalui **Pengaturan → Kebijakan Kerja →
+Kebutuhan Staf Outlet**, tetapi tidak wajib. Default sistem menghitung kasir
+yang bekerja setelah off/cuti/backup: dua kasir memakai Pagi dan Malam, tiga
+kasir memakai Middle hanya pada Senin–Jumat, dan empat kasir dibagi ke Pagi dan
+Malam.

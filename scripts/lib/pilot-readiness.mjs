@@ -60,23 +60,7 @@ export function countPilotCapableOutlets(snapshot) {
     ).size;
     const configuredShiftTypes = new Set(
       activeTemplates
-        .filter(
-          (template) =>
-            template.outlet_id === outlet.id &&
-            snapshot.staffingRequirements.some(
-              (requirement) =>
-                requirement.outlet_id === outlet.id &&
-                requirement.shift_template_id === template.id &&
-                requirement.cashier_count === employeeCount &&
-                isEffectiveOn(
-                  {
-                    start: requirement.effective_from,
-                    end: requirement.effective_until,
-                  },
-                  snapshot.today
-                )
-            )
-        )
+        .filter((template) => template.outlet_id === outlet.id)
         .map((template) => template.shift_type)
     );
 
@@ -129,7 +113,7 @@ export function evaluatePilotReadiness(facts) {
       "Kandidat outlet pilot",
       facts.pilotCapableOutlets >= 1
         ? `${facts.pilotCapableOutlets} outlet memenuhi data minimum`
-        : "butuh 3 akun kasir siap, penempatan aktif, serta Pagi/Middle/Malam dengan kebutuhan staf"
+        : "butuh 3 akun kasir siap, penempatan aktif, serta template Pagi/Middle/Malam"
     ),
     check(
       facts.activePolicyTypes.length === REQUIRED_POLICY_TYPES.length

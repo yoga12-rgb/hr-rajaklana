@@ -159,6 +159,7 @@ erDiagram
         uuid outlet_id FK
         uuid shift_template_id FK
         smallint cashier_count
+        text day_scope
         smallint minimum_staff
         date effective_from
         date effective_until
@@ -344,6 +345,9 @@ erDiagram
 10. Pertukaran shift hanya boleh antara dua jadwal pada outlet yang sama.
 11. Perubahan roster setelah publikasi membuat notifikasi dan acknowledgement baru.
 12. Validasi aturan lintas baris dijalankan oleh fungsi transaksi database sebelum publikasi.
+    Jumlah kasir untuk kebutuhan staf dihitung setelah off/cuti dan pergerakan
+    backup. Default Middle hanya berlaku Senin–Jumat saat tepat tiga kasir
+    bekerja; override weekday/weekend boleh menetapkan minimum `0`.
 13. Client authenticated tidak memperoleh hak tulis langsung ke tabel historis roster; seluruh perubahan melalui RPC role-aware.
 14. Satu sumber jatah off pekanan hanya dapat digunakan sekali per karyawan, termasuk saat dipinjam dari pekan bersebelahan.
 15. Selfie clock-in dapat dipreview supervisor sejak clock-in, tetapi keputusan
@@ -704,7 +708,7 @@ erDiagram
 | `outlets` | Data outlet dan titik geofence | Radius 50–500 meter; koordinat wajib untuk outlet aktif |
 | `employee_placements` | Riwayat penempatan | Tidak boleh ada dua penempatan utama aktif yang tumpang tindih |
 | `outlet_shift_templates` | Jam Morning/Middle/Night per outlet | Unik per `(outlet_id, shift_type)` pada periode aktif |
-| `outlet_staffing_requirements` | Kebutuhan minimum staf | Mendukung perubahan efektif berdasarkan tanggal |
+| `outlet_staffing_requirements` | Override kebutuhan minimum staf | Berdasarkan kasir bekerja harian, weekday/weekend, dan tanggal efektif; minimum shift boleh `0` |
 | `policy_versions` | Snapshot parameter bisnis | Menjamin keputusan lama dapat diaudit dengan aturan saat itu |
 
 ### 8.2 Roster

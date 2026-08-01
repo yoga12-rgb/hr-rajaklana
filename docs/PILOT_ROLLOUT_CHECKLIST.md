@@ -26,9 +26,10 @@ npm run operations:verify-pilot
 
 Hasil `WAIT` berarti bukti manual atau berbasis waktu belum lengkap. Hasil
 `BLOCKED` berarti prasyarat teknis harus diperbaiki sebelum pilot. Pemeriksaan
-1 Agustus 2026 menemukan empat akun karyawan siap. Outlet belum menjadi
-kandidat sampai kebutuhan staf efektif Pagi/Middle/Malam disimpan melalui
-Pengaturan. Detail kontrak output berada di
+1 Agustus 2026 menemukan empat akun karyawan siap dan satu outlet kandidat
+teknis. Override kebutuhan staf tidak wajib karena komposisi default memakai
+jumlah kasir bekerja setelah off/cuti/backup dan jenis hari. Detail kontrak
+output berada di
 `docs/PILOT_READINESS_VERIFICATION.md`.
 
 ## Scope awal

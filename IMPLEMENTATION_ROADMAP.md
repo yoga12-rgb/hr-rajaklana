@@ -73,7 +73,7 @@ Sudah tersedia:
 - Supabase browser client, server client berbasis cookie, dan Next.js Proxy
   untuk refresh sesi.
 - Public sign-up dan anonymous sign-in dinonaktifkan pada konfigurasi lokal.
-- Project hosted sudah terhubung dan tiga puluh empat migration berikut
+- Project hosted sudah terhubung dan tiga puluh lima migration berikut
   identik antara lokal dan remote:
 
 | Migration                                                          | Fungsi                                     |
@@ -112,12 +112,13 @@ Sudah tersedia:
 | `20260729210000_harden_operational_health_role_check.sql`          | Gate role NULL-safe workspace operasional  |
 | `20260801163000_fix_cross_month_publish_pattern.sql`               | Koreksi pola off carry-out saat publish     |
 | `20260801183000_staffing_requirement_management.sql`               | Kebutuhan staf versioned dan jalur tulis aman |
+| `20260801194500_staffing_availability_and_day_scope.sql`            | Staffing harian dan scope weekday/weekend   |
 
 Verifikasi terakhir terhadap hosted project:
 
 - Migration lokal dan remote cocok.
 - Lint schema `public` tidak menemukan error.
-- pgTAP lulus `324/324`.
+- pgTAP lulus `328/328`.
 
 ### B3 — Batas baseline yang wajib dipahami
 
@@ -417,9 +418,10 @@ Selesai:
 - Penggantian template shift menonaktifkan template aktif lama lalu membuat
   record baru sehingga jadwal historis tidak berubah. Jam Pagi/Middle/Malam,
   toleransi terlambat, dan toleransi pulang awal dapat berbeda per outlet.
-- Supervisor dapat mengatur minimum staf Pagi/Middle/Malam berdasarkan jumlah
-  kasir dan tanggal efektif langsung dari Pengaturan. Versi berikutnya menutup
-  rentang versi sebelumnya; total minimum yang melebihi jumlah kasir ditolak.
+- Supervisor dapat membuat override minimum staf Pagi/Middle/Malam berdasarkan
+  kasir yang benar-benar bekerja, weekday/weekend, dan tanggal efektif. Default
+  sistem menghilangkan Middle saat hanya dua kasir bekerja dan pada weekend;
+  versi berikutnya menutup rentang sebelumnya dan minimum shift boleh `0`.
 - Hak tulis langsung client pada tabel kebijakan, template shift, dan kebutuhan
   staf dicabut; seluruh perubahan wajib melewati RPC versioned yang diaudit.
 - Supervisor dapat mengunduh template XLSX dua sheet, memilih file hingga
@@ -746,8 +748,8 @@ diedit supervisor.
 - Pisahkan hard constraints dan soft constraints sesuai PRD.
 - Terapkan satu off day per pekan dengan mekanisme peminjaman yang tercatat.
 - Terapkan pagi sebelum off dan malam setelah off.
-- Jika hanya tiga kasir aktif di outlet pada suatu hari, tetapkan tepat satu
-  middle bila layak.
+- Jika tepat tiga kasir bekerja di outlet pada weekday, tetapkan tepat satu
+  Middle bila layak. Dua kasir atau weekend tidak membutuhkan Middle.
 - Jatah middle maksimum satu kali per orang per pekan.
 - Seimbangkan jumlah shift pagi/malam dan pertemuan pasangan kasir selama satu
   bulan.
@@ -862,21 +864,21 @@ menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
   dan secret tidak mencapai client.
 - Runbook insiden, panduan backup/restore, dan checklist pilot sudah tersedia.
   Restore drill lokal terbaru lulus pada 1 Agustus 2026: 42 tabel, 79 fungsi,
-  dan 34 migration identik setelah dipulihkan ke database disposable; dump dan
+  dan 35 migration identik setelah dipulihkan ke database disposable; dump dan
   database drill dibersihkan otomatis.
-- Local/hosted lint schema bersih dan pgTAP `324/324`; lint, typecheck, build
-  live/demo, lima belas unit test, dan 20 E2E desktop/mobile lulus.
+- Local/hosted lint schema bersih dan pgTAP `328/328`; lint, typecheck, build
+  live/demo, enam belas unit test, dan 20 E2E desktop/mobile lulus.
 - Verifier read-only `npm run operations:verify-pilot` memeriksa target hosted,
-  akun, outlet, kasir eligible, penempatan, template/kebutuhan shift, policy,
+  akun, outlet, kasir eligible, penempatan, template shift, policy,
   job operasional, dan audit cron tanpa mencetak PII, UUID, path Storage,
   error mentah, atau secret. Pemeriksaan 1 Agustus 2026 menemukan satu
   supervisor aktif, satu outlet aktif, empat kasir eligible serta siap login,
-  seluruh policy aktif, antrean sehat, dan cron sukses. Outlet kandidat masih
-  menunggu konfigurasi kebutuhan staf efektif untuk Pagi/Middle/Malam melalui
-  Pengaturan.
-- Pengaturan live menyediakan form kebutuhan staf outlet per jumlah kasir dan
-  tanggal efektif. Nilai disimpan atomik, mempertahankan histori, menulis audit,
-  dan langsung menjadi input generator serta verifier pilot.
+  seluruh policy aktif, antrean sehat, dan cron sukses. Satu outlet kini lulus
+  sebagai kandidat teknis tanpa mewajibkan override kebutuhan staf.
+- Pengaturan live menyediakan override kebutuhan staf outlet per kasir bekerja,
+  weekday/weekend, dan tanggal efektif. Nilai `0` didukung, perubahan disimpan
+  atomik, mempertahankan histori, dan menulis audit. Generator serta validator
+  publish menghitung kasir harian setelah off, cuti, dan backup.
 - Validator publish roster tidak lagi mencari assignment bulan berikutnya di
   draft bulan pemilik untuk off carry-out. Kasus Agustus 2026 dengan off pada
   2–3 September kini ditunda ke guard carry-in roster September, yang tetap
@@ -989,9 +991,9 @@ Untuk perubahan hosted:
 - [x] `migration list --linked` diperiksa sebelum dan sesudah push.
 - [x] Dua migration M7 dan satu koreksi carry-over diterapkan tanpa reset
       production.
-- [x] Dua migration observability dan satu migration kebutuhan staf M8
+- [x] Dua migration observability dan dua migration kebutuhan staf M8
       diterapkan tanpa reset production.
-- [x] Hosted lint dan pgTAP `324/324` lulus.
+- [x] Hosted lint dan pgTAP `328/328` lulus.
 - [x] Tidak pernah melakukan reset production.
 
 ---

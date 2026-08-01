@@ -117,7 +117,9 @@ test("menghasilkan roster bulanan valid dan deterministik untuk empat kasir", ()
     const middleCount = daily.filter(
       (assignment) => assignment.shift === "middle"
     ).length;
-    assert.equal(middleCount, daily.length === 3 ? 1 : 0);
+    const day = new Date(`${date}T00:00:00.000Z`).getUTCDay();
+    const isWeekday = day >= 1 && day <= 5;
+    assert.equal(middleCount, daily.length === 3 && isWeekday ? 1 : 0);
   }
 
   for (const detail of first.fairnessDetails) {
@@ -148,7 +150,13 @@ test("menghasilkan roster bulanan valid dan deterministik untuk empat kasir", ()
 });
 
 test("melaporkan konflik yang dapat ditindaklanjuti ketika kapasitas Middle tidak cukup", () => {
-  const result = generateDeterministicRoster(createInput(3));
+  const input = createInput(3);
+  input.outlets[0].staffingRequirements = [
+    { cashierCount: 3, shift: "morning", minimumStaff: 1 },
+    { cashierCount: 3, shift: "middle", minimumStaff: 1 },
+    { cashierCount: 3, shift: "night", minimumStaff: 1 },
+  ];
+  const result = generateDeterministicRoster(input);
 
   assert.equal(result.status, "invalid");
   const conflict = result.conflicts.find(
@@ -157,6 +165,23 @@ test("melaporkan konflik yang dapat ditindaklanjuti ketika kapasitas Middle tida
   assert.ok(conflict);
   assert.ok(conflict.description.includes("Middle"));
   assert.ok(conflict.suggestions.length > 0);
+});
+
+test("menghilangkan Middle pada weekend dan ketika dua kasir tersedia", () => {
+  const result = generateDeterministicRoster(createInput(3));
+
+  for (const assignment of result.assignments) {
+    if (assignment.shift !== "middle") continue;
+    const day = new Date(`${assignment.date}T00:00:00.000Z`).getUTCDay();
+    assert.ok(day >= 1 && day <= 5);
+    const workingCount = result.assignments.filter(
+      (candidate) =>
+        candidate.date === assignment.date &&
+        candidate.shift !== "off" &&
+        candidate.shift !== "leave"
+    ).length;
+    assert.equal(workingCount, 3);
+  }
 });
 
 test("memperingatkan lebih dari enam hari kerja tanpa menggagalkan roster", () => {

@@ -60,6 +60,7 @@ export interface ShiftTemplateInput {
 export interface StaffingRequirementInput {
   outletId: string;
   cashierCount: number;
+  dayScope: "weekday" | "weekend";
   effectiveFrom: string;
   requirements: Array<{
     shiftType: Database["public"]["Enums"]["shift_type"];
@@ -298,6 +299,7 @@ export async function listStaffingRequirements(client: MasterDataClient) {
         outlet_id,
         shift_template_id,
         cashier_count,
+        day_scope,
         minimum_staff,
         effective_from,
         effective_until,
@@ -514,6 +516,7 @@ export async function replaceOutletStaffingRequirements(
     {
       p_outlet_id: input.outletId,
       p_cashier_count: input.cashierCount,
+      p_day_scope: input.dayScope,
       p_effective_from: input.effectiveFrom,
       p_requirements: input.requirements.map((requirement) => ({
         shift_type: requirement.shiftType,

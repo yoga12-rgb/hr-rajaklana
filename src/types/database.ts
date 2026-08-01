@@ -1335,6 +1335,7 @@ export type Database = {
         Row: {
           cashier_count: number
           created_at: string
+          day_scope: string
           effective_from: string
           effective_until: string | null
           id: string
@@ -1346,6 +1347,7 @@ export type Database = {
         Insert: {
           cashier_count: number
           created_at?: string
+          day_scope?: string
           effective_from: string
           effective_until?: string | null
           id?: string
@@ -1357,6 +1359,7 @@ export type Database = {
         Update: {
           cashier_count?: number
           created_at?: string
+          day_scope?: string
           effective_from?: string
           effective_until?: string | null
           id?: string
@@ -2803,6 +2806,7 @@ export type Database = {
       replace_outlet_staffing_requirements: {
         Args: {
           p_cashier_count: number
+          p_day_scope: string
           p_effective_from: string
           p_outlet_id: string
           p_reason: string

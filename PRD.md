@@ -189,15 +189,19 @@ Template umum:
 
 Setiap outlet dapat mengganti waktu ketiga kategori tersebut agar sesuai jam operasionalnya.
 
-Setiap outlet dapat mengatur kebutuhan minimum per shift. Nilai awal:
+Setiap outlet dapat mengatur override kebutuhan minimum per shift. Jumlah
+kasir tersedia dihitung per hari setelah off, cuti, dan perpindahan backup.
+Nilai awal:
 
-| Kasir tersedia | Komposisi awal |
-| ---: | --- |
-| 2 | 1 Pagi + 1 Malam |
-| 3 | 1 Pagi + 1 Middle + 1 Malam |
-| 4 | 2 Pagi + 2 Malam |
+| Kasir tersedia | Weekday (Senin–Jumat) | Weekend (Sabtu–Minggu) |
+| ---: | --- | --- |
+| 2 | 1 Pagi + 0 Middle + 1 Malam | 1 Pagi + 0 Middle + 1 Malam |
+| 3 | 1 Pagi + 1 Middle + 1 Malam | Minimum 1 Pagi + 0 Middle + 1 Malam; satu kasir diseimbangkan ke Pagi/Malam |
+| 4 | 2 Pagi + 0 Middle + 2 Malam | 2 Pagi + 0 Middle + 2 Malam |
 
-Kebutuhan outlet yang dikonfigurasi mempunyai prioritas lebih tinggi daripada nilai awal.
+Kebutuhan outlet yang dikonfigurasi mempunyai prioritas lebih tinggi daripada
+nilai awal, dapat berbeda antara weekday/weekend, dan boleh menyimpan minimum
+`0` untuk shift yang tidak diperlukan.
 
 ### 7.4 Off day
 

@@ -33,6 +33,7 @@ export interface OptimizerEmployee {
 
 export interface OptimizerStaffingRequirement {
   cashierCount: number;
+  dayScope?: "weekday" | "weekend";
   shift: OptimizerShift;
   minimumStaff: number;
   effectiveFrom?: string;
@@ -218,7 +219,12 @@ function outletWeekKey(outletId: string, date: string) {
   return `${outletId}:${weekStart(date)}`;
 }
 
-function defaultTarget(cashierCount: number): ShiftTarget {
+function dayScopeFor(date: string) {
+  const day = parseDate(date).getUTCDay();
+  return day >= 1 && day <= 5 ? "weekday" : "weekend";
+}
+
+function defaultTarget(date: string, cashierCount: number): ShiftTarget {
   if (cashierCount <= 0) {
     return { morning: 0, middle: 0, night: 0, configured: false };
   }
@@ -229,7 +235,12 @@ function defaultTarget(cashierCount: number): ShiftTarget {
     return { morning: 1, middle: 0, night: 1, configured: false };
   }
   if (cashierCount === 3) {
-    return { morning: 1, middle: 1, night: 1, configured: false };
+    return {
+      morning: 1,
+      middle: dayScopeFor(date) === "weekday" ? 1 : 0,
+      night: 1,
+      configured: false,
+    };
   }
 
   const morning = Math.ceil(cashierCount / 2);
@@ -249,10 +260,11 @@ function targetFor(
   const matching = (outlet.staffingRequirements ?? []).filter(
     (requirement) =>
       requirement.cashierCount === cashierCount &&
+      (!requirement.dayScope || requirement.dayScope === dayScopeFor(date)) &&
       (!requirement.effectiveFrom || requirement.effectiveFrom <= date) &&
       (!requirement.effectiveUntil || requirement.effectiveUntil >= date)
   );
-  if (matching.length === 0) return defaultTarget(cashierCount);
+  if (matching.length === 0) return defaultTarget(date, cashierCount);
 
   return matching.reduce<ShiftTarget>(
     (target, requirement) => ({
