@@ -68,8 +68,9 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
   tempo, lease tertahan, dan percobaan yang habis. Invocation cron mencatat
   audit persisten tanpa secret/path Storage; UI supervisor menampilkan
   invocation terakhir dan memperingatkan scheduler yang tidak tercatat lebih
-  dari 26 jam. Script verifikasi read-only mendukung pemeriksaan evidence dan
-  `--cron-status` di
+  dari 26 jam. Invocation otomatis Vercel Cron pertama sudah terverifikasi
+  melalui audit persisten pada 1 Agustus 2026 pukul 03.59 WIB. Script
+  verifikasi read-only mendukung pemeriksaan evidence dan `--cron-status` di
   `scripts/verify-attendance-retention.mjs`; checklist berada di
   `docs/ATTENDANCE_RETENTION_VERIFICATION.md`.
 - Optimizer roster deterministik sudah diimplementasikan server-side. Snapshot
@@ -112,12 +113,12 @@ Dokumen ini berisi informasi arsitektur, konvensi desain, dan petunjuk penting u
 - Milestone **M4 — Cuti, Izin, dan Lembur** sudah selesai.
 - Milestone **M7 — Roster Otomatis, Middle, dan Fairness** sudah selesai.
 - **M6 — Validasi Presensi dan Retensi File** tetap berstatus
-  `DEFERRED VERIFICATION`; invocation otomatis dan penghapusan evidence nyata
-  masih menunggu waktu eksekusi scheduler/retensi.
+  `DEFERRED VERIFICATION`; invocation otomatis sudah lulus, sedangkan
+  penghapusan evidence nyata setelah tujuh hari masih menunggu jatuh tempo.
 - **M8 — Notifikasi, Laporan, Offline Read, dan Pilot Produksi** berstatus
-  `IN PROGRESS` berdasarkan keputusan pemilik produk untuk menunda koreksi cron.
-  Implementasi non-pilot boleh dilanjutkan, tetapi pilot produksi dan status
-  `DONE` tetap dilarang sampai dua bukti waktu M6 tersebut lulus.
+  `IN PROGRESS`. Implementasi non-pilot boleh dilanjutkan, tetapi pilot
+  produksi dan status `DONE` tetap dilarang sampai bukti penghapusan evidence
+  nyata M6, backup hosted, dan scope pilot selesai diverifikasi.
 
 ---
 
@@ -250,12 +251,14 @@ src/
     └── clickSound.ts     # Audio feedback + Haptic Feedback (navigator.vibrate) utility
 scripts/
 ├── verify-attendance-retention.mjs # Verifikasi read-only metadata, Storage, audit, dan signed URL
+├── verify-pilot-readiness.mjs # Agregat kesiapan pilot production tanpa PII/secret
 └── run-local-backup-restore-drill.mjs # Restore disposable Supabase lokal
 docs/
 ├── ATTENDANCE_RETENTION_VERIFICATION.md # Checklist penutupan exit criteria M6
 ├── ROSTER_OPTIMIZER.md # Kontrak, aturan, dan tahap integrasi optimizer M7
 ├── OPERATIONS_RUNBOOK.md # Triase, respons, pemulihan, dan penutupan insiden
 ├── BACKUP_RESTORE_DRILL.md # Prosedur drill lokal dan verifikasi hosted
+├── PILOT_READINESS_VERIFICATION.md # Interpretasi verifier pilot read-only
 └── PILOT_ROLLOUT_CHECKLIST.md # Gate dan smoke test pilot terbatas
 public/
 └── sw.js                 # Runtime cache shell/asset, tanpa cache API

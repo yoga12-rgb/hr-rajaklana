@@ -5,8 +5,8 @@
 | Atribut               | Nilai                                                           |
 | --------------------- | --------------------------------------------------------------- |
 | Tujuan                | Menjadi sumber acuan eksekusi untuk agent pengembang berikutnya |
-| Terakhir diverifikasi | 29 Juli 2026                                                    |
-| Fase saat ini         | M8 berjalan; gate pilot menunggu verifikasi waktu M6            |
+| Terakhir diverifikasi | 1 Agustus 2026                                                   |
+| Fase saat ini         | M8 berjalan; gate pilot menunggu retensi M6 dan kesiapan operasi |
 | Branch utama          | `main`                                                          |
 | Supabase hosted       | `https://ttbogurultjbporryylb.supabase.co`                      |
 | Supabase project ref  | `ttbogurultjbporryylb`                                          |
@@ -660,7 +660,7 @@ tier melalui penghapusan bukti yang dapat diaudit.
 - File hilang dari Storage tetapi metadata keputusan tetap tersedia.
 - Pengguna tidak dapat mengambil signed URL setelah retensi selesai.
 
-### Status implementasi 29 Juli 2026
+### Status implementasi 1 Agustus 2026
 
 - Halaman Presensi live supervisor menampilkan waktu dan selfie private
   melalui signed URL dua menit sejak clock-in. Daftar diperbarui setiap 30
@@ -712,11 +712,17 @@ tier melalui penghapusan bukti yang dapat diaudit.
   runtime log Vercel mencatat request GET production berstatus `200`. Bukti ini
   memvalidasi route, autentikasi, worker, serta audit persisten, tetapi tidak
   menggantikan bukti scheduler otomatis.
-- Tersisa: setelah job selfie nyata jatuh tempo, verifikasi objek terhapus dan
-  signed URL lama tidak dapat mengambil objek.
-  Invocation otomatis Vercel berikutnya perlu dikonfirmasi melalui
-  `--cron-status`. Pada paket Hobby, schedule tersebut dapat dijalankan kapan
-  saja antara pukul 03.00-03.59 WIB, bukan wajib tepat pukul 03.17 WIB.
+- Invocation otomatis Vercel Cron terverifikasi melalui audit persisten pada
+  1 Agustus 2026 pukul 03.59 WIB. `--cron-status` menghasilkan `PASS` dengan
+  `scanned: 0`, `completed: 0`, dan `failed: 0`; gate scheduler otomatis M6
+  selesai.
+- Evidence nyata terbaru diunggah 31 Juli 2026 pukul 11.08 WIB dan memiliki
+  deletion job tepat pada 7 Agustus 2026 pukul 11.08 WIB. Metadata, objek
+  private, dan jadwal retensi saat ini lulus; finalisasi penghapusan masih
+  `WAIT` karena belum jatuh tempo.
+- Tersisa: setelah job selfie nyata tersebut jatuh tempo, verifikasi objek
+  terhapus, metadata/audit tetap tersedia, serta signed URL baru tidak dapat
+  mengambil objek.
 - Pada 29 Juli 2026, pemilik produk menyetujui penangguhan khusus untuk dua
   verifikasi berbasis waktu di atas agar M7 dapat dimulai. M6 belum berstatus
   selesai dan tetap menjadi gate wajib sebelum M8/pilot produksi.
@@ -817,7 +823,8 @@ pilot produksi tidak boleh dinyatakan siap sampai M6 membuktikan:
    metadata/audit tetap tersedia, serta signed URL tidak lagi dapat mengambil
    objek.
 
-Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
+Bukti pertama lulus pada 1 Agustus 2026 pukul 03.59 WIB. Bukti kedua masih
+menunggu evidence nyata jatuh tempo pada 7 Agustus 2026 pukul 11.08 WIB.
 
 ### Progres terverifikasi
 
@@ -853,7 +860,14 @@ Pemeriksaan `--cron-status` pada 29 Juli 2026 masih menghasilkan `WAIT`.
   32 migration identik setelah dipulihkan ke database disposable; dump dan
   database drill dibersihkan otomatis.
 - Local/hosted lint schema bersih dan pgTAP `310/310`; lint, typecheck, build
-  live/demo, sepuluh unit test, dan 20 E2E desktop/mobile lulus.
+  live/demo, empat belas unit test, dan 20 E2E desktop/mobile lulus.
+- Verifier read-only `npm run operations:verify-pilot` memeriksa target hosted,
+  akun, outlet, kasir eligible, penempatan, template/kebutuhan shift, policy,
+  job operasional, dan audit cron tanpa mencetak PII, UUID, path Storage,
+  error mentah, atau secret. Pemeriksaan 1 Agustus 2026 menemukan satu
+  supervisor aktif, satu outlet aktif, empat kasir eligible, seluruh policy
+  aktif, antrean sehat, dan cron sukses; baru dua akun karyawan siap sehingga
+  belum ada outlet kandidat yang memenuhi minimum tiga akun kasir siap.
 - Seluruh pekerjaan non-pilot M8 sudah siap. Pilot tetap menunggu gate M6,
   verifikasi backup hosted, pilihan outlet/pengguna pilot, dan persetujuan
   checklist oleh pemilik produk.
@@ -979,7 +993,7 @@ Input berikut diminta hanya ketika milestone terkait dimulai:
 | M3        | Template shift per outlet, pengecualian outlet, off day awal, aturan perubahan/publish    |
 | M4        | Daftar final jenis cuti dan dokumen wajib                                                 |
 | M5        | Hasil uji accuracy GPS perangkat nyata dan toleransi pilot                                |
-| M6        | Bukti scheduler otomatis dan evidence nyata pascajatuh tempo tujuh hari                   |
+| M6        | Bukti evidence nyata pascajatuh tempo tujuh hari; scheduler otomatis sudah lulus           |
 | M8        | Pengguna pilot, SOP dukungan, kebutuhan laporan/export final                              |
 
 Jangan mengarang data perusahaan nyata. Gunakan fixture sintetis sampai data
@@ -1009,8 +1023,8 @@ Prompt singkat yang dapat diberikan kepada agent baru:
 > dan lanjutkan M8 dari quality gate observability serta kesiapan pilot.
 > Panel kesehatan, SOP, restore drill lokal, dan checklist pilot sudah ada.
 > Implementasi non-pilot boleh berjalan,
-> tetapi jangan nyatakan M6/M8 `DONE` atau mulai pilot sampai invocation cron
-> otomatis dan penghapusan evidence nyata tujuh hari terverifikasi.
+> tetapi jangan nyatakan M6/M8 `DONE` atau mulai pilot sampai penghapusan
+> evidence nyata tujuh hari, backup hosted, dan scope pilot terverifikasi.
 > Pertahankan data prototype sampai modul tersebut benar-benar dimigrasikan,
 > jangan mengekspos secret, jangan reset Supabase hosted, jalankan seluruh
 > quality gate milestone, lalu perbarui status handoff.

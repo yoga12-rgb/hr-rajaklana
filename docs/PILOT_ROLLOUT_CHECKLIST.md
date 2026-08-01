@@ -1,11 +1,13 @@
 # Checklist Pilot Produksi
 
-Status saat ini: **BELUM BOLEH DIMULAI**. Implementasi non-pilot M8 tersedia,
-tetapi gate berbasis waktu M6 dan verifikasi backup hosted belum selesai.
+Status saat ini: **BELUM BOLEH DIMULAI**. Invocation cron otomatis sudah
+terverifikasi, tetapi penghapusan evidence nyata M6, backup hosted, kesiapan
+akun karyawan, dan persetujuan scope pilot belum selesai.
 
 ## Gate wajib
 
-- [ ] Invocation otomatis Vercel Cron tercatat pada audit persisten.
+- [x] Invocation otomatis Vercel Cron tercatat pada audit persisten pada
+      1 Agustus 2026 pukul 03.59 WIB.
 - [ ] Satu selfie nyata melewati tujuh hari, object Storage terhapus,
       metadata/audit tetap tersedia, dan signed URL lama tidak berlaku.
 - [x] Restore drill lokal lulus pada schema yang akan dipilotkan.
@@ -13,6 +15,20 @@ tetapi gate berbasis waktu M6 dan verifikasi backup hosted belum selesai.
 - [ ] Quality Gate commit pilot lulus di GitHub Actions.
 - [ ] Pemilik produk menyetujui outlet dan pengguna pilot.
 - [ ] Runbook dukungan serta jalur eskalasi dibagikan ke supervisor pilot.
+
+## Pemeriksaan read-only
+
+Jalankan dari environment operator yang memiliki konfigurasi hosted:
+
+```bash
+npm run operations:verify-pilot
+```
+
+Hasil `WAIT` berarti bukti manual atau berbasis waktu belum lengkap. Hasil
+`BLOCKED` berarti prasyarat teknis harus diperbaiki sebelum pilot. Pemeriksaan
+1 Agustus 2026 menemukan baru dua akun karyawan siap; diperlukan minimal tiga
+akun kasir aktif tanpa kewajiban ganti kata sandi agar sebuah outlet menjadi
+kandidat. Detail kontrak output berada di `docs/PILOT_READINESS_VERIFICATION.md`.
 
 ## Scope awal
 

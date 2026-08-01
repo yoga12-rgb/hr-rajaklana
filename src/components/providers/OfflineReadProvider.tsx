@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import { WifiOff } from "lucide-react";
 import type { DataSourceConfig } from "@/lib/data-source";
@@ -30,6 +30,23 @@ function cacheKey(userId: string) {
   return `hr-rajaklana-roster-cache-v1:${userId}`;
 }
 
+function subscribeOnlineStatus(onStoreChange: () => void) {
+  window.addEventListener("online", onStoreChange);
+  window.addEventListener("offline", onStoreChange);
+  return () => {
+    window.removeEventListener("online", onStoreChange);
+    window.removeEventListener("offline", onStoreChange);
+  };
+}
+
+function getOnlineStatus() {
+  return navigator.onLine;
+}
+
+function getServerOnlineStatus() {
+  return true;
+}
+
 /**
  * Menyimpan maksimal tiga snapshot roster yang sudah disanitasi per pengguna.
  * Bukti, dokumen, notifikasi, alasan perubahan, dan signed URL tidak disimpan.
@@ -43,25 +60,14 @@ export function OfflineReadProvider({
   queryClient: QueryClient;
   dataSource: DataSourceConfig;
 }) {
-  // Selalu mulai dengan true di server; di-sync ulang setelah mount agar
-  // tidak terjadi hydration mismatch yang menyebabkan banner Offline palsu.
-  const [isOnline, setIsOnline] = useState(true);
+  // Snapshot server selalu online untuk menjaga hydration stabil, kemudian
+  // React membaca navigator.onLine dan berlangganan event koneksi di client.
+  const isOnline = useSyncExternalStore(
+    subscribeOnlineStatus,
+    getOnlineStatus,
+    getServerOnlineStatus
+  );
   const [hasCachedRoster, setHasCachedRoster] = useState(false);
-
-  // Sinkronisasi status online segera setelah mount dan pasang listener
-  // agar perubahan koneksi selalu ter-update, terlepas dari mode data.
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
 
   useEffect(() => {
     if (dataSource.mode !== "supabase") return;

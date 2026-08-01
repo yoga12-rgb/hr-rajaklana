@@ -180,3 +180,8 @@ Jangan menjalankan reset terhadap production.
   membersihkan artefak. Verifikasi backup hosted tetap dilakukan terpisah
   mengikuti `docs/BACKUP_RESTORE_DRILL.md`; statusnya tidak boleh diasumsikan
   dari aplikasi.
+- Gunakan `npm run operations:verify-pilot` untuk pemeriksaan hosted read-only
+  terhadap kesiapan akun, outlet, roster, policy, antrean operasional, dan
+  audit cron. Script hanya menampilkan agregat tanpa PII, UUID, path Storage,
+  error mentah, atau secret; backup provider dan bukti retensi tujuh hari tetap
+  wajib diverifikasi terpisah.

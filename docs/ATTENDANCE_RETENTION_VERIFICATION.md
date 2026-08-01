@@ -38,8 +38,9 @@ Status `WAIT` sebelum tenggat bukan kegagalan.
 ## Pemeriksaan setelah cron pascajatuh tempo
 
 Jalankan setelah jadwal cron pertama yang terjadi sesudah batas retensi. Untuk
-evidence pilot 28 Juli 2026, pemeriksaan final dilakukan setelah cron
-5 Agustus 2026 dalam jendela pukul 03.00-03.59 WIB:
+evidence production terbaru yang diunggah 31 Juli 2026 pukul 11.08 WIB,
+pemeriksaan final dilakukan setelah cron 8 Agustus 2026 dalam jendela pukul
+03.00-03.59 WIB karena batas retensinya 7 Agustus 2026 pukul 11.08 WIB:
 
 ```bash
 npm run attendance:verify-retention -- --evidence-id <uuid> --expect-deleted
@@ -94,6 +95,12 @@ dan `failed: 0`. Audit `cron_completed` tersimpan dengan agregat yang sama dan
 runtime log Vercel mencatat request GET production berstatus `200`.
 
 Smoke test ini membuktikan route, bearer authentication, worker, koneksi
-Supabase, dan audit persisten bekerja. Pemeriksaan `--cron-status` setelah
-jadwal harian tetap wajib karena hanya user agent `vercel-cron/1.0` yang
-dianggap sebagai bukti scheduler otomatis.
+Supabase, dan audit persisten bekerja.
+
+### Bukti scheduler otomatis
+
+Pada 1 Agustus 2026 pukul 03.59 WIB, invocation otomatis Vercel Cron tercatat
+oleh audit persisten dengan `scanned: 0`, `completed: 0`, dan `failed: 0`.
+Perintah `--cron-status` menghasilkan `PASS`, sehingga bukti scheduler
+otomatis M6 sudah terpenuhi. Gate M6 yang tersisa hanya penghapusan evidence
+nyata setelah jatuh tempo beserta metadata, audit, dan kegagalan signed URL.
